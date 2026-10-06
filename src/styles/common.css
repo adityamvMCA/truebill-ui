@@ -1,0 +1,487 @@
+/* =========================================
+   TRUSTIQ ERP
+   COMMON THEME
+========================================= */
+
+:root {
+  /* Default Theme */
+  --primary-color: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-light: #eff6ff;
+  --primary-soft: #dbeafe;
+
+  /* Sidebar */
+  --sidebar-bg: #ffffff;
+  --sidebar-text: #172033;
+  --sidebar-text-muted: #64748b;
+  --sidebar-hover: #f1f5f9;
+  --sidebar-active-bg: #e8f1ff;
+  --sidebar-active-text: #2563eb;
+
+  /* Header */
+  --header-bg: #ffffff;
+  --header-border: #e5e7eb;
+
+  /* Page */
+  --page-bg: #f8fafc;
+
+  /* Cards */
+  --card-bg: #ffffff;
+  --card-border: #e5e7eb;
+
+  /* Text */
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+
+  /* Border */
+  --border-color: #e2e8f0;
+
+  /* Status */
+  --success: #16a34a;
+  --warning: #f59e0b;
+  --danger: #dc2626;
+
+  /* Basic */
+  --white: #ffffff;
+  --black: #000000;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  /* Shadow */
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+
+  /* Layout */
+  --sidebar-width: 250px;
+  --header-height: 64px;
+}
+
+
+/* =========================================
+   THEME 1 - OCEAN BLUE
+========================================= */
+
+[data-theme="blue"] {
+  --primary-color: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-light: #eff6ff;
+  --primary-soft: #dbeafe;
+
+  --sidebar-active-bg: #e8f1ff;
+  --sidebar-active-text: #2563eb;
+}
+
+
+/* =========================================
+   THEME 2 - EMERALD
+========================================= */
+
+[data-theme="green"] {
+  --primary-color: #16a34a;
+  --primary-hover: #15803d;
+  --primary-light: #f0fdf4;
+  --primary-soft: #dcfce7;
+
+  --sidebar-active-bg: #eaf8ef;
+  --sidebar-active-text: #16a34a;
+}
+
+
+/* =========================================
+   THEME 3 - PURPLE
+========================================= */
+
+[data-theme="purple"] {
+  --primary-color: #7c3aed;
+  --primary-hover: #6d28d9;
+  --primary-light: #f5f3ff;
+  --primary-soft: #ede9fe;
+
+  --sidebar-active-bg: #f0ebff;
+  --sidebar-active-text: #7c3aed;
+}
+
+
+/* =========================================
+   THEME 4 - ORANGE
+========================================= */
+
+[data-theme="orange"] {
+  --primary-color: #ea580c;
+  --primary-hover: #c2410c;
+  --primary-light: #fff7ed;
+  --primary-soft: #ffedd5;
+
+  --sidebar-active-bg: #fff2e8;
+  --sidebar-active-text: #ea580c;
+}
+
+
+/* =========================================
+   THEME 5 - RED
+========================================= */
+
+[data-theme="red"] {
+  --primary-color: #dc2626;
+  --primary-hover: #b91c1c;
+  --primary-light: #fef2f2;
+  --primary-soft: #fee2e2;
+
+  --sidebar-active-bg: #fff0f0;
+  --sidebar-active-text: #dc2626;
+}
+
+
+/* =========================================
+   THEME 6 - TEAL
+========================================= */
+
+[data-theme="teal"] {
+  --primary-color: #0d9488;
+  --primary-hover: #0f766e;
+  --primary-light: #f0fdfa;
+  --primary-soft: #ccfbf1;
+
+  --sidebar-active-bg: #e8faf7;
+  --sidebar-active-text: #0d9488;
+}
+
+
+/* =========================================
+   THEME 7 - INDIGO
+========================================= */
+
+[data-theme="indigo"] {
+  --primary-color: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-light: #eef2ff;
+  --primary-soft: #e0e7ff;
+
+  --sidebar-active-bg: #eceeff;
+  --sidebar-active-text: #4f46e5;
+}
+
+
+/* =========================================
+   THEME 8 - PINK
+========================================= */
+
+[data-theme="pink"] {
+  --primary-color: #db2777;
+  --primary-hover: #be185d;
+  --primary-light: #fdf2f8;
+  --primary-soft: #fce7f3;
+
+  --sidebar-active-bg: #fdf0f7;
+  --sidebar-active-text: #db2777;
+}
+
+
+/* =========================================
+   THEME 9 - CYAN
+========================================= */
+
+[data-theme="cyan"] {
+  --primary-color: #0891b2;
+  --primary-hover: #0e7490;
+  --primary-light: #ecfeff;
+  --primary-soft: #cffafe;
+
+  --sidebar-active-bg: #e8fafc;
+  --sidebar-active-text: #0891b2;
+}
+
+
+/* =========================================
+   THEME 10 - SLATE
+========================================= */
+
+[data-theme="slate"] {
+  --primary-color: #475569;
+  --primary-hover: #334155;
+  --primary-light: #f1f5f9;
+  --primary-soft: #e2e8f0;
+
+  --sidebar-active-bg: #eef1f5;
+  --sidebar-active-text: #475569;
+}
+
+
+/* =========================================
+   RESET
+========================================= */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  width: 100%;
+  min-height: 100%;
+
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+
+  background: var(--page-bg);
+  color: var(--text-primary);
+
+  overflow-x: hidden;
+
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+
+/* =========================================
+   COMMON
+========================================= */
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.primary-button {
+  border: none;
+
+  background: var(--primary-color);
+  color: var(--white);
+
+  padding: 10px 18px;
+
+  border-radius: var(--radius-md);
+
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.primary-button:hover {
+  background: var(--primary-hover);
+}
+
+/* =====================================
+   GLOBAL SKELETON
+===================================== */
+
+.global-skeleton {
+  width: 100%;
+  min-height: 100%;
+  padding: 20px;
+  background: var(--page-bg, #f6f8fb);
+}
+
+.skeleton-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.skeleton-line,
+.skeleton-box,
+.skeleton-card,
+.skeleton-table-header div,
+.skeleton-table-row div {
+  position: relative;
+  overflow: hidden;
+  background: var(--border-color, #e5e7eb);
+  border-radius: 8px;
+}
+
+.skeleton-line::after,
+.skeleton-box::after,
+.skeleton-card::after,
+.skeleton-table-header div::after,
+.skeleton-table-row div::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.55),
+    transparent
+  );
+  animation: skeleton-shimmer 1.4s infinite;
+}
+
+.skeleton-title {
+  width: 220px;
+  height: 28px;
+}
+
+.skeleton-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.skeleton-box {
+  width: 42px;
+  height: 38px;
+}
+
+.skeleton-card-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.skeleton-card {
+  height: 110px;
+  border-radius: 12px;
+}
+
+.skeleton-content-card {
+  padding: 18px;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--card-border, #e5e7eb);
+  border-radius: 12px;
+}
+
+.skeleton-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.skeleton-search {
+  width: 280px;
+  height: 40px;
+}
+
+.skeleton-button {
+  width: 110px;
+  height: 40px;
+}
+
+.skeleton-table {
+  width: 100%;
+}
+
+.skeleton-table-header,
+.skeleton-table-row {
+  display: grid;
+  grid-template-columns:
+    0.7fr
+    1.4fr
+    1.2fr
+    1fr
+    0.8fr;
+  gap: 16px;
+  align-items: center;
+}
+
+.skeleton-table-header {
+  margin-bottom: 10px;
+}
+
+.skeleton-table-header div {
+  height: 16px;
+  border-radius: 5px;
+}
+
+.skeleton-table-row {
+  padding: 15px 0;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.skeleton-table-row div {
+  height: 18px;
+  border-radius: 5px;
+}
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* =====================================
+   RESPONSIVE
+===================================== */
+
+@media (max-width: 900px) {
+  .skeleton-card-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .global-skeleton {
+    padding: 14px;
+  }
+
+  .skeleton-header {
+    align-items: flex-start;
+  }
+
+  .skeleton-title {
+    width: 160px;
+  }
+
+  .skeleton-card-row {
+    grid-template-columns: 1fr;
+  }
+
+  .skeleton-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .skeleton-search {
+    width: 100%;
+  }
+
+  .skeleton-button {
+    width: 100%;
+  }
+
+  .skeleton-table {
+    overflow: hidden;
+  }
+
+  .skeleton-table-header,
+  .skeleton-table-row {
+    min-width: 650px;
+  }
+}

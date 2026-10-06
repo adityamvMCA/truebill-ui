@@ -1,0 +1,518 @@
+.skeleton-page {
+  width: 100%;
+  min-height: 100%;
+  padding: 20px;
+  background: var(--page-bg);
+  color: var(--text-primary);
+}
+
+.sk-block {
+  position: relative;
+  overflow: hidden;
+  background: var(--border-color);
+  border-radius: 7px;
+}
+
+.sk-block::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.5),
+    transparent
+  );
+  animation: skeleton-shimmer 1.35s infinite;
+}
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* ===============================
+   HEADER
+================================ */
+
+.sk-page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.sk-title {
+  width: 220px;
+  height: 28px;
+  margin-bottom: 8px;
+}
+
+.sk-subtitle {
+  width: 280px;
+  height: 13px;
+}
+
+.sk-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ===============================
+   BUTTON
+================================ */
+
+.sk-button {
+  width: 100px;
+  height: 38px;
+  border-radius: 7px;
+}
+
+.sk-button-primary {
+  width: 120px;
+}
+
+/* ===============================
+   LIST
+================================ */
+
+.sk-list-card {
+  width: 100%;
+  overflow: hidden;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.sk-list-toolbar {
+  min-height: 68px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sk-search {
+  width: 320px;
+  height: 36px;
+}
+
+.sk-toolbar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.sk-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sk-table {
+  min-width: 900px;
+}
+
+.sk-table-row {
+  display: grid;
+  grid-template-columns: repeat(
+    var(--sk-columns),
+    minmax(100px, 1fr)
+  );
+  gap: 16px;
+  align-items: center;
+  min-height: 56px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sk-table-head {
+  min-height: 43px;
+  background: var(--page-bg);
+}
+
+.sk-table-cell {
+  width: 100%;
+  height: 15px;
+}
+
+.sk-table-head .sk-table-cell {
+  height: 13px;
+}
+
+/* ===============================
+   PAGINATION
+================================ */
+
+.sk-pagination {
+  min-height: 58px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.sk-pagination-info {
+  width: 140px;
+  height: 14px;
+}
+
+.sk-pagination-buttons {
+  display: flex;
+  gap: 5px;
+}
+
+.sk-page-button {
+  width: 31px;
+  height: 31px;
+}
+
+/* ===============================
+   FORM
+================================ */
+
+.sk-form-card {
+  display: grid;
+  grid-template-columns: repeat(
+    2,
+    minmax(0, 1fr)
+  );
+  gap: 20px;
+  padding: 20px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.sk-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.sk-label {
+  width: 90px;
+  height: 12px;
+}
+
+.sk-input {
+  width: 100%;
+  height: 40px;
+}
+
+.sk-form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+/* ===============================
+   DETAIL
+================================ */
+
+.sk-detail-card {
+  margin-bottom: 16px;
+  padding: 20px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.sk-section-title {
+  width: 180px;
+  height: 18px;
+  margin-bottom: 20px;
+}
+
+.sk-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(
+    3,
+    minmax(0, 1fr)
+  );
+  gap: 20px;
+}
+
+.sk-detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sk-detail-value {
+  width: 80%;
+  height: 17px;
+}
+
+/* ===============================
+   MODAL
+================================ */
+
+.sk-modal {
+  width: min(
+    600px,
+    calc(100vw - 32px)
+  );
+  overflow: hidden;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.sk-modal-header {
+  min-height: 58px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sk-modal-title {
+  width: 180px;
+  height: 20px;
+}
+
+.sk-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+.sk-modal-body {
+  display: grid;
+  grid-template-columns: repeat(
+    2,
+    minmax(0, 1fr)
+  );
+  gap: 16px;
+  padding: 20px;
+}
+
+.sk-modal-footer {
+  padding: 14px 18px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid var(--border-color);
+}
+
+/* ===============================
+   DASHBOARD
+================================ */
+
+.sk-dashboard-cards {
+  display: grid;
+  grid-template-columns: repeat(
+    4,
+    minmax(0, 1fr)
+  );
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.sk-dashboard-card {
+  min-height: 125px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+}
+
+.sk-small-line {
+  width: 90px;
+  height: 12px;
+}
+
+.sk-large-line {
+  width: 120px;
+  height: 28px;
+}
+
+.sk-medium-line {
+  width: 160px;
+  height: 12px;
+}
+
+.sk-dashboard-content {
+  display: grid;
+  grid-template-columns: repeat(
+    2,
+    minmax(0, 1fr)
+  );
+  gap: 16px;
+}
+
+.sk-chart-card {
+  min-height: 320px;
+  padding: 18px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+}
+
+.sk-chart {
+  width: 100%;
+  height: 240px;
+  margin-top: 20px;
+}
+
+/* ===============================
+   GENERIC
+================================ */
+
+.sk-generic-card {
+  padding: 20px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+}
+
+.sk-generic-line {
+  width: 100%;
+  height: 18px;
+  margin-bottom: 18px;
+}
+
+/* ===============================
+   TABLET
+================================ */
+
+@media (max-width: 1000px) {
+
+  .sk-dashboard-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .sk-detail-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+}
+
+/* ===============================
+   MOBILE
+================================ */
+
+@media (max-width: 768px) {
+
+  .skeleton-page {
+    padding: 14px;
+  }
+
+  .sk-page-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .sk-title {
+    width: 170px;
+  }
+
+  .sk-subtitle {
+    width: 230px;
+  }
+
+  .sk-header-actions {
+    width: 100%;
+  }
+
+  .sk-header-actions .sk-button {
+    flex: 1;
+  }
+
+  .sk-list-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .sk-search {
+    width: 100%;
+  }
+
+  .sk-toolbar-actions {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .sk-toolbar-actions .sk-button {
+    flex-shrink: 0;
+  }
+
+  .sk-form-card {
+    grid-template-columns: 1fr;
+  }
+
+  .sk-form-actions {
+    grid-column: auto;
+  }
+
+  .sk-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sk-modal-body {
+    grid-template-columns: 1fr;
+  }
+
+  .sk-dashboard-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .sk-dashboard-content {
+    grid-template-columns: 1fr;
+  }
+
+  .sk-pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .sk-pagination-info {
+    width: 120px;
+  }
+
+  .sk-pagination-buttons {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* ===============================
+   SMALL MOBILE
+================================ */
+
+@media (max-width: 480px) {
+
+  .skeleton-page {
+    padding: 10px;
+  }
+
+  .sk-detail-card,
+  .sk-form-card {
+    padding: 14px;
+  }
+
+  .sk-table {
+    min-width: 800px;
+  }
+
+  .sk-modal {
+    width: calc(100vw - 20px);
+  }
+
+}

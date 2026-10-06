@@ -1,0 +1,703 @@
+.sales-order-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(3px);
+}
+
+.sales-order-modal {
+    width: min(1120px, 100%);
+    max-height: calc(100vh - 40px);
+
+    display: flex;
+    flex-direction: column;
+
+    overflow: hidden;
+
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+
+    box-shadow: 0 15px 45px rgba(15, 23, 42, 0.18);
+}
+
+/* Header */
+
+.sales-order-modal-header {
+    min-height: 64px;
+
+    padding: 0 20px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    background: var(--card-bg);
+
+    border-bottom: 1px solid var(--border-color);
+}
+
+.sales-order-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sales-order-title-icon {
+    width: 38px;
+    height: 38px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 9px;
+
+    background: var(--primary-color);
+    color: var(--white);
+}
+
+.sales-order-modal-title h2 {
+    margin: 0;
+
+    font-size: 17px;
+    font-weight: 700;
+
+    color: var(--text-primary);
+}
+
+.sales-order-modal-title span {
+    display: block;
+
+    margin-top: 2px;
+
+    font-size: 11px;
+
+    color: var(--text-secondary);
+}
+
+.sales-order-close-btn {
+    width: 32px;
+    height: 32px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 0;
+    border-radius: 6px;
+
+    background: transparent;
+    color: var(--text-secondary);
+
+    cursor: pointer;
+}
+
+.sales-order-close-btn:hover {
+    background: var(--page-bg);
+    color: var(--danger);
+}
+
+/* Body */
+
+.sales-order-modal-body {
+    flex: 1;
+
+    overflow-y: auto;
+
+    padding: 18px;
+
+    background: var(--page-bg);
+}
+
+/* Sections */
+
+.sales-order-section {
+    margin-bottom: 14px;
+    padding: 16px;
+
+    background: var(--card-bg);
+
+    border: 1px solid var(--border-color);
+    border-radius: 9px;
+}
+
+.sales-order-section:last-child {
+    margin-bottom: 0;
+}
+
+.sales-order-section-header {
+    display: flex;
+    align-items: center;
+
+    gap: 9px;
+
+    margin-bottom: 16px;
+}
+
+.sales-order-section-icon {
+    width: 32px;
+    height: 32px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 7px;
+
+    background: var(--primary-light);
+    color: var(--primary-color);
+}
+
+.sales-order-section-header h3 {
+    margin: 0;
+
+    font-size: 13px;
+    font-weight: 700;
+
+    color: var(--text-primary);
+}
+
+.sales-order-section-header p {
+    margin: 2px 0 0;
+
+    font-size: 10px;
+
+    color: var(--text-secondary);
+}
+
+/* Form */
+
+.sales-order-form-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+
+    gap: 14px;
+}
+
+.sales-order-field {
+    min-width: 0;
+}
+
+.sales-order-field-full {
+    grid-column: 1 / -1;
+}
+
+.sales-order-field label {
+    display: flex;
+    align-items: center;
+
+    gap: 4px;
+
+    margin-bottom: 5px;
+
+    font-size: 11px;
+    font-weight: 600;
+
+    color: var(--text-primary);
+}
+
+.sales-order-field label svg {
+    color: var(--primary-color);
+}
+
+.sales-order-field input,
+.sales-order-field select,
+.sales-order-field textarea,
+.sales-order-notes-section textarea {
+    width: 100%;
+
+    box-sizing: border-box;
+
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+
+    background: var(--card-bg);
+    color: var(--text-primary);
+
+    font-family: inherit;
+    font-size: 12px;
+
+    outline: none;
+}
+
+.sales-order-field input,
+.sales-order-field select {
+    height: 36px;
+
+    padding: 0 9px;
+}
+
+.sales-order-field textarea,
+.sales-order-notes-section textarea {
+    padding: 8px 9px;
+
+    resize: vertical;
+}
+
+.sales-order-field input::placeholder,
+.sales-order-field textarea::placeholder,
+.sales-order-notes-section textarea::placeholder {
+    color: var(--text-muted);
+}
+
+.sales-order-field input:focus,
+.sales-order-field select:focus,
+.sales-order-field textarea:focus,
+.sales-order-notes-section textarea:focus {
+    border-color: var(--primary-color);
+
+    box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+/* Products */
+
+.sales-order-items-header {
+    margin-bottom: 12px;
+}
+
+.sales-order-add-item-btn {
+    margin-left: auto;
+
+    height: 32px;
+
+    padding: 0 11px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 5px;
+
+    border: 0;
+    border-radius: 6px;
+
+    background: var(--primary-color);
+    color: var(--white);
+
+    font-size: 11px;
+    font-weight: 600;
+
+    cursor: pointer;
+}
+
+.sales-order-add-item-btn:hover {
+    background: var(--primary-hover);
+}
+
+/* Product Table */
+
+.sales-order-items-wrapper {
+    width: 100%;
+
+    overflow-x: auto;
+
+    border: 1px solid var(--border-color);
+    border-radius: 7px;
+}
+
+.sales-order-items-table {
+    width: 100%;
+
+    min-width: 850px;
+
+    border-collapse: collapse;
+}
+
+.sales-order-items-table th {
+    padding: 9px;
+
+    background: var(--page-bg);
+
+    border-bottom: 1px solid var(--border-color);
+
+    text-align: left;
+
+    font-size: 10px;
+    font-weight: 700;
+
+    color: var(--text-secondary);
+
+    white-space: nowrap;
+}
+
+.sales-order-items-table td {
+    padding: 7px;
+
+    border-bottom: 1px solid var(--border-color);
+
+    vertical-align: middle;
+}
+
+.sales-order-items-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.sales-order-items-table tbody tr:hover td {
+    background: var(--primary-light);
+}
+
+.sales-order-items-table td:first-child {
+    min-width: 210px;
+}
+
+.sales-order-items-table input {
+    width: 100%;
+    height: 32px;
+
+    box-sizing: border-box;
+
+    padding: 0 7px;
+
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+
+    background: var(--card-bg);
+    color: var(--text-primary);
+
+    font-size: 11px;
+
+    outline: none;
+}
+
+.sales-order-items-table input:focus {
+    border-color: var(--primary-color);
+}
+
+.sales-order-input-icon {
+    position: relative;
+}
+
+.sales-order-input-icon svg {
+    position: absolute;
+
+    left: 7px;
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    color: var(--text-muted);
+
+    pointer-events: none;
+}
+
+.sales-order-input-icon input {
+    padding-left: 23px;
+}
+
+.sales-order-items-table td strong {
+    font-size: 11px;
+    font-weight: 700;
+
+    color: var(--text-primary);
+
+    white-space: nowrap;
+}
+
+.sales-order-delete-item {
+    width: 29px;
+    height: 29px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 0;
+    border-radius: 5px;
+
+    background: transparent;
+    color: var(--danger);
+
+    cursor: pointer;
+}
+
+.sales-order-delete-item:hover {
+    background: var(--primary-light);
+}
+
+.sales-order-delete-item:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* Bottom */
+
+.sales-order-bottom-grid {
+    display: grid;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        330px;
+
+    gap: 14px;
+}
+
+.sales-order-notes-section {
+    margin-bottom: 0;
+}
+
+.sales-order-notes-section textarea {
+    min-height: 105px;
+}
+
+/* Total */
+
+.sales-order-total-card {
+    align-self: start;
+
+    padding: 16px;
+
+    background: var(--card-bg);
+
+    border: 1px solid var(--border-color);
+    border-radius: 9px;
+}
+
+.sales-order-total-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin-bottom: 11px;
+
+    font-size: 12px;
+}
+
+.sales-order-total-row span {
+    color: var(--text-secondary);
+}
+
+.sales-order-total-row strong {
+    color: var(--text-primary);
+
+    font-weight: 600;
+}
+
+.sales-order-total-divider {
+    height: 1px;
+
+    margin: 13px 0;
+
+    background: var(--border-color);
+}
+
+.sales-order-grand-total {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding-top: 2px;
+}
+
+.sales-order-grand-total span {
+    font-size: 13px;
+    font-weight: 700;
+
+    color: var(--text-primary);
+}
+
+.sales-order-grand-total strong {
+    font-size: 18px;
+    font-weight: 700;
+
+    color: var(--primary-color);
+}
+
+/* Footer */
+
+.sales-order-modal-footer {
+    min-height: 60px;
+
+    padding: 10px 18px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 10px;
+
+    background: var(--card-bg);
+
+    border-top: 1px solid var(--border-color);
+}
+
+.sales-order-footer-actions {
+    display: flex;
+
+    gap: 7px;
+}
+
+.sales-order-cancel-btn,
+.sales-order-draft-btn,
+.sales-order-submit-btn {
+    height: 34px;
+
+    padding: 0 12px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 5px;
+
+    border-radius: 6px;
+
+    font-size: 11px;
+    font-weight: 600;
+
+    cursor: pointer;
+}
+
+.sales-order-cancel-btn {
+    border: 1px solid var(--border-color);
+
+    background: var(--card-bg);
+    color: var(--text-secondary);
+}
+
+.sales-order-cancel-btn:hover {
+    background: var(--page-bg);
+    color: var(--text-primary);
+}
+
+.sales-order-draft-btn {
+    border: 1px solid var(--border-color);
+
+    background: var(--card-bg);
+    color: var(--text-primary);
+}
+
+.sales-order-draft-btn:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.sales-order-submit-btn {
+    min-width: 115px;
+
+    border: 0;
+
+    background: var(--primary-color);
+    color: var(--white);
+}
+
+.sales-order-submit-btn:hover {
+    background: var(--primary-hover);
+}
+
+/* Tablet */
+
+@media (max-width: 1000px) {
+    .sales-order-form-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+    .sales-order-bottom-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Mobile */
+
+@media (max-width: 767px) {
+    .sales-order-modal-overlay {
+        padding: 0;
+
+        align-items: stretch;
+    }
+
+    .sales-order-modal {
+        width: 100%;
+        height: 100dvh;
+        max-height: 100dvh;
+
+        border: 0;
+        border-radius: 0;
+    }
+
+    .sales-order-modal-header {
+        min-height: 58px;
+
+        padding: 0 14px;
+    }
+
+    .sales-order-title-icon {
+        width: 34px;
+        height: 34px;
+    }
+
+    .sales-order-modal-title h2 {
+        font-size: 15px;
+    }
+
+    .sales-order-modal-body {
+        padding: 12px;
+    }
+
+    .sales-order-section {
+        padding: 13px;
+        margin-bottom: 10px;
+    }
+
+    .sales-order-form-grid {
+        grid-template-columns: 1fr;
+
+        gap: 11px;
+    }
+
+    .sales-order-field-full {
+        grid-column: auto;
+    }
+
+    .sales-order-items-header {
+        flex-wrap: wrap;
+
+        align-items: flex-start;
+    }
+
+    .sales-order-add-item-btn {
+        width: calc(100% - 41px);
+
+        margin-left: 41px;
+    }
+
+    .sales-order-bottom-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .sales-order-modal-footer {
+        padding: 9px 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .sales-order-modal-footer {
+        flex-direction: column-reverse;
+
+        align-items: stretch;
+    }
+
+    .sales-order-footer-actions {
+        width: 100%;
+    }
+
+    .sales-order-draft-btn,
+    .sales-order-submit-btn {
+        flex: 1;
+    }
+
+    .sales-order-cancel-btn {
+        width: 100%;
+    }
+}
