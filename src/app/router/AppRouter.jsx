@@ -10,6 +10,9 @@ import ProtectedRoute from "./ProtectedRoute";
 import MainLayout from "../../layouts/MainLayout";
 import GlobalSkeleton from "../../components/common/GlobalSkeleton";
 import SalesOrders1 from "../../pages/SalesOrders1";
+import PurchaseOrders from "../../pages/PurchaseOrders";
+import CustomerRegistration from "../../pages/CustomerRegistration";
+import SalesInvoiceCreation from "../../pages/SalesInvoiceCreation";
 
 
 // =====================================
@@ -75,6 +78,14 @@ const AppRouter = () => {
             <Route
               path={routes.sales.orders}
               element={<SalesOrders1 />}
+            />
+            <Route
+              path={routes.purchase.index}
+              element={<PurchaseOrders />}
+            />
+            <Route
+              path={routes.customers.index}
+              element={<SalesInvoiceCreation />}
             />
             <Route
               path={routes.sales.orders1}

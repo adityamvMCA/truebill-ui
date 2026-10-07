@@ -7,29 +7,21 @@ const Textarea = forwardRef(
     {
       label,
       name,
-
       value = "",
       onChange,
-
       placeholder = "",
-
       error,
       required = false,
-
       disabled = false,
       readOnly = false,
-
-      rows = 4,
-
+      rows = 3,
       className = "",
-
       ...rest
     },
     ref
   ) => {
     return (
-      <div className={`form-field ${className}`}>
-
+      <div className="form-field">
         {label && (
           <label
             htmlFor={name}
@@ -56,19 +48,16 @@ const Textarea = forwardRef(
           readOnly={readOnly}
           rows={rows}
           className={`form-textarea ${
-            error
-              ? "form-input-error"
-              : ""
-          }`}
+            error ? "has-error" : ""
+          } ${className}`}
           {...rest}
         />
 
         {error && (
-          <div className="form-error">
+          <span className="form-error">
             {error}
-          </div>
+          </span>
         )}
-
       </div>
     );
   }

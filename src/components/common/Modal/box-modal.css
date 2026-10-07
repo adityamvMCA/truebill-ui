@@ -1,0 +1,700 @@
+/* =====================================================
+   BOX MODAL OVERLAY
+===================================================== */
+
+.box-modal-overlay {
+  position: fixed;
+  inset: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background: rgba(15, 23, 42, 0.45);
+
+  backdrop-filter: blur(3px);
+
+  box-sizing: border-box;
+}
+
+
+/* =====================================================
+   MODAL
+===================================================== */
+
+.box-modal {
+  width: min(
+    var(--box-modal-width, 1120px),
+    100%
+  );
+
+  max-height: calc(100dvh - 40px);
+
+  display: flex;
+  flex-direction: column;
+
+  overflow: hidden;
+
+  background: var(--card-bg);
+
+  border: 1px solid var(--border-color);
+
+  border-radius: 12px;
+
+  box-shadow:
+    0 15px 45px
+    rgba(15, 23, 42, 0.18);
+
+  box-sizing: border-box;
+
+  animation:
+    box-modal-enter
+    0.16s ease-out;
+}
+
+
+/* =====================================================
+   ANIMATION
+===================================================== */
+
+@keyframes box-modal-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px)
+      scale(0.99);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0)
+      scale(1);
+  }
+}
+
+
+/* =====================================================
+   HEADER
+===================================================== */
+
+.box-modal-header {
+  min-height: 64px;
+
+  padding: 0 20px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+
+  background: var(--card-bg);
+
+  border-bottom:
+    1px solid
+    var(--border-color);
+
+  flex-shrink: 0;
+
+  box-sizing: border-box;
+}
+
+
+/* =====================================================
+   TITLE
+===================================================== */
+
+.box-modal-title-wrapper {
+  min-width: 0;
+
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+}
+
+
+.box-modal-title-icon {
+  width: 38px;
+  height: 38px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border-radius: 9px;
+
+  background: var(--primary-light);
+
+  color: var(--primary-color);
+}
+
+
+.box-modal-title-content {
+  min-width: 0;
+}
+
+
+.box-modal-title-content h2 {
+  margin: 0;
+
+  font-size: 17px;
+
+  line-height: 1.25;
+
+  font-weight: 700;
+
+  color: var(--text-primary);
+}
+
+
+.box-modal-title-content span {
+  display: block;
+
+  margin-top: 2px;
+
+  font-size: 11px;
+
+  line-height: 1.3;
+
+  color: var(--text-secondary);
+}
+
+
+/* =====================================================
+   CLOSE
+===================================================== */
+
+.box-modal-close {
+  width: 32px;
+  height: 32px;
+
+  padding: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border: 1px solid transparent;
+
+  border-radius: 6px;
+
+  background: transparent;
+
+  color: var(--text-secondary);
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+
+.box-modal-close:hover {
+  background: var(--page-bg);
+
+  color: var(--danger);
+
+  border-color:
+    var(--border-color);
+}
+
+
+.box-modal-close:focus-visible {
+  outline: none;
+
+  box-shadow:
+    0 0 0 2px
+    var(--primary-light);
+}
+
+
+/* =====================================================
+   BODY
+===================================================== */
+
+.box-modal-body {
+  min-height: 0;
+
+  flex: 1;
+
+  padding: 18px;
+
+  background: var(--page-bg);
+
+  box-sizing: border-box;
+}
+
+
+.box-modal-body-scroll {
+  overflow-y: auto;
+}
+
+
+/* =====================================================
+   CUSTOM SCROLLBAR
+===================================================== */
+
+.box-modal-body::-webkit-scrollbar {
+  width: 7px;
+}
+
+
+.box-modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+
+.box-modal-body::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+
+  border-radius: 10px;
+}
+
+
+.box-modal-body::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+
+/* =====================================================
+   FOOTER
+===================================================== */
+
+.box-modal-footer {
+  min-height: 60px;
+
+  padding: 10px 18px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 10px;
+
+  background: var(--card-bg);
+
+  border-top:
+    1px solid
+    var(--border-color);
+
+  flex-shrink: 0;
+
+  box-sizing: border-box;
+}
+
+
+/* =====================================================
+   GENERIC BOX SECTION
+===================================================== */
+
+.box-modal-section {
+  margin-bottom: 14px;
+
+  padding: 16px;
+
+  background: var(--card-bg);
+
+  border:
+    1px solid
+    var(--border-color);
+
+  border-radius: 9px;
+}
+
+
+.box-modal-section:last-child {
+  margin-bottom: 0;
+}
+
+
+/* =====================================================
+   SECTION HEADER
+===================================================== */
+
+.box-modal-section-header {
+  display: flex;
+  align-items: center;
+
+  gap: 9px;
+
+  margin-bottom: 16px;
+}
+
+
+.box-modal-section-icon {
+  width: 32px;
+  height: 32px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border-radius: 7px;
+
+  background: var(--primary-light);
+
+  color: var(--primary-color);
+}
+
+
+.box-modal-section-header-content {
+  min-width: 0;
+}
+
+
+.box-modal-section-header h3 {
+  margin: 0;
+
+  font-size: 13px;
+
+  line-height: 1.3;
+
+  font-weight: 700;
+
+  color: var(--text-primary);
+}
+
+
+.box-modal-section-header p {
+  margin: 2px 0 0;
+
+  font-size: 10px;
+
+  line-height: 1.3;
+
+  color: var(--text-secondary);
+}
+
+
+/* =====================================================
+   FORM GRID
+===================================================== */
+
+.box-modal-form-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      3,
+      minmax(0, 1fr)
+    );
+
+  gap: 14px;
+}
+
+
+.box-modal-form-full {
+  grid-column: 1 / -1;
+}
+
+
+/* =====================================================
+   GENERIC TABLE
+===================================================== */
+
+.box-modal-table-wrapper {
+  width: 100%;
+
+  overflow-x: auto;
+
+  border:
+    1px solid
+    var(--border-color);
+
+  border-radius: 7px;
+}
+
+
+.box-modal-table {
+  width: 100%;
+
+  min-width: 800px;
+
+  border-collapse: collapse;
+}
+
+
+.box-modal-table th {
+  padding: 9px;
+
+  background: var(--page-bg);
+
+  border-bottom:
+    1px solid
+    var(--border-color);
+
+  text-align: left;
+
+  font-size: 10px;
+
+  font-weight: 700;
+
+  color: var(--text-secondary);
+
+  white-space: nowrap;
+}
+
+
+.box-modal-table td {
+  padding: 7px;
+
+  border-bottom:
+    1px solid
+    var(--border-color);
+
+  vertical-align: middle;
+}
+
+
+.box-modal-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+
+.box-modal-table tbody tr:hover td {
+  background: var(--primary-light);
+}
+
+
+/* =====================================================
+   DELETE BUTTON
+===================================================== */
+
+.box-modal-delete {
+  width: 29px;
+  height: 29px;
+
+  padding: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 0;
+
+  border-radius: 5px;
+
+  background: transparent;
+
+  color: var(--danger);
+
+  cursor: pointer;
+}
+
+
+.box-modal-delete:hover {
+  background: var(--primary-light);
+}
+
+
+.box-modal-delete:disabled {
+  opacity: 0.3;
+
+  cursor: not-allowed;
+}
+
+
+/* =====================================================
+   SUMMARY
+===================================================== */
+
+.box-modal-summary {
+  width: 100%;
+
+  max-width: 360px;
+
+  margin-left: auto;
+
+  margin-top: 14px;
+
+  padding: 16px;
+
+  background: var(--card-bg);
+
+  border:
+    1px solid
+    var(--border-color);
+
+  border-radius: 9px;
+
+  box-sizing: border-box;
+}
+
+
+.box-modal-summary-row {
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 15px;
+
+  margin-bottom: 11px;
+
+  font-size: 12px;
+}
+
+
+.box-modal-summary-row span {
+  color: var(--text-secondary);
+}
+
+
+.box-modal-summary-row strong {
+  color: var(--text-primary);
+
+  font-weight: 600;
+}
+
+
+.box-modal-summary-divider {
+  height: 1px;
+
+  margin: 13px 0;
+
+  background:
+    var(--border-color);
+}
+
+
+.box-modal-summary-total {
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 15px;
+}
+
+
+.box-modal-summary-total span {
+  font-size: 13px;
+
+  font-weight: 700;
+
+  color: var(--text-primary);
+}
+
+
+.box-modal-summary-total strong {
+  font-size: 18px;
+
+  font-weight: 700;
+
+  color: var(--primary-color);
+}
+
+
+/* =====================================================
+   FOOTER ACTION GROUP
+===================================================== */
+
+.box-modal-footer-actions {
+  display: flex;
+
+  align-items: center;
+
+  gap: 7px;
+}
+
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 1000px) {
+  .box-modal-form-grid {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(0, 1fr)
+      );
+  }
+}
+
+
+@media (max-width: 767px) {
+  .box-modal-overlay {
+    padding: 0;
+
+    align-items: stretch;
+  }
+
+  .box-modal {
+    width: 100%;
+
+    height: 100dvh;
+
+    max-height: 100dvh;
+
+    border: 0;
+
+    border-radius: 0;
+  }
+
+  .box-modal-header {
+    min-height: 58px;
+
+    padding: 0 14px;
+  }
+
+  .box-modal-title-icon {
+    width: 34px;
+    height: 34px;
+  }
+
+  .box-modal-title-content h2 {
+    font-size: 15px;
+  }
+
+  .box-modal-body {
+    padding: 12px;
+  }
+
+  .box-modal-section {
+    padding: 13px;
+
+    margin-bottom: 10px;
+  }
+
+  .box-modal-form-grid {
+    grid-template-columns: 1fr;
+
+    gap: 11px;
+  }
+
+  .box-modal-form-full {
+    grid-column: auto;
+  }
+
+  .box-modal-footer {
+    padding: 9px 12px;
+  }
+}
+
+
+@media (max-width: 480px) {
+  .box-modal-footer {
+    flex-direction: column-reverse;
+
+    align-items: stretch;
+  }
+
+  .box-modal-footer-actions {
+    width: 100%;
+  }
+
+  .box-modal-footer-actions > * {
+    flex: 1;
+  }
+}

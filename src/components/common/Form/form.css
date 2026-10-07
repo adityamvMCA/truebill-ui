@@ -1,41 +1,39 @@
-/* =========================================
-   FIELD
-========================================= */
+/* =========================================================
+   REUSABLE FORM COMPONENTS
+   UI MATCHES ORIGINAL SALES ORDER FORM
+========================================================= */
 
 .form-field {
   width: 100%;
   min-width: 0;
 }
 
+/* =========================================================
+   LABEL
+========================================================= */
+
 .form-label {
   display: block;
 
-  margin-bottom: 5px;
+  margin-bottom: 6px;
 
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 12px;
+  line-height: 13px;
 
-  line-height: 1.3;
+  font-weight: 700;
 
-  color: var(
-    --text-secondary,
-    #4b5563
-  );
+  color: var(--text-secondary, #000000);
 }
 
 .form-required {
-  margin-left: 3px;
+  color: #dc2626;
 
-  color: var(
-    --danger,
-    #dc2626
-  );
+  margin-left: 2px;
 }
 
-
-/* =========================================
-   INPUT
-========================================= */
+/* =========================================================
+   INPUT WRAPPER
+========================================================= */
 
 .form-input-wrapper {
   position: relative;
@@ -43,42 +41,48 @@
   width: 100%;
 }
 
+/* =========================================================
+   INPUT
+========================================================= */
+
 .form-input {
   width: 100%;
-  height: 34px;
+  min-width: 0;
 
-  padding: 0 10px;
+  height: 36px;
+
+  padding: 0 9px;
+
+  box-sizing: border-box;
 
   border: 1px solid
-    var(--border-color, #d1d5db);
+    var(--border-color, #dfe3e8);
 
-  border-radius: 6px;
-
-  outline: none;
+  border-radius: 5px;
 
   background: var(
-    --input-bg,
-    var(--card-bg, #ffffff)
+    --card-bg,
+    #ffffff
   );
 
   color: var(
     --text-primary,
-    #111827
+    #334155
   );
 
-  font-size: 12px;
+  font-family: inherit;
+
+  font-size: 11px;
+
+  outline: none;
 
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease;
 }
 
-.form-input::placeholder,
-.form-textarea::placeholder {
-  color: var(
-    --text-muted,
-    #9ca3af
-  );
+.form-input::placeholder {
+  color: #a8b0bb;
 }
 
 .form-input:focus {
@@ -89,83 +93,98 @@
 
   box-shadow:
     0 0 0 2px
-    var(--primary-soft, #eff6ff);
+    var(
+      --primary-light,
+      #eff6ff
+    );
 }
 
-.form-input:disabled,
-.form-textarea:disabled {
-  opacity: 0.65;
+.form-input:disabled {
+  background: #f8fafc;
+
+  color: #94a3b8;
 
   cursor: not-allowed;
-
-  background: var(
-    --page-bg,
-    #f8fafc
-  );
 }
 
+.form-input[readonly] {
+  background: #f8fafc;
+}
 
-/* =========================================
-   ICON INPUT
-========================================= */
+/* =========================================================
+   INPUT ICON
+========================================================= */
 
-.form-input-with-icon .form-input {
-  padding-left: 34px;
+.form-input-wrapper.has-icon
+  .form-input {
+  padding-left: 32px;
 }
 
 .form-input-icon {
   position: absolute;
 
-  left: 10px;
+  left: 9px;
   top: 50%;
 
   transform: translateY(-50%);
 
-  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-  color: var(
-    --text-muted,
-    #9ca3af
-  );
+  color: #94a3b8;
 
   pointer-events: none;
+
+  z-index: 1;
 }
 
-
-/* =========================================
+/* =========================================================
    SELECT
-========================================= */
+========================================================= */
 
 .form-select-wrapper {
   position: relative;
+
+  width: 100%;
 }
 
 .form-select {
   width: 100%;
-  height: 34px;
+  min-width: 0;
 
-  appearance: none;
+  height: 36px;
 
-  padding: 0 32px 0 10px;
+  padding: 0 32px 0 9px;
+
+  box-sizing: border-box;
 
   border: 1px solid
-    var(--border-color, #d1d5db);
+    var(--border-color, #dfe3e8);
 
-  border-radius: 6px;
+  border-radius: 5px;
 
-  outline: none;
-
-  background:
-    var(--input-bg, #ffffff);
+  background: var(
+    --card-bg,
+    #ffffff
+  );
 
   color: var(
     --text-primary,
-    #111827
+    #334155
   );
 
-  font-size: 12px;
+  font-family: inherit;
+
+  font-size: 11px;
+
+  outline: none;
 
   cursor: pointer;
+
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
 
   transition:
     border-color 0.15s ease,
@@ -180,67 +199,108 @@
 
   box-shadow:
     0 0 0 2px
-    var(--primary-soft, #eff6ff);
+    var(
+      --primary-light,
+      #eff6ff
+    );
 }
 
-.form-select-with-icon {
-  padding-left: 34px;
+.form-select:disabled {
+  background: #f8fafc;
+
+  color: #94a3b8;
+
+  cursor: not-allowed;
 }
 
 .form-select-arrow {
   position: absolute;
 
-  right: 10px;
+  right: 9px;
+
   top: 50%;
 
   transform: translateY(-50%);
 
-  color: var(
-    --text-muted,
-    #9ca3af
-  );
+  color: #94a3b8;
 
   pointer-events: none;
 }
 
+/* =========================================================
+   SELECT LEFT ICON
+========================================================= */
 
-/* =========================================
+.form-select-left-icon {
+  position: absolute;
+
+  left: 9px;
+
+  top: 50%;
+
+  transform: translateY(-50%);
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  color: #94a3b8;
+
+  pointer-events: none;
+
+  z-index: 1;
+}
+
+.form-select.has-left-icon {
+  padding-left: 32px;
+}
+
+/* =========================================================
    TEXTAREA
-========================================= */
+========================================================= */
 
 .form-textarea {
   width: 100%;
 
+  min-width: 0;
+
   min-height: 80px;
 
-  padding: 8px 10px;
+  padding: 8px 9px;
 
-  resize: vertical;
+  box-sizing: border-box;
 
   border: 1px solid
-    var(--border-color, #d1d5db);
+    var(--border-color, #dfe3e8);
 
-  border-radius: 6px;
-
-  outline: none;
+  border-radius: 5px;
 
   background: var(
-    --input-bg,
-    var(--card-bg, #ffffff)
+    --card-bg,
+    #ffffff
   );
 
   color: var(
     --text-primary,
-    #111827
+    #334155
   );
 
-  font-size: 12px;
+  font-family: inherit;
 
-  line-height: 1.45;
+  font-size: 11px;
+
+  outline: none;
+
+  resize: vertical;
 
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease;
+}
+
+.form-textarea::placeholder {
+  color: #a8b0bb;
 }
 
 .form-textarea:focus {
@@ -251,141 +311,85 @@
 
   box-shadow:
     0 0 0 2px
-    var(--primary-soft, #eff6ff);
+    var(
+      --primary-light,
+      #eff6ff
+    );
 }
 
+.form-textarea:disabled {
+  background: #f8fafc;
 
-/* =========================================
+  color: #94a3b8;
+
+  cursor: not-allowed;
+}
+
+/* =========================================================
    ERROR
-========================================= */
+========================================================= */
 
-.form-input-error .form-input,
-.form-input-error.form-textarea,
-.form-input-error .form-select {
-  border-color: var(
-    --danger,
-    #dc2626
-  );
+.form-input.has-error,
+.form-select.has-error,
+.form-textarea.has-error {
+  border-color: #dc2626;
+}
+
+.form-input.has-error:focus,
+.form-select.has-error:focus,
+.form-textarea.has-error:focus {
+  box-shadow:
+    0 0 0 2px
+    rgba(220, 38, 38, 0.1);
 }
 
 .form-error {
+  display: block;
+
   margin-top: 4px;
+
+  color: #dc2626;
 
   font-size: 10px;
 
-  color: var(
-    --danger,
-    #dc2626
-  );
+  line-height: 13px;
 }
 
-
-/* =========================================
+/* =========================================================
    BUTTON
-========================================= */
+========================================================= */
 
 .form-button {
+  min-height: 32px;
+
+  padding: 0 13px;
+
   display: inline-flex;
+
   align-items: center;
+
   justify-content: center;
 
-  gap: 6px;
+  gap: 5px;
 
-  border: 1px solid transparent;
+  border-radius: 5px;
 
-  border-radius: 6px;
+  font-family: inherit;
 
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 10px;
+
+  font-weight: 500;
 
   cursor: pointer;
 
+  white-space: nowrap;
+
+  border: 1px solid transparent;
+
   transition:
     background 0.15s ease,
-    border-color 0.15s ease,
-    opacity 0.15s ease;
-}
-
-.form-button-small {
-  height: 30px;
-  padding: 0 10px;
-}
-
-.form-button-medium {
-  height: 34px;
-  padding: 0 12px;
-}
-
-.form-button-large {
-  height: 38px;
-  padding: 0 15px;
-}
-
-.form-button-primary {
-  background: var(
-    --primary-color,
-    #2563eb
-  );
-
-  border-color: var(
-    --primary-color,
-    #2563eb
-  );
-
-  color: #ffffff;
-}
-
-.form-button-primary:hover {
-  background: var(
-    --primary-hover,
-    #1d4ed8
-  );
-}
-
-.form-button-secondary {
-  background: var(
-    --card-bg,
-    #ffffff
-  );
-
-  border-color: var(
-    --border-color,
-    #d1d5db
-  );
-
-  color: var(
-    --text-secondary,
-    #4b5563
-  );
-}
-
-.form-button-secondary:hover {
-  background: var(
-    --page-bg,
-    #f8fafc
-  );
-}
-
-.form-button-danger {
-  background: var(
-    --danger,
-    #dc2626
-  );
-
-  color: #ffffff;
-}
-
-.form-button-success {
-  background: var(
-    --success,
-    #16a34a
-  );
-
-  color: #ffffff;
-}
-
-.form-button-full {
-  width: 100%;
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .form-button:disabled {
@@ -394,24 +398,155 @@
   cursor: not-allowed;
 }
 
+/* PRIMARY */
+
+.form-button-primary {
+  border-color:
+    var(--primary-color, #2563eb);
+
+  background:
+    var(--primary-color, #2563eb);
+
+  color: #ffffff;
+}
+
+.form-button-primary:hover:not(:disabled) {
+  background:
+    var(--primary-hover, #1d4ed8);
+}
+
+/* SECONDARY */
+
+.form-button-secondary {
+  border-color: #dfe3e8;
+
+  background: #ffffff;
+
+  color: #64748b;
+}
+
+.form-button-secondary:hover:not(:disabled) {
+  background: #f8fafc;
+}
+
+/* SUCCESS */
+
+.form-button-success {
+  background: #16a34a;
+
+  border-color: #16a34a;
+
+  color: #ffffff;
+}
+
+/* DANGER */
+
+.form-button-danger {
+  background: #dc2626;
+
+  border-color: #dc2626;
+
+  color: #ffffff;
+}
+
+/* SMALL */
+
+.form-button-small {
+  min-height: 32px;
+
+  padding: 0 10px;
+
+  font-size: 10px;
+}
+
+/* MEDIUM */
+
+.form-button-medium {
+  min-height: 32px;
+}
+
+/* LARGE */
+
+.form-button-large {
+  min-height: 38px;
+
+  padding: 0 15px;
+}
+
+/* FULL WIDTH */
+
+.form-button-full {
+  width: 100%;
+}
+
+/* =========================================================
+   BUTTON SPINNER
+========================================================= */
+
 .form-button-spinner {
   width: 13px;
   height: 13px;
 
   border: 2px solid
-    rgba(255, 255, 255, 0.4);
+    rgba(255, 255, 255, 0.35);
 
   border-top-color: #ffffff;
 
   border-radius: 50%;
 
   animation:
-    form-button-spin
+    formButtonSpin
     0.7s linear infinite;
 }
 
-@keyframes form-button-spin {
+@keyframes formButtonSpin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* =========================================================
+   MOBILE
+   SAME RESPONSIVE BEHAVIOR AS ORIGINAL
+========================================================= */
+
+@media (max-width: 767px) {
+  .form-input,
+  .form-select {
+    height: 40px;
+
+    font-size: 12px;
+  }
+
+  .form-textarea {
+    font-size: 12px;
+  }
+}
+
+/* =========================================================
+   SMALL MOBILE
+========================================================= */
+
+@media (max-width: 480px) {
+  .form-input,
+  .form-select {
+    height: 40px;
+  }
+}
+
+/* =========================================================
+   ACCESSIBILITY
+========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .form-input,
+  .form-select,
+  .form-textarea,
+  .form-button {
+    transition: none;
+  }
+
+  .form-button-spinner {
+    animation: none;
   }
 }

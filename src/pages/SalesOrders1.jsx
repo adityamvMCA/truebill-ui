@@ -2,7 +2,7 @@ import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import DataList from "../components/common/DataList/DataList";
-import SalesOrderModal3 from "../components/SalesOrderModal3";
+import SalesOrderModal from "../components/SalesOrderModal";
 
 function SalesOrders1() {
   /* ========================================
@@ -588,7 +588,7 @@ function SalesOrders1() {
           SALES ORDER MODAL
       ======================================== */}
 
-      <SalesOrderModal3
+      <SalesOrderModal
         isOpen={showSalesOrderModal}
         onClose={() =>
           setShowSalesOrderModal(false)

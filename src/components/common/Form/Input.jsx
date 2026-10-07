@@ -10,32 +10,23 @@ const Input = forwardRef(
       type = "text",
       value = "",
       onChange,
-
       placeholder = "",
-
       error,
       required = false,
-
       disabled = false,
       readOnly = false,
-
       icon: Icon,
-
       className = "",
-
       min,
       max,
       step,
-
-      autoComplete,
-
+      autoComplete = "off",
       ...rest
     },
     ref
   ) => {
     return (
-      <div className={`form-field ${className}`}>
-
+      <div className="form-field">
         {label && (
           <label
             htmlFor={name}
@@ -53,20 +44,13 @@ const Input = forwardRef(
 
         <div
           className={`form-input-wrapper ${
-            Icon
-              ? "form-input-with-icon"
-              : ""
-          } ${
-            error
-              ? "form-input-error"
-              : ""
+            Icon ? "has-icon" : ""
           }`}
         >
           {Icon && (
-            <Icon
-              className="form-input-icon"
-              size={15}
-            />
+            <span className="form-input-icon">
+              <Icon size={15} />
+            </span>
           )}
 
           <input
@@ -83,17 +67,18 @@ const Input = forwardRef(
             max={max}
             step={step}
             autoComplete={autoComplete}
-            className="form-input"
+            className={`form-input ${
+              error ? "has-error" : ""
+            } ${className}`}
             {...rest}
           />
         </div>
 
         {error && (
-          <div className="form-error">
+          <span className="form-error">
             {error}
-          </div>
+          </span>
         )}
-
       </div>
     );
   }

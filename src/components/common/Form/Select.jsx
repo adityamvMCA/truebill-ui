@@ -9,30 +9,21 @@ const Select = forwardRef(
     {
       label,
       name,
-
       value = "",
       onChange,
-
       options = [],
-
-      placeholder = "Select...",
-
+      placeholder = "",
       error,
       required = false,
-
       disabled = false,
-
       icon: Icon,
-
       className = "",
-
       ...rest
     },
     ref
   ) => {
     return (
-      <div className={`form-field ${className}`}>
-
+      <div className="form-field">
         {label && (
           <label
             htmlFor={name}
@@ -48,19 +39,11 @@ const Select = forwardRef(
           </label>
         )}
 
-        <div
-          className={`form-input-wrapper form-select-wrapper ${
-            error
-              ? "form-input-error"
-              : ""
-          }`}
-        >
-
+        <div className="form-select-wrapper">
           {Icon && (
-            <Icon
-              className="form-input-icon"
-              size={15}
-            />
+            <span className="form-select-left-icon">
+              <Icon size={15} />
+            </span>
           )}
 
           <select
@@ -71,42 +54,48 @@ const Select = forwardRef(
             onChange={onChange}
             disabled={disabled}
             className={`form-select ${
-              Icon
-                ? "form-select-with-icon"
-                : ""
-            }`}
+              Icon ? "has-left-icon" : ""
+            } ${error ? "has-error" : ""} ${className}`}
             {...rest}
           >
-            <option value="">
-              {placeholder}
-            </option>
-
-            {options.map((option) => (
-              <option
-                key={option.value}
-                value={option.value}
-                disabled={
-                  option.disabled
-                }
-              >
-                {option.label}
+            {placeholder && (
+              <option value="">
+                {placeholder}
               </option>
-            ))}
+            )}
+
+            {options.map((option) => {
+              const item =
+                typeof option === "string"
+                  ? {
+                      value: option,
+                      label: option,
+                    }
+                  : option;
+
+              return (
+                <option
+                  key={item.value}
+                  value={item.value}
+                  disabled={item.disabled}
+                >
+                  {item.label}
+                </option>
+              );
+            })}
           </select>
 
           <ChevronDown
-            size={15}
             className="form-select-arrow"
+            size={15}
           />
-
         </div>
 
         {error && (
-          <div className="form-error">
+          <span className="form-error">
             {error}
-          </div>
+          </span>
         )}
-
       </div>
     );
   }

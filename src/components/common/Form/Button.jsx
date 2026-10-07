@@ -6,25 +6,15 @@ const Button = forwardRef(
   (
     {
       children,
-
       type = "button",
-
       variant = "primary",
-
       size = "medium",
-
       icon: Icon,
-
       loading = false,
-
       disabled = false,
-
       fullWidth = false,
-
       className = "",
-
       onClick,
-
       ...rest
     },
     ref
@@ -33,10 +23,8 @@ const Button = forwardRef(
       <button
         ref={ref}
         type={type}
+        disabled={disabled || loading}
         onClick={onClick}
-        disabled={
-          disabled || loading
-        }
         className={`
           form-button
           form-button-${variant}
@@ -46,19 +34,13 @@ const Button = forwardRef(
         `}
         {...rest}
       >
-
-        {loading && (
+        {loading ? (
           <span className="form-button-spinner" />
+        ) : (
+          Icon && <Icon size={15} />
         )}
 
-        {!loading && Icon && (
-          <Icon size={15} />
-        )}
-
-        <span>
-          {children}
-        </span>
-
+        <span>{children}</span>
       </button>
     );
   }

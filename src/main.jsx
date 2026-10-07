@@ -28,6 +28,7 @@ import App from "./App";
 import "./styles/common.css";
 import "./styles/layout.css";
 import "bootstrap/dist/css/bootstrap.min.css";
+import "./components/common/Form/form.css";
 ReactDOM.createRoot(
   document.getElementById("root")
 ).render(

@@ -10,16 +10,15 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
+import Select from "../components/common/Form/Select";
+import Input from "../components/common/Form/Input";
+import Textarea from "../components/common/Form/Textarea";
+import Button from "../components/common/Form/Button";
+import SectionModal from "../components/common/Modal/SectionModal";
 
-import Select from "./common/Form/Select";
-import Input from "./common/Form/Input";
-import Textarea from "./common/Form/Textarea";
-import Button from "./common/Form/Button";
-import SectionModal from "./common/Modal/SectionModal";
 
-// No sales-order-modal.css
 
-const SalesOrderModal3 = ({
+const PurchaseOrderModal = ({
   isOpen,
   onClose,
   onSave,
@@ -28,36 +27,35 @@ const SalesOrderModal3 = ({
      ACTIVE SECTION
   ===================================================== */
 
-  const [activeSection, setActiveSection] = useState("basic");
+  const [activeSection, setActiveSection] =
+    useState("basic");
 
   /* =====================================================
      FORM DATA
   ===================================================== */
 
   const [formData, setFormData] = useState({
-    orderNo: "SAL01",
+    purchaseOrderNo: "PO-00001",
 
     orderDate: new Date()
       .toISOString()
       .split("T")[0],
 
-    customer: "",
-    customerPhone: "",
+    supplier: "",
+    supplierPhone: "",
 
     billingAddress: "",
     shippingAddress: "",
 
-    paymentTerms: "Cash",
+    paymentTerms: "30 Days",
 
-    priceList: "Default Price List",
+    priceList: "Purchase Price List",
 
     warehouse: "Main Warehouse",
 
-    deliveryDate: "",
+    expectedDate: "",
 
     deliveryStatus: "Pending",
-
-    deliveryAddress: "",
 
     notes: "",
   });
@@ -78,7 +76,7 @@ const SalesOrderModal3 = ({
   ]);
 
   /* =====================================================
-     FIELD UPDATE
+     UPDATE FORM FIELD
   ===================================================== */
 
   const updateField = (field, value) => {
@@ -89,10 +87,14 @@ const SalesOrderModal3 = ({
   };
 
   /* =====================================================
-     PRODUCT UPDATE
+     UPDATE PRODUCT
   ===================================================== */
 
-  const updateProduct = (id, field, value) => {
+  const updateProduct = (
+    id,
+    field,
+    value
+  ) => {
     setProducts((previous) =>
       previous.map((item) =>
         item.id === id
@@ -114,7 +116,6 @@ const SalesOrderModal3 = ({
       ...previous,
       {
         id: Date.now() + Math.random(),
-
         product: "",
         qty: 1,
         rate: 0,
@@ -134,24 +135,32 @@ const SalesOrderModal3 = ({
     }
 
     setProducts((previous) =>
-      previous.filter((item) => item.id !== id)
+      previous.filter(
+        (item) => item.id !== id
+      )
     );
   };
 
   /* =====================================================
-     PRODUCT AMOUNT
+     CALCULATE PRODUCT AMOUNT
   ===================================================== */
 
-  const calculateProductAmount = (item) => {
+  const calculateProductAmount = (
+    item
+  ) => {
     const qty = Number(item.qty) || 0;
 
     const rate = Number(item.rate) || 0;
 
-    const discount = Number(item.discount) || 0;
+    const discount =
+      Number(item.discount) || 0;
 
     const amount = qty * rate;
 
-    return amount - (amount * discount) / 100;
+    return (
+      amount -
+      (amount * discount) / 100
+    );
   };
 
   /* =====================================================
@@ -160,7 +169,8 @@ const SalesOrderModal3 = ({
 
   const subtotal = products.reduce(
     (total, item) =>
-      total + calculateProductAmount(item),
+      total +
+      calculateProductAmount(item),
     0
   );
 
@@ -170,11 +180,16 @@ const SalesOrderModal3 = ({
 
   const taxAmount = products.reduce(
     (total, item) => {
-      const amount = calculateProductAmount(item);
+      const amount =
+        calculateProductAmount(item);
 
-      const tax = Number(item.tax) || 0;
+      const tax =
+        Number(item.tax) || 0;
 
-      return total + (amount * tax) / 100;
+      return (
+        total +
+        (amount * tax) / 100
+      );
     },
     0
   );
@@ -183,10 +198,11 @@ const SalesOrderModal3 = ({
      GRAND TOTAL
   ===================================================== */
 
-  const grandTotal = subtotal + taxAmount;
+  const grandTotal =
+    subtotal + taxAmount;
 
   /* =====================================================
-     SAVE
+     SAVE PURCHASE ORDER
   ===================================================== */
 
   const handleSave = () => {
@@ -198,10 +214,12 @@ const SalesOrderModal3 = ({
       subtotal,
       taxAmount,
       grandTotal,
+
+      status: "Created",
     };
 
     console.log(
-      "Sales Order Payload:",
+      "Purchase Order Payload:",
       payload
     );
 
@@ -228,7 +246,7 @@ const SalesOrderModal3 = ({
     };
 
     console.log(
-      "Sales Order Draft:",
+      "Purchase Order Draft:",
       payload
     );
 
@@ -236,7 +254,7 @@ const SalesOrderModal3 = ({
   };
 
   /* =====================================================
-     SECTIONS
+     SECTION CONFIGURATION
   ===================================================== */
 
   const sections = [
@@ -245,197 +263,237 @@ const SalesOrderModal3 = ({
       label: "Basic Details",
       icon: FileText,
       required: true,
-      title: "Basic Details",
-      description:
-        "Enter basic sales order information",
     },
 
     {
-      id: "customer",
-      label: "Customer Details",
+      id: "supplier",
+      label: "Supplier Details",
       icon: User,
-      title: "Customer Details",
-      description:
-        "Customer contact and address information",
     },
 
     {
       id: "products",
       label: "Products",
       icon: Package,
-      title: "Products",
-      description:
-        "Add products to this sales order",
     },
 
     {
       id: "delivery",
       label: "Delivery Details",
       icon: Truck,
-      title: "Delivery Details",
-      description:
-        "Enter delivery information",
     },
 
     {
       id: "pricing",
       label: "Pricing Details",
       icon: IndianRupee,
-      title: "Pricing Details",
-      description:
-        "Configure pricing and payment details",
     },
 
     {
       id: "advanced",
       label: "Advanced Details",
       icon: Settings,
-      title: "Advanced Details",
-      description:
-        "Additional sales order information",
     },
   ];
 
   /* =====================================================
-     OPTIONS
+     SUPPLIER OPTIONS
   ===================================================== */
 
-  const customerOptions = [
+  const supplierOptions = [
     {
-      value: "CUST001",
-      label: "Shree Balaji Constructions",
+      value: "SUP001",
+      label: "ABC Traders",
     },
+
     {
-      value: "CUST002",
-      label: "Vijay Steel Industries",
+      value: "SUP002",
+      label: "Shree Suppliers",
     },
+
     {
-      value: "CUST003",
-      label: "Karnataka Electricals",
+      value: "SUP003",
+      label: "Karnataka Steel Suppliers",
+    },
+
+    {
+      value: "SUP004",
+      label: "Sri Balaji Enterprises",
     },
   ];
+
+  /* =====================================================
+     PAYMENT TERMS
+  ===================================================== */
 
   const paymentTermsOptions = [
     {
       value: "Cash",
       label: "Cash",
     },
+
     {
       value: "15 Days",
       label: "15 Days",
     },
+
     {
       value: "30 Days",
       label: "30 Days",
     },
+
     {
       value: "45 Days",
       label: "45 Days",
     },
+
     {
       value: "60 Days",
       label: "60 Days",
     },
   ];
 
+  /* =====================================================
+     PRICE LIST
+  ===================================================== */
+
   const priceListOptions = [
     {
-      value: "Default Price List",
-      label: "Default Price List",
+      value: "Purchase Price List",
+      label: "Purchase Price List",
     },
+
     {
-      value: "Retail Price",
-      label: "Retail Price",
+      value: "Wholesale Purchase",
+      label: "Wholesale Purchase",
     },
+
     {
-      value: "Wholesale Price",
-      label: "Wholesale Price",
+      value: "Special Supplier Price",
+      label: "Special Supplier Price",
     },
   ];
+
+  /* =====================================================
+     WAREHOUSE
+  ===================================================== */
 
   const warehouseOptions = [
     {
       value: "Main Warehouse",
       label: "Main Warehouse",
     },
+
     {
       value: "Warehouse 2",
       label: "Warehouse 2",
     },
+
     {
       value: "Warehouse 3",
       label: "Warehouse 3",
     },
   ];
 
+  /* =====================================================
+     DELIVERY STATUS
+  ===================================================== */
+
   const deliveryStatusOptions = [
     {
       value: "Pending",
       label: "Pending",
     },
+
     {
       value: "Processing",
       label: "Processing",
     },
+
     {
-      value: "Partially Delivered",
-      label: "Partially Delivered",
+      value: "Partially Received",
+      label: "Partially Received",
     },
+
     {
-      value: "Delivered",
-      label: "Delivered",
+      value: "Received",
+      label: "Received",
     },
   ];
+
+  /* =====================================================
+     PRODUCT OPTIONS
+  ===================================================== */
 
   const productOptions = [
     {
       value: "Cement",
       label: "Cement",
     },
+
     {
       value: "Steel",
       label: "Steel",
     },
+
     {
       value: "Bricks",
       label: "Bricks",
     },
+
     {
       value: "Electrical Wire",
       label: "Electrical Wire",
     },
+
+    {
+      value: "Tiles",
+      label: "Tiles",
+    },
+
+    {
+      value: "Paint",
+      label: "Paint",
+    },
   ];
 
   /* =====================================================
-     BASIC SECTION
+     BASIC DETAILS
   ===================================================== */
 
   const renderBasicSection = () => {
     return (
       <>
-        <div className="sales-form-section-title">
+        <div className="section-form-title">
           <h3>Basic Details</h3>
 
           <p>
-            Enter basic sales order information
+            Enter basic purchase order
+            information
           </p>
         </div>
 
-        <div className="sales-form-grid">
+        <div className="section-form-grid">
+
+          {/* PURCHASE ORDER NUMBER */}
 
           <Input
-            label="Order No"
-            name="orderNo"
-            value={formData.orderNo}
+            label="Purchase Order No"
+            name="purchaseOrderNo"
+            value={
+              formData.purchaseOrderNo
+            }
             onChange={(event) =>
               updateField(
-                "orderNo",
+                "purchaseOrderNo",
                 event.target.value
               )
             }
-            placeholder="Enter order number"
+            placeholder="Enter purchase order number"
             required
           />
+
+          {/* ORDER DATE */}
 
           <Input
             label="Order Date"
@@ -451,33 +509,43 @@ const SalesOrderModal3 = ({
             required
           />
 
+          {/* SUPPLIER */}
+
           <Select
-            label="Customer"
-            name="customer"
-            value={formData.customer}
+            label="Supplier"
+            name="supplier"
+            value={formData.supplier}
             onChange={(event) =>
               updateField(
-                "customer",
+                "supplier",
                 event.target.value
               )
             }
-            options={customerOptions}
-            placeholder="Select Customer"
+            options={supplierOptions}
+            placeholder="Select Supplier"
             required
           />
+
+          {/* PAYMENT TERMS */}
 
           <Select
             label="Payment Terms"
             name="paymentTerms"
-            value={formData.paymentTerms}
+            value={
+              formData.paymentTerms
+            }
             onChange={(event) =>
               updateField(
                 "paymentTerms",
                 event.target.value
               )
             }
-            options={paymentTermsOptions}
+            options={
+              paymentTermsOptions
+            }
           />
+
+          {/* PRICE LIST */}
 
           <Select
             label="Price List"
@@ -491,6 +559,8 @@ const SalesOrderModal3 = ({
             }
             options={priceListOptions}
           />
+
+          {/* WAREHOUSE */}
 
           <Select
             label="Warehouse"
@@ -511,30 +581,33 @@ const SalesOrderModal3 = ({
   };
 
   /* =====================================================
-     CUSTOMER SECTION
+     SUPPLIER DETAILS
   ===================================================== */
 
-  const renderCustomerSection = () => {
+  const renderSupplierSection = () => {
     return (
       <>
-        <div className="sales-form-section-title">
-          <h3>Customer Details</h3>
+        <div className="section-form-title">
+          <h3>Supplier Details</h3>
 
           <p>
-            Customer contact and address information
+            Supplier contact and address
+            information
           </p>
         </div>
 
-        <div className="sales-form-grid">
+        <div className="section-form-grid">
 
           <Input
-            label="Customer Phone"
-            name="customerPhone"
+            label="Supplier Phone"
+            name="supplierPhone"
             type="tel"
-            value={formData.customerPhone}
+            value={
+              formData.supplierPhone
+            }
             onChange={(event) =>
               updateField(
-                "customerPhone",
+                "supplierPhone",
                 event.target.value
               )
             }
@@ -543,11 +616,13 @@ const SalesOrderModal3 = ({
 
           <div />
 
-          <div className="sales-form-full">
+          <div className="section-form-full">
             <Textarea
               label="Billing Address"
               name="billingAddress"
-              value={formData.billingAddress}
+              value={
+                formData.billingAddress
+              }
               onChange={(event) =>
                 updateField(
                   "billingAddress",
@@ -559,11 +634,13 @@ const SalesOrderModal3 = ({
             />
           </div>
 
-          <div className="sales-form-full">
+          <div className="section-form-full">
             <Textarea
               label="Shipping Address"
               name="shippingAddress"
-              value={formData.shippingAddress}
+              value={
+                formData.shippingAddress
+              }
               onChange={(event) =>
                 updateField(
                   "shippingAddress",
@@ -581,19 +658,20 @@ const SalesOrderModal3 = ({
   };
 
   /* =====================================================
-     PRODUCTS SECTION
+     PRODUCTS
   ===================================================== */
 
   const renderProductsSection = () => {
     return (
       <>
-        <div className="sales-products-title">
+        <div className="section-form-title section-products-header">
 
           <div>
             <h3>Products</h3>
 
             <p>
-              Add products to this sales order
+              Add products to this purchase
+              order
             </p>
           </div>
 
@@ -609,9 +687,9 @@ const SalesOrderModal3 = ({
 
         </div>
 
-        <div className="sales-products-table-wrapper">
+        <div className="section-table-wrapper">
 
-          <table className="sales-products-table">
+          <table className="section-table">
 
             <thead>
               <tr>
@@ -621,7 +699,7 @@ const SalesOrderModal3 = ({
                 <th>Discount %</th>
                 <th>Tax %</th>
                 <th>Amount</th>
-                <th />
+                <th></th>
               </tr>
             </thead>
 
@@ -631,6 +709,7 @@ const SalesOrderModal3 = ({
                 <tr key={item.id}>
 
                   {/* PRODUCT */}
+
                   <td>
                     <Select
                       name={`product-${item.id}`}
@@ -642,16 +721,20 @@ const SalesOrderModal3 = ({
                           event.target.value
                         )
                       }
-                      options={productOptions}
+                      options={
+                        productOptions
+                      }
                       placeholder="Select Product"
                     />
                   </td>
 
-                  {/* QTY */}
+                  {/* QUANTITY */}
+
                   <td>
                     <Input
                       name={`qty-${item.id}`}
                       type="number"
+                      min="1"
                       value={item.qty}
                       onChange={(event) =>
                         updateProduct(
@@ -660,15 +743,17 @@ const SalesOrderModal3 = ({
                           event.target.value
                         )
                       }
-                      min="1"
                     />
                   </td>
 
                   {/* RATE */}
+
                   <td>
                     <Input
                       name={`rate-${item.id}`}
                       type="number"
+                      min="0"
+                      step="0.01"
                       value={item.rate}
                       onChange={(event) =>
                         updateProduct(
@@ -677,17 +762,20 @@ const SalesOrderModal3 = ({
                           event.target.value
                         )
                       }
-                      min="0"
-                      step="0.01"
                     />
                   </td>
 
                   {/* DISCOUNT */}
+
                   <td>
                     <Input
                       name={`discount-${item.id}`}
                       type="number"
-                      value={item.discount}
+                      min="0"
+                      step="0.01"
+                      value={
+                        item.discount
+                      }
                       onChange={(event) =>
                         updateProduct(
                           item.id,
@@ -695,16 +783,17 @@ const SalesOrderModal3 = ({
                           event.target.value
                         )
                       }
-                      min="0"
-                      step="0.01"
                     />
                   </td>
 
                   {/* TAX */}
+
                   <td>
                     <Input
                       name={`tax-${item.id}`}
                       type="number"
+                      min="0"
+                      step="0.01"
                       value={item.tax}
                       onChange={(event) =>
                         updateProduct(
@@ -713,13 +802,12 @@ const SalesOrderModal3 = ({
                           event.target.value
                         )
                       }
-                      min="0"
-                      step="0.01"
                     />
                   </td>
 
                   {/* AMOUNT */}
-                  <td className="sales-product-amount">
+
+                  <td className="section-table-amount">
                     ₹
                     {calculateProductAmount(
                       item
@@ -727,23 +815,21 @@ const SalesOrderModal3 = ({
                   </td>
 
                   {/* DELETE */}
+
                   <td>
                     <button
                       type="button"
-                      className="sales-delete-product"
+                      className="section-delete-button"
                       onClick={() =>
-                        removeProduct(item.id)
+                        removeProduct(
+                          item.id
+                        )
                       }
                       disabled={
                         products.length === 1
                       }
-                      title={
-                        products.length === 1
-                          ? "At least one product is required"
-                          : "Remove product"
-                      }
                     >
-                      <Trash2 size={15} />
+                      <Trash2 size={14} />
                     </button>
                   </td>
 
@@ -758,7 +844,7 @@ const SalesOrderModal3 = ({
 
         {/* SUMMARY */}
 
-        <div className="sales-summary">
+        <div className="section-summary">
 
           <div>
             <span>Subtotal</span>
@@ -776,7 +862,7 @@ const SalesOrderModal3 = ({
             </strong>
           </div>
 
-          <div className="sales-grand-total">
+          <div className="section-grand-total">
             <span>Grand Total</span>
 
             <strong>
@@ -790,30 +876,33 @@ const SalesOrderModal3 = ({
   };
 
   /* =====================================================
-     DELIVERY SECTION
+     DELIVERY DETAILS
   ===================================================== */
 
   const renderDeliverySection = () => {
     return (
       <>
-        <div className="sales-form-section-title">
+        <div className="section-form-title">
           <h3>Delivery Details</h3>
 
           <p>
-            Enter delivery information
+            Enter expected delivery
+            information
           </p>
         </div>
 
-        <div className="sales-form-grid">
+        <div className="section-form-grid">
 
           <Input
-            label="Delivery Date"
-            name="deliveryDate"
+            label="Expected Date"
+            name="expectedDate"
             type="date"
-            value={formData.deliveryDate}
+            value={
+              formData.expectedDate
+            }
             onChange={(event) =>
               updateField(
-                "deliveryDate",
+                "expectedDate",
                 event.target.value
               )
             }
@@ -822,31 +911,19 @@ const SalesOrderModal3 = ({
           <Select
             label="Delivery Status"
             name="deliveryStatus"
-            value={formData.deliveryStatus}
+            value={
+              formData.deliveryStatus
+            }
             onChange={(event) =>
               updateField(
                 "deliveryStatus",
                 event.target.value
               )
             }
-            options={deliveryStatusOptions}
+            options={
+              deliveryStatusOptions
+            }
           />
-
-          <div className="sales-form-full">
-            <Textarea
-              label="Delivery Address"
-              name="deliveryAddress"
-              value={formData.deliveryAddress}
-              onChange={(event) =>
-                updateField(
-                  "deliveryAddress",
-                  event.target.value
-                )
-              }
-              placeholder="Enter delivery address"
-              rows={4}
-            />
-          </div>
 
         </div>
       </>
@@ -854,21 +931,22 @@ const SalesOrderModal3 = ({
   };
 
   /* =====================================================
-     PRICING SECTION
+     PRICING DETAILS
   ===================================================== */
 
   const renderPricingSection = () => {
     return (
       <>
-        <div className="sales-form-section-title">
+        <div className="section-form-title">
           <h3>Pricing Details</h3>
 
           <p>
-            Configure pricing and payment details
+            Configure purchase pricing
+            and payment details
           </p>
         </div>
 
-        <div className="sales-form-grid">
+        <div className="section-form-grid">
 
           <Select
             label="Price List"
@@ -886,23 +964,25 @@ const SalesOrderModal3 = ({
           <Select
             label="Payment Terms"
             name="paymentTerms"
-            value={formData.paymentTerms}
+            value={
+              formData.paymentTerms
+            }
             onChange={(event) =>
               updateField(
                 "paymentTerms",
                 event.target.value
               )
             }
-            options={paymentTermsOptions}
+            options={
+              paymentTermsOptions
+            }
           />
 
         </div>
 
-        {/* TOTAL PREVIEW */}
+        <div className="section-summary">
 
-        <div className="sales-pricing-summary">
-
-          <div className="sales-pricing-row">
+          <div>
             <span>Subtotal</span>
 
             <strong>
@@ -910,7 +990,7 @@ const SalesOrderModal3 = ({
             </strong>
           </div>
 
-          <div className="sales-pricing-row">
+          <div>
             <span>Tax</span>
 
             <strong>
@@ -918,7 +998,7 @@ const SalesOrderModal3 = ({
             </strong>
           </div>
 
-          <div className="sales-pricing-row sales-pricing-total">
+          <div className="section-grand-total">
             <span>Grand Total</span>
 
             <strong>
@@ -932,23 +1012,24 @@ const SalesOrderModal3 = ({
   };
 
   /* =====================================================
-     ADVANCED SECTION
+     ADVANCED DETAILS
   ===================================================== */
 
   const renderAdvancedSection = () => {
     return (
       <>
-        <div className="sales-form-section-title">
+        <div className="section-form-title">
           <h3>Advanced Details</h3>
 
           <p>
-            Additional sales order information
+            Additional purchase order
+            information
           </p>
         </div>
 
-        <div className="sales-form-grid">
+        <div className="section-form-grid">
 
-          <div className="sales-form-full">
+          <div className="section-form-full">
             <Textarea
               label="Notes"
               name="notes"
@@ -970,7 +1051,7 @@ const SalesOrderModal3 = ({
   };
 
   /* =====================================================
-     SECTION CONTENT
+     RENDER ACTIVE SECTION
   ===================================================== */
 
   const renderSection = () => {
@@ -978,8 +1059,8 @@ const SalesOrderModal3 = ({
       case "basic":
         return renderBasicSection();
 
-      case "customer":
-        return renderCustomerSection();
+      case "supplier":
+        return renderSupplierSection();
 
       case "products":
         return renderProductsSection();
@@ -999,30 +1080,27 @@ const SalesOrderModal3 = ({
   };
 
   /* =====================================================
-     RENDER
+     MODAL
   ===================================================== */
 
   return (
     <SectionModal
       show={isOpen}
       onClose={onClose}
-
-      title="Create Sales Order"
-      subtitle="Enter sales order details"
-
+      title="Create Purchase Order"
+      subtitle="Enter purchase order details"
       icon={FileText}
-
       sections={sections}
-
       activeSection={activeSection}
-      onSectionChange={setActiveSection}
-
+      onSectionChange={
+        setActiveSection
+      }
       onSave={handleSave}
-      onSecondary={handleSaveDraft}
-
-      saveText="Create Sales Order"
+      onSecondary={
+        handleSaveDraft
+      }
+      saveText="Create Purchase Order"
       secondaryText="Save Draft"
-
       showSecondary
     >
       {renderSection()}
@@ -1030,4 +1108,4 @@ const SalesOrderModal3 = ({
   );
 };
 
-export default SalesOrderModal3;
+export default PurchaseOrderModal;
