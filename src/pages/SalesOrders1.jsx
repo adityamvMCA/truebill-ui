@@ -1,10 +1,18 @@
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import DataList from "../components/common/DataList/DataList";
+import SalesOrderModal3 from "../components/SalesOrderModal3";
 
 function SalesOrders1() {
-  const [loading, setLoading] = useState(false);
+  /* ========================================
+     STATE
+  ======================================== */
+
+  const [loading, setLoading] = useState(true);
+
+  const [showSalesOrderModal, setShowSalesOrderModal] =
+    useState(false);
 
   const [orders, setOrders] = useState([
     {
@@ -21,6 +29,7 @@ function SalesOrders1() {
       deliveryStatus: "Delivered",
       salesPerson: "Aditya",
     },
+
     {
       id: 2,
       orderNo: "SAL02",
@@ -35,6 +44,7 @@ function SalesOrders1() {
       deliveryStatus: "Partially Delivered",
       salesPerson: "Rahul",
     },
+
     {
       id: 3,
       orderNo: "SAL03",
@@ -49,7 +59,63 @@ function SalesOrders1() {
       deliveryStatus: "Pending",
       salesPerson: "Priya",
     },
+
+    {
+      id: 4,
+      orderNo: "SAL04",
+      orderDate: "2026-09-21",
+      customer: "Om Sai Enterprises",
+      customerCode: "CU0104",
+      items: 3,
+      quantity: 15,
+      amount: 125800,
+      status: "Created",
+      paymentStatus: "Pending",
+      deliveryStatus: "Pending",
+      salesPerson: "Aditya",
+    },
+
+    {
+      id: 5,
+      orderNo: "SAL05",
+      orderDate: "2026-09-22",
+      customer: "Sri Sai Traders",
+      customerCode: "CU0105",
+      items: 6,
+      quantity: 34,
+      amount: 245600,
+      status: "Delivered",
+      paymentStatus: "Paid",
+      deliveryStatus: "Delivered",
+      salesPerson: "Rahul",
+    },
   ]);
+
+  /* ========================================
+     INITIAL LOADING
+  ======================================== */
+
+  useEffect(() => {
+    const loadOrders = async () => {
+      setLoading(true);
+
+      try {
+        // API call later
+
+        await new Promise((resolve) =>
+          setTimeout(resolve, 1000)
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadOrders();
+  }, []);
+
+  /* ========================================
+     COLUMNS
+  ======================================== */
 
   const columns = [
     {
@@ -110,12 +176,14 @@ function SalesOrders1() {
       key: "paymentStatus",
       label: "Payment",
       type: "status",
+      sortable: true,
     },
 
     {
       key: "deliveryStatus",
       label: "Delivery",
       type: "status",
+      sortable: true,
     },
 
     {
@@ -126,11 +194,16 @@ function SalesOrders1() {
     },
   ];
 
+  /* ========================================
+     FILTERS
+  ======================================== */
+
   const filters = [
     {
       key: "status",
       label: "Status",
       type: "select",
+
       options: [
         "Created",
         "Confirmed",
@@ -144,6 +217,7 @@ function SalesOrders1() {
       key: "paymentStatus",
       label: "Payment",
       type: "select",
+
       options: [
         "Pending",
         "Partial",
@@ -156,6 +230,7 @@ function SalesOrders1() {
       key: "deliveryStatus",
       label: "Delivery",
       type: "select",
+
       options: [
         "Pending",
         "Partially Delivered",
@@ -168,6 +243,7 @@ function SalesOrders1() {
       key: "salesPerson",
       label: "Sales Person",
       type: "select",
+
       options: [
         "Aditya",
         "Rahul",
@@ -182,43 +258,76 @@ function SalesOrders1() {
     },
   ];
 
+  /* ========================================
+     QUICK FILTERS
+  ======================================== */
+
   const quickFilters = [
+    {
+      key: "status",
+      value: "",
+      label: "All",
+    },
+
     {
       key: "status",
       value: "Created",
       label: "Created",
     },
+
     {
       key: "status",
       value: "Confirmed",
       label: "Confirmed",
     },
+
     {
       key: "status",
       value: "Processing",
       label: "Processing",
     },
+
     {
       key: "status",
       value: "Delivered",
       label: "Delivered",
     },
+
+    {
+      key: "status",
+      value: "Cancelled",
+      label: "Cancelled",
+    },
   ];
+
+  /* ========================================
+     VIEW
+  ======================================== */
 
   const handleView = (row) => {
     console.log("View:", row);
   };
 
+  /* ========================================
+     EDIT
+  ======================================== */
+
   const handleEdit = (row) => {
     console.log("Edit:", row);
   };
+
+  /* ========================================
+     DELETE
+  ======================================== */
 
   const handleDelete = (row) => {
     const confirmed = window.confirm(
       `Delete ${row.orderNo}?`
     );
 
-    if (!confirmed) return;
+    if (!confirmed) {
+      return;
+    }
 
     setOrders((previous) =>
       previous.filter(
@@ -227,13 +336,22 @@ function SalesOrders1() {
     );
   };
 
+  /* ========================================
+     DUPLICATE
+  ======================================== */
+
   const handleDuplicate = (row) => {
     const duplicate = {
       ...row,
+
       id: Date.now(),
+
       orderNo: `${row.orderNo}-COPY`,
+
       status: "Created",
+
       paymentStatus: "Pending",
+
       deliveryStatus: "Pending",
     };
 
@@ -243,9 +361,17 @@ function SalesOrders1() {
     ]);
   };
 
+  /* ========================================
+     PRINT
+  ======================================== */
+
   const handlePrint = (row) => {
     console.log("Print:", row);
   };
+
+  /* ========================================
+     BULK DELETE
+  ======================================== */
 
   const handleBulkDelete = (rows) => {
     const ids = rows.map(
@@ -258,6 +384,10 @@ function SalesOrders1() {
       )
     );
   };
+
+  /* ========================================
+     BULK CONFIRM
+  ======================================== */
 
   const handleBulkConfirm = (rows) => {
     const ids = rows.map(
@@ -276,79 +406,196 @@ function SalesOrders1() {
     );
   };
 
+  /* ========================================
+     REFRESH
+  ======================================== */
+
   const handleRefresh = async () => {
     setLoading(true);
 
     try {
       // API call later
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, 1000)
+      );
     } finally {
       setLoading(false);
     }
   };
 
+  /* ========================================
+     SALES ORDER CREATED
+  ======================================== */
+
+  const handleSalesOrderCreated = (orderData) => {
+    console.log(
+      "Sales order created:",
+      orderData
+    );
+
+    /*
+      SalesOrderModal3 returns:
+
+      {
+        orderNo,
+        orderDate,
+        customer,
+        customerPhone,
+        billingAddress,
+        shippingAddress,
+        paymentTerms,
+        priceList,
+        warehouse,
+        deliveryDate,
+        deliveryStatus,
+        deliveryAddress,
+        notes,
+        products,
+        subtotal,
+        taxAmount,
+        grandTotal
+      }
+    */
+
+    const newOrder = {
+      id: Date.now(),
+
+      orderNo:
+        orderData.orderNo ||
+        `SAL${orders.length + 1}`,
+
+      orderDate:
+        orderData.orderDate,
+
+      customer:
+        orderData.customer,
+
+      customerCode:
+        orderData.customerCode || "",
+
+      items:
+        orderData.products?.length || 0,
+
+      quantity:
+        orderData.products?.reduce(
+          (sum, item) =>
+            sum + Number(item.qty || 0),
+          0
+        ) || 0,
+
+      amount:
+        Number(orderData.grandTotal) || 0,
+
+      status:
+        orderData.status || "Created",
+
+      paymentStatus: "Pending",
+
+      deliveryStatus:
+        orderData.deliveryStatus ||
+        "Pending",
+
+      salesPerson: "Aditya",
+    };
+
+    setOrders((previous) => [
+      newOrder,
+      ...previous,
+    ]);
+
+    setShowSalesOrderModal(false);
+  };
+
+  /* ========================================
+     RENDER
+  ======================================== */
+
   return (
-    <DataList
-  title="Sales Orders"
-  subtitle="Manage and track all sales orders"
+    <>
+      <DataList
+        title="Sales Orders"
+        subtitle="Manage and track all sales orders"
 
-  columns={columns}
-  data={orders}
+        columns={columns}
 
-  rowKey="id"
+        data={orders}
 
-  showCase="list"
+        loading={loading}
 
-  searchable
-  filterable
-  sortable
-  selectable
-  columnVisibility
-  pagination
+        rowKey="id"
 
-  filters={filters}
-  quickFilters={quickFilters}
+        showCase="list"
 
-  storageKey="trustiq-sales-orders"
+        searchable
+        filterable
+        sortable
+        selectable
+        columnVisibility
+        pagination
 
-  searchPlaceholder="Search order no, customer, code..."
+        filters={filters}
 
-  actions={{
-    view: handleView,
-    edit: handleEdit,
-    duplicate: handleDuplicate,
-    print: handlePrint,
-    delete: handleDelete,
-  }}
+        quickFilters={quickFilters}
 
-  bulkActions={[
-    {
-      key: "confirm",
-      label: "Confirm",
-      action: handleBulkConfirm,
-    },
-    {
-      key: "delete",
-      label: "Delete",
-      danger: true,
-      action: handleBulkDelete,
-    },
-  ]}
+        storageKey="trustiq-sales-orders"
 
-  onRefresh={handleRefresh}
-//   onExport={handleExport}
-//   onImport={handleImport}
+        searchPlaceholder="Search order no, customer, code..."
 
-  addButton={
-    <button
-      type="button"
-      className="so-primary-button"
-    //   onClick={handleCreate}
-    >
-      <Plus size={16} />
-      New Sales Order
-    </button>
-  }
-/>
+        actions={{
+          view: handleView,
+          edit: handleEdit,
+          duplicate: handleDuplicate,
+          print: handlePrint,
+          delete: handleDelete,
+        }}
+
+        bulkActions={[
+          {
+            key: "confirm",
+            label: "Confirm",
+            action: handleBulkConfirm,
+          },
+
+          {
+            key: "delete",
+            label: "Delete",
+            danger: true,
+            action: handleBulkDelete,
+          },
+        ]}
+
+        onRefresh={handleRefresh}
+
+        addButton={
+          <button
+            type="button"
+            className="so-primary-button"
+            onClick={() =>
+              setShowSalesOrderModal(true)
+            }
+          >
+            <Plus size={16} />
+
+            <span>
+              New Sales Order
+            </span>
+          </button>
+        }
+      />
+
+      {/* ========================================
+          SALES ORDER MODAL
+      ======================================== */}
+
+      <SalesOrderModal3
+        isOpen={showSalesOrderModal}
+        onClose={() =>
+          setShowSalesOrderModal(false)
+        }
+        onSave={handleSalesOrderCreated}
+      />
+    </>
   );
 }
 

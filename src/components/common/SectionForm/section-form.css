@@ -1,0 +1,348 @@
+/* =========================================================
+   SECTION FORM
+========================================================= */
+
+.section-form-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 15px 12px;
+}
+
+.section-form-grid-one {
+  grid-template-columns: 1fr;
+}
+
+.section-form-full {
+  grid-column: 1 / -1;
+}
+
+
+/* =========================================================
+   FIELD
+========================================================= */
+
+.section-form-field {
+  min-width: 0;
+}
+
+.section-form-field label {
+  display: block;
+
+  margin-bottom: 6px;
+
+  font-size: 10px;
+  line-height: 13px;
+
+  font-weight: 500;
+
+  color: var(
+    --text-secondary,
+    #64748b
+  );
+}
+
+.section-form-field label > span,
+.section-form-field label > em {
+  margin-left: 3px;
+
+  color: var(
+    --danger,
+    #dc2626
+  );
+
+  font-style: normal;
+}
+
+
+/* =========================================================
+   INPUT / SELECT / TEXTAREA
+========================================================= */
+
+.section-form-input-wrapper,
+.section-form-select-wrapper {
+  position: relative;
+
+  width: 100%;
+}
+
+.section-form-field input,
+.section-form-field textarea,
+.section-form-field select {
+  width: 100%;
+
+  min-width: 0;
+
+  box-sizing: border-box;
+
+  border: 1px solid
+    var(
+      --border-color,
+      #dfe3e8
+    );
+
+  border-radius: 5px;
+
+  background: var(
+    --input-bg,
+    var(--card-bg, #ffffff)
+  );
+
+  color: var(
+    --text-primary,
+    #334155
+  );
+
+  font-family: inherit;
+
+  font-size: 11px;
+
+  outline: none;
+
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.section-form-field input,
+.section-form-field select {
+  height: 36px;
+
+  padding: 0 9px;
+}
+
+.section-form-field textarea {
+  min-height: 80px;
+
+  padding: 8px 9px;
+
+  resize: vertical;
+}
+
+.section-form-field input::placeholder,
+.section-form-field textarea::placeholder {
+  color: var(
+    --text-muted,
+    #a8b0bb
+  );
+}
+
+.section-form-field input:focus,
+.section-form-field textarea:focus,
+.section-form-field select:focus {
+  border-color: var(
+    --primary-color,
+    #2563eb
+  );
+
+  box-shadow:
+    0 0 0 2px
+    var(
+      --primary-light,
+      var(--primary-soft, #eff6ff)
+    );
+}
+
+
+/* =========================================================
+   SELECT
+========================================================= */
+
+.section-form-select-wrapper select {
+  appearance: none;
+
+  padding-right: 32px;
+}
+
+.section-form-select-wrapper svg {
+  position: absolute;
+
+  right: 9px;
+  top: 50%;
+
+  transform:
+    translateY(-50%);
+
+  color: var(
+    --text-muted,
+    #94a3b8
+  );
+
+  pointer-events: none;
+}
+
+
+/* =========================================================
+   PASSWORD
+========================================================= */
+
+.section-form-input-wrapper
+  button {
+  position: absolute;
+
+  right: 5px;
+  top: 50%;
+
+  width: 27px;
+  height: 27px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+
+  transform:
+    translateY(-50%);
+
+  border: 0;
+
+  background: transparent;
+
+  color: var(
+    --text-muted,
+    #64748b
+  );
+
+  cursor: pointer;
+}
+
+.section-form-input-wrapper
+  button:hover {
+  color: var(
+    --primary-color,
+    #2563eb
+  );
+}
+
+
+/* =========================================================
+   ERROR
+========================================================= */
+
+.section-form-error-field
+  input,
+.section-form-error-field
+  select,
+.section-form-error-field
+  textarea {
+  border-color: var(
+    --danger,
+    #dc2626
+  );
+}
+
+.section-form-error {
+  display: block;
+
+  margin-top: 4px;
+
+  color: var(
+    --danger,
+    #dc2626
+  );
+
+  font-size: 9px;
+}
+
+
+/* =========================================================
+   CHECKBOX
+========================================================= */
+
+.section-form-checkbox {
+  display: flex !important;
+
+  align-items: center;
+
+  gap: 8px;
+
+  margin-top: 21px;
+
+  cursor: pointer;
+}
+
+.section-form-checkbox input {
+  position: absolute;
+
+  opacity: 0;
+
+  width: 0;
+  height: 0;
+}
+
+.section-form-checkbox span {
+  width: 16px;
+  height: 16px;
+
+  flex-shrink: 0;
+
+  border: 1px solid
+    var(
+      --border-color,
+      #cbd5e1
+    );
+
+  border-radius: 4px;
+
+  background: var(
+    --card-bg,
+    #ffffff
+  );
+}
+
+.section-form-checkbox
+  input:checked
+  + span {
+  background: var(
+    --primary-color,
+    #2563eb
+  );
+
+  border-color: var(
+    --primary-color,
+    #2563eb
+  );
+}
+
+.section-form-checkbox strong {
+  color: var(
+    --text-secondary,
+    #64748b
+  );
+
+  font-size: 10px;
+
+  font-weight: 500;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 767px) {
+  .section-form-grid {
+    grid-template-columns: 1fr;
+
+    gap: 13px;
+  }
+
+  .section-form-full {
+    grid-column: auto;
+  }
+
+  .section-form-field input,
+  .section-form-field select {
+    height: 40px;
+
+    font-size: 12px;
+  }
+
+  .section-form-field textarea {
+    font-size: 12px;
+  }
+}
