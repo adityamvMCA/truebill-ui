@@ -23,3 +23,10 @@ andoid
 *.njsproj
 *.sln
 *.sw?
+
+
+# Environment variables
+.env
+.env.*
+!.env.examplesd
+andoid
