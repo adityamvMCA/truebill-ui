@@ -9,8 +9,11 @@ import {
   ChevronDown,
   Palette,
   Check,
+  LogOut,
 } from "lucide-react";
 
+import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 const themes = [
   {
@@ -65,100 +68,232 @@ const themes = [
   },
 ];
 
-
 function Header({ onMenuClick }) {
-  const [themeOpen, setThemeOpen] =
-    useState(false);
+  const navigate = useNavigate();
 
-  const [selectedTheme, setSelectedTheme] =
-    useState(
-      localStorage.getItem(
-        "trustiq-theme"
-      ) || "blue"
-    );
+  /* =========================================
+     STATE
+  ========================================= */
+
+  const [themeOpen, setThemeOpen] = useState(false);
+
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  const [selectedTheme, setSelectedTheme] = useState(
+    localStorage.getItem("trustiq-theme") || "blue",
+  );
+
+  const [user, setUser] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "null");
+    } catch {
+      return null;
+    }
+  });
+
+  const [selectedTenant, setSelectedTenant] = useState(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("selectedTenant") || "null");
+    } catch {
+      return null;
+    }
+  });
+
+  /* =========================================
+     REFS
+  ========================================= */
 
   const themeRef = useRef(null);
 
+  const profileRef = useRef(null);
 
-  /* =====================================
-     APPLY THEME
-  ====================================== */
+  /* =========================================
+     LOAD THEME
+  ========================================= */
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("trustiq-theme") || "blue";
+
+    document.documentElement.setAttribute("data-theme", savedTheme);
+
+    setSelectedTheme(savedTheme);
+  }, []);
+
+  /* =========================================
+     LOAD USER
+  ========================================= */
+
+  useEffect(() => {
+    const loadUser = () => {
+      try {
+        const storedUser = localStorage.getItem("user");
+
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        } else {
+          setUser(null);
+        }
+      } catch {
+        setUser(null);
+      }
+    };
+
+    loadUser();
+
+    window.addEventListener("userChanged", loadUser);
+
+    return () => {
+      window.removeEventListener("userChanged", loadUser);
+    };
+  }, []);
+
+  /* =========================================
+     LOAD SELECTED TENANT
+  ========================================= */
+
+  useEffect(() => {
+    const loadSelectedTenant = () => {
+      try {
+        const storedTenant = sessionStorage.getItem("selectedTenant");
+
+        if (storedTenant) {
+          setSelectedTenant(JSON.parse(storedTenant));
+        } else {
+          setSelectedTenant(null);
+        }
+      } catch {
+        setSelectedTenant(null);
+      }
+    };
+
+    loadSelectedTenant();
+
+    window.addEventListener("tenantChanged", loadSelectedTenant);
+
+    return () => {
+      window.removeEventListener("tenantChanged", loadSelectedTenant);
+    };
+  }, []);
+
+  /* =========================================
+     CLOSE DROPDOWNS
+  ========================================= */
+
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (themeRef.current && !themeRef.current.contains(event.target)) {
+        setThemeOpen(false);
+      }
+
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setProfileOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, []);
+
+  /* =========================================
+     THEME
+  ========================================= */
 
   const applyTheme = (themeId) => {
-    document.documentElement.setAttribute(
-      "data-theme",
-      themeId
-    );
+    document.documentElement.setAttribute("data-theme", themeId);
 
-    localStorage.setItem(
-      "trustiq-theme",
-      themeId
-    );
+    localStorage.setItem("trustiq-theme", themeId);
 
     setSelectedTheme(themeId);
 
     setThemeOpen(false);
   };
 
+  /* =========================================
+     LOGOUT
+  ========================================= */
 
-  /* =====================================
-     LOAD THEME
-  ====================================== */
+  const handleLogout = () => {
+    localStorage.removeItem("token");
 
-  useEffect(() => {
-    const savedTheme =
-      localStorage.getItem(
-        "trustiq-theme"
-      ) || "blue";
+    localStorage.removeItem("user");
 
-    document.documentElement.setAttribute(
-      "data-theme",
-      savedTheme
-    );
+    localStorage.removeItem("tenant");
 
-    setSelectedTheme(savedTheme);
-  }, []);
+    sessionStorage.removeItem("selectedTenantId");
 
+    sessionStorage.removeItem("selectedClientCode");
 
-  /* =====================================
-     CLOSE THEME DROPDOWN
-  ====================================== */
+    sessionStorage.removeItem("selectedTenant");
 
-  useEffect(() => {
-    const handleOutsideClick = (event) => {
-      if (
-        themeRef.current &&
-        !themeRef.current.contains(
-          event.target
-        )
-      ) {
-        setThemeOpen(false);
-      }
-    };
+    setUser(null);
 
-    document.addEventListener(
-      "mousedown",
-      handleOutsideClick
-    );
+    setSelectedTenant(null);
 
-    return () => {
-      document.removeEventListener(
-        "mousedown",
-        handleOutsideClick
-      );
-    };
-  }, []);
+    setProfileOpen(false);
 
+    toast.success("Logged out successfully");
+
+    navigate("/login", {
+      replace: true,
+    });
+  };
+
+  /* =========================================
+     USER DATA
+  ========================================= */
+
+  const userName = user?.name || user?.username || user?.email || "User";
+
+  const userRole = user?.role || user?.platformRole || "User";
+
+  const userEmail = user?.email || "";
+
+  const userInitials =
+    userName
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((name) => name.charAt(0).toUpperCase())
+      .join("") || "U";
+
+  /* =========================================
+     TENANT / TRADER DATA
+  ========================================= */
+
+  /*
+   * Developer / Support:
+   * selectedTenant comes from sessionStorage.
+   *
+   * Normal trader:
+   * user.tenant comes from login.
+   */
+
+  const tenant = selectedTenant || user?.tenant || null;
+
+  const tenantName = tenant?.businessName || "TrustIQ ERP";
+
+  const tenantClientCode = tenant?.clientCode || user?.clientCode || null;
+
+  /* =========================================
+     PLATFORM ROLE
+  ========================================= */
+
+  const isDeveloper = user?.platformRole === "developer";
+
+  const isSupport = user?.platformRole === "support";
+
+  const canSwitchTenant = isDeveloper || isSupport;
 
   return (
     <header className="header">
-
       {/* =====================================
           LEFT
       ====================================== */}
 
       <div className="header-left">
-
         <button
           type="button"
           className="menu-button"
@@ -168,208 +303,200 @@ function Header({ onMenuClick }) {
           <Menu size={22} />
         </button>
 
-
-        {/* Search */}
+        {/* SEARCH */}
 
         <div className="search-box">
-
           <Search size={18} />
 
           <input
             type="text"
             placeholder="Search anything... (Customer, Invoice, Product, etc.)"
           />
-
         </div>
-
       </div>
-
 
       {/* =====================================
           RIGHT
       ====================================== */}
 
       <div className="header-right">
+        {/* =====================================
+            COMPANY / SELECTED TRADER
+        ====================================== */}
 
-        {/* Company */}
-
-        <button
-          type="button"
-          className="company-selector"
-        >
-
+        <button type="button" className="company-selector" title={tenantName}>
           <Building2 size={18} />
 
-          <span>
-            DSV Traders
-          </span>
+          <span>{tenantName}</span>
 
-          <ChevronDown size={16} />
-
+          {canSwitchTenant && <ChevronDown size={16} />}
         </button>
 
-
-        {/* Notification */}
+        {/* =====================================
+            NOTIFICATIONS
+        ====================================== */}
 
         <button
           type="button"
           className="header-icon-button notification-button"
           aria-label="Notifications"
         >
-
           <Bell size={20} />
 
           <span className="notification-dot" />
-
         </button>
 
+        {/* =====================================
+            THEME
+        ====================================== */}
 
-        {/* Theme */}
-
-        <div
-          className="theme-selector"
-          ref={themeRef}
-        >
-
+        <div className="theme-selector" ref={themeRef}>
           <button
             type="button"
             className={`header-icon-button ${
-              themeOpen
-                ? "theme-button-active"
-                : ""
+              themeOpen ? "theme-button-active" : ""
             }`}
-            onClick={() =>
-              setThemeOpen(
-                (previous) =>
-                  !previous
-              )
-            }
+            onClick={() => setThemeOpen((previous) => !previous)}
             aria-label="Change theme"
           >
-
             <Palette size={20} />
-
           </button>
 
-
-          {/* Theme dropdown */}
-
           {themeOpen && (
-
             <div className="theme-dropdown">
-
               <div className="theme-dropdown-header">
-
                 <div>
-                  <strong>
-                    Appearance
-                  </strong>
+                  <strong>Appearance</strong>
 
-                  <span>
-                    Choose your theme
-                  </span>
+                  <span>Choose your theme</span>
                 </div>
-
               </div>
 
-
               <div className="theme-grid">
-
                 {themes.map((theme) => (
-
                   <button
                     key={theme.id}
                     type="button"
                     className={`theme-option ${
-                      selectedTheme ===
-                      theme.id
-                        ? "theme-option-selected"
-                        : ""
+                      selectedTheme === theme.id ? "theme-option-selected" : ""
                     }`}
-                    onClick={() =>
-                      applyTheme(
-                        theme.id
-                      )
-                    }
+                    onClick={() => applyTheme(theme.id)}
                   >
-
                     <span
                       className="theme-color"
                       style={{
-                        background:
-                          theme.color,
+                        background: theme.color,
                       }}
                     >
-                      {selectedTheme ===
-                        theme.id && (
-                        <Check
-                          size={14}
-                        />
-                      )}
+                      {selectedTheme === theme.id && <Check size={14} />}
                     </span>
 
-                    <span className="theme-name">
-                      {theme.name}
-                    </span>
-
+                    <span className="theme-name">{theme.name}</span>
                   </button>
-
                 ))}
-
               </div>
-
             </div>
-
           )}
-
         </div>
 
+        {/* =====================================
+            HELP
+        ====================================== */}
 
-        {/* Help */}
-
-        <button
-          type="button"
-          className="header-icon-button"
-          aria-label="Help"
-        >
-
+        <button type="button" className="header-icon-button" aria-label="Help">
           <HelpCircle size={20} />
-
         </button>
 
+        {/* =====================================
+            PROFILE
+        ====================================== */}
 
-        {/* User */}
+        <div className="profile-selector" ref={profileRef}>
+          <button
+            type="button"
+            className="user-profile"
+            onClick={() => setProfileOpen((previous) => !previous)}
+            aria-label="User profile"
+          >
+            <div className="user-avatar">{userInitials}</div>
 
-        <button
-          type="button"
-          className="user-profile"
-        >
+            <div className="user-info">
+              <strong>{userName}</strong>
 
-          <div className="user-avatar">
-            AD
-          </div>
+              <span>{userRole}</span>
+            </div>
 
-          <div className="user-info">
+            <ChevronDown
+              size={16}
+              className={profileOpen ? "profile-arrow-open" : ""}
+            />
+          </button>
 
-            <strong>
-              Admin
-            </strong>
+          {/* =================================
+              PROFILE DROPDOWN
+          ================================== */}
 
-            <span>
-              Administrator
-            </span>
+          {profileOpen && (
+            <div className="profile-dropdown">
+              {/* PROFILE HEADER */}
 
-          </div>
+              <div className="profile-dropdown-header">
+                <div className="profile-dropdown-avatar">{userInitials}</div>
 
-          <ChevronDown size={16} />
+                <div>
+                  <strong>{userName}</strong>
 
-        </button>
+                  <span>{userEmail}</span>
+                </div>
+              </div>
 
+              <div className="profile-divider" />
+
+              {/* USER DETAILS */}
+
+              <div className="profile-details">
+                <div>
+                  <span>Role</span>
+
+                  <strong>{userRole}</strong>
+                </div>
+
+                {tenantClientCode && (
+                  <div>
+                    <span>Client Code</span>
+
+                    <strong>{tenantClientCode}</strong>
+                  </div>
+                )}
+
+                {tenantName !== "TrustIQ ERP" && (
+                  <div>
+                    <span>Company</span>
+
+                    <strong>{tenantName}</strong>
+                  </div>
+                )}
+              </div>
+
+              <div className="profile-divider" />
+
+              {/* LOGOUT */}
+
+              <button
+                type="button"
+                className="logout-button"
+                onClick={handleLogout}
+              >
+                <LogOut size={17} />
+
+                <span>Logout</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-
     </header>
   );
 }
-
 
 export default Header;

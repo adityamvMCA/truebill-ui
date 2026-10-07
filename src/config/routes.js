@@ -12,6 +12,9 @@ const routes = {
     index: "/dashboard",
   },
 
+  traders:{
+    trders:"/traders",
+  },
   // =========================
   // SALES
   // =========================

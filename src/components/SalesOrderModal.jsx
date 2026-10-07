@@ -89,8 +89,8 @@ function SalesOrderModal({ isOpen, onClose, onSave }) {
                   ? Number(value)
                   : value,
             }
-          : item
-      )
+          : item,
+      ),
     );
   };
 
@@ -132,17 +132,17 @@ function SalesOrderModal({ isOpen, onClose, onSave }) {
 
   const subtotal = items.reduce(
     (sum, item) => sum + calculateItem(item).taxableAmount,
-    0
+    0,
   );
 
   const totalTax = items.reduce(
     (sum, item) => sum + calculateItem(item).taxAmount,
-    0
+    0,
   );
 
   const totalDiscount = items.reduce(
     (sum, item) => sum + calculateItem(item).discountAmount,
-    0
+    0,
   );
 
   const grandTotal = subtotal + totalTax;
@@ -245,9 +245,7 @@ function SalesOrderModal({ isOpen, onClose, onSave }) {
                   <option value="Karnataka Electricals">
                     Karnataka Electricals
                   </option>
-                  <option value="Om Sai Enterprises">
-                    Om Sai Enterprises
-                  </option>
+                  <option value="Om Sai Enterprises">Om Sai Enterprises</option>
                 </select>
               </div>
 
@@ -288,9 +286,7 @@ function SalesOrderModal({ isOpen, onClose, onSave }) {
                 >
                   <option value="">Select Warehouse</option>
                   <option value="Main Warehouse">Main Warehouse</option>
-                  <option value="Bagalkot Warehouse">
-                    Bagalkot Warehouse
-                  </option>
+                  <option value="Bagalkot Warehouse">Bagalkot Warehouse</option>
                   <option value="Hubli Warehouse">Hubli Warehouse</option>
                 </select>
               </div>
@@ -361,7 +357,7 @@ function SalesOrderModal({ isOpen, onClose, onSave }) {
                               handleItemChange(
                                 item.id,
                                 "product",
-                                e.target.value
+                                e.target.value,
                               )
                             }
                             placeholder="Product name"
@@ -377,7 +373,7 @@ function SalesOrderModal({ isOpen, onClose, onSave }) {
                               handleItemChange(
                                 item.id,
                                 "quantity",
-                                e.target.value
+                                e.target.value,
                               )
                             }
                           />
@@ -395,7 +391,7 @@ function SalesOrderModal({ isOpen, onClose, onSave }) {
                                 handleItemChange(
                                   item.id,
                                   "rate",
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                             />
@@ -415,7 +411,7 @@ function SalesOrderModal({ isOpen, onClose, onSave }) {
                                 handleItemChange(
                                   item.id,
                                   "discount",
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                             />
@@ -432,11 +428,7 @@ function SalesOrderModal({ isOpen, onClose, onSave }) {
                               max="100"
                               value={item.tax}
                               onChange={(e) =>
-                                handleItemChange(
-                                  item.id,
-                                  "tax",
-                                  e.target.value
-                                )
+                                handleItemChange(item.id, "tax", e.target.value)
                               }
                             />
                           </div>

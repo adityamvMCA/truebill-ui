@@ -1,12 +1,179 @@
-import {
-  useEffect,
-  useRef,
-} from "react";
+// import { useEffect, useRef } from "react";
 
-import {
-  X,
-} from "lucide-react";
+// import { X } from "lucide-react";
+// import "./box-modal.css";
+// const BoxModal = ({
+//   show = false,
+//   onClose,
+
+//   title = "",
+//   subtitle = "",
+
+//   icon: Icon,
+
+//   children,
+
+//   footer,
+
+//   width = "1120px",
+
+//   closeOnOverlay = true,
+//   closeOnEsc = true,
+
+//   showClose = true,
+
+//   className = "",
+//   contentClassName = "",
+
+//   bodyScrollable = true,
+
+//   zIndex = 99999,
+// }) => {
+//   const modalRef = useRef(null);
+
+//   /* =====================================================
+//      ESC CLOSE
+//   ===================================================== */
+
+//   useEffect(() => {
+//     if (!show || !closeOnEsc) {
+//       return;
+//     }
+
+//     const handleKeyDown = (event) => {
+//       if (event.key === "Escape") {
+//         onClose?.();
+//       }
+//     };
+
+//     document.addEventListener("keydown", handleKeyDown);
+
+//     return () => {
+//       document.removeEventListener("keydown", handleKeyDown);
+//     };
+//   }, [show, closeOnEsc, onClose]);
+
+//   /* =====================================================
+//      BODY SCROLL LOCK
+//   ===================================================== */
+
+//   useEffect(() => {
+//     if (!show) {
+//       return;
+//     }
+
+//     const previousOverflow = document.body.style.overflow;
+
+//     document.body.style.overflow = "hidden";
+
+//     return () => {
+//       document.body.style.overflow = previousOverflow;
+//     };
+//   }, [show]);
+
+//   /* =====================================================
+//      OVERLAY CLICK
+//   ===================================================== */
+
+//   const handleOverlayClick = (event) => {
+//     if (!closeOnOverlay || event.target !== event.currentTarget) {
+//       return;
+//     }
+
+//     onClose?.();
+//   };
+
+//   /* =====================================================
+//      DON'T RENDER
+//   ===================================================== */
+
+//   if (!show) {
+//     return null;
+//   }
+
+//   /* =====================================================
+//      RENDER
+//   ===================================================== */
+
+//   return (
+//     <div
+//       className="box-modal-overlay"
+//       style={{
+//         zIndex,
+//       }}
+//       onMouseDown={handleOverlayClick}
+//     >
+//       <div
+//         ref={modalRef}
+//         className={`box-modal ${className}`}
+//         style={{
+//           "--box-modal-width": width,
+//         }}
+//         role="dialog"
+//         aria-modal="true"
+//         aria-labelledby={title ? "box-modal-title" : undefined}
+//       >
+//         {/* =================================================
+//             HEADER
+//         ================================================= */}
+
+//         <div className="box-modal-header">
+//           <div className="box-modal-title-wrapper">
+//             {Icon && (
+//               <div className="box-modal-title-icon">
+//                 <Icon size={20} />
+//               </div>
+//             )}
+
+//             <div className="box-modal-title-content">
+//               {title && <h2 id="box-modal-title">{title}</h2>}
+
+//               {subtitle && <span>{subtitle}</span>}
+//             </div>
+//           </div>
+
+//           {showClose && (
+//             <button
+//               type="button"
+//               className="box-modal-close"
+//               onClick={onClose}
+//               aria-label="Close modal"
+//             >
+//               <X size={19} />
+//             </button>
+//           )}
+//         </div>
+
+//         {/* =================================================
+//             BODY
+//         ================================================= */}
+
+//         <div
+//           className={`box-modal-body ${
+//             bodyScrollable ? "box-modal-body-scroll" : ""
+//           } ${contentClassName}`}
+//         >
+//           {children}
+//         </div>
+
+//         {/* =================================================
+//             FOOTER
+//         ================================================= */}
+
+//         {footer && <div className="box-modal-footer">{footer}</div>}
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default BoxModal;
+
+import { useEffect, useRef } from "react";
+
+import { X } from "lucide-react";
+
 import "./box-modal.css";
+
 const BoxModal = ({
   show = false,
   onClose,
@@ -14,7 +181,7 @@ const BoxModal = ({
   title = "",
   subtitle = "",
 
-  icon: Icon,
+  icon,
 
   children,
 
@@ -51,22 +218,12 @@ const BoxModal = ({
       }
     };
 
-    document.addEventListener(
-      "keydown",
-      handleKeyDown
-    );
+    document.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.removeEventListener(
-        "keydown",
-        handleKeyDown
-      );
+      document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [
-    show,
-    closeOnEsc,
-    onClose,
-  ]);
+  }, [show, closeOnEsc, onClose]);
 
   /* =====================================================
      BODY SCROLL LOCK
@@ -77,15 +234,12 @@ const BoxModal = ({
       return;
     }
 
-    const previousOverflow =
-      document.body.style.overflow;
+    const previousOverflow = document.body.style.overflow;
 
-    document.body.style.overflow =
-      "hidden";
+    document.body.style.overflow = "hidden";
 
     return () => {
-      document.body.style.overflow =
-        previousOverflow;
+      document.body.style.overflow = previousOverflow;
     };
   }, [show]);
 
@@ -93,13 +247,8 @@ const BoxModal = ({
      OVERLAY CLICK
   ===================================================== */
 
-  const handleOverlayClick = (
-    event
-  ) => {
-    if (
-      !closeOnOverlay ||
-      event.target !== event.currentTarget
-    ) {
+  const handleOverlayClick = (event) => {
+    if (!closeOnOverlay || event.target !== event.currentTarget) {
       return;
     }
 
@@ -124,9 +273,7 @@ const BoxModal = ({
       style={{
         zIndex,
       }}
-      onMouseDown={
-        handleOverlayClick
-      }
+      onMouseDown={handleOverlayClick}
     >
       <div
         ref={modalRef}
@@ -136,11 +283,7 @@ const BoxModal = ({
         }}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={
-          title
-            ? "box-modal-title"
-            : undefined
-        }
+        aria-labelledby={title ? "box-modal-title" : undefined}
       >
         {/* =================================================
             HEADER
@@ -148,30 +291,20 @@ const BoxModal = ({
 
         <div className="box-modal-header">
           <div className="box-modal-title-wrapper">
+            {/* ICON */}
 
-            {Icon && (
-              <div className="box-modal-title-icon">
-                <Icon size={20} />
-              </div>
-            )}
+            {icon && <div className="box-modal-title-icon">{icon}</div>}
+
+            {/* TITLE */}
 
             <div className="box-modal-title-content">
+              {title && <h2 id="box-modal-title">{title}</h2>}
 
-              {title && (
-                <h2 id="box-modal-title">
-                  {title}
-                </h2>
-              )}
-
-              {subtitle && (
-                <span>
-                  {subtitle}
-                </span>
-              )}
-
+              {subtitle && <span>{subtitle}</span>}
             </div>
-
           </div>
+
+          {/* CLOSE */}
 
           {showClose && (
             <button
@@ -191,12 +324,8 @@ const BoxModal = ({
 
         <div
           className={`box-modal-body ${
-            bodyScrollable
-              ? "box-modal-body-scroll"
-              : ""
-          } ${
-            contentClassName
-          }`}
+            bodyScrollable ? "box-modal-body-scroll" : ""
+          } ${contentClassName}`}
         >
           {children}
         </div>
@@ -205,11 +334,7 @@ const BoxModal = ({
             FOOTER
         ================================================= */}
 
-        {footer && (
-          <div className="box-modal-footer">
-            {footer}
-          </div>
-        )}
+        {footer && <div className="box-modal-footer">{footer}</div>}
       </div>
     </div>
   );

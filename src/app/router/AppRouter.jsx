@@ -13,6 +13,7 @@ import SalesOrders1 from "../../pages/SalesOrders1";
 import PurchaseOrders from "../../pages/PurchaseOrders";
 import CustomerRegistration from "../../pages/CustomerRegistration";
 import SalesInvoiceCreation from "../../pages/SalesInvoiceCreation";
+import Traders from "../../pages/Traders/Traders";
 
 
 // =====================================
@@ -90,6 +91,10 @@ const AppRouter = () => {
             <Route
               path={routes.sales.orders1}
               element={<SalesOrders />}
+            />
+            <Route
+              path={routes.traders.trders}
+              element={<Traders />}
             />
 
             {/* Root */}
