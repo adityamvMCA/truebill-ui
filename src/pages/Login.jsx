@@ -8,6 +8,7 @@ function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -83,7 +84,9 @@ function Login() {
 
         <h1>Welcome back</h1>
 
-        <p className="login-subtitle">Sign in to continue to TrustIQ ERP</p>
+        <p className="login-subtitle">
+          Sign in to continue to TrustIQ ERP
+        </p>
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -103,15 +106,70 @@ function Login() {
           <div className="form-group">
             <label>Password</label>
 
-            <input
-              type="password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="current-password"
-              disabled={loading}
-            />
+            <div
+              style={{
+                position: "relative",
+                width: "100%",
+              }}
+            >
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+                disabled={loading}
+                style={{
+                  width: "100%",
+                  paddingRight: "42px",
+                }}
+              />
+
+            <button
+  type="button"
+  onClick={() => setShowPassword((prev) => !prev)}
+  disabled={loading}
+  aria-label={showPassword ? "Hide password" : "Show password"}
+  style={{
+    position: "absolute",
+    right: "10px",
+    top: "50%",
+    transform: "translateY(-50%)",
+    border: "none",
+    background: "transparent",
+    cursor: loading ? "not-allowed" : "pointer",
+    padding: "4px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  }}
+>
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    {showPassword ? (
+      <>
+        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+        <circle cx="12" cy="12" r="3" />
+      </>
+    ) : (
+      <>
+        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+        <circle cx="12" cy="12" r="3" />
+        <path d="M3 3l18 18" />
+      </>
+    )}
+  </svg>
+</button>
+            </div>
           </div>
 
           <div className="login-options">
@@ -123,14 +181,20 @@ function Login() {
             <button
               type="button"
               className="forgot-button"
-              onClick={() => toast("Forgot password feature coming soon")}
+              onClick={() =>
+                toast("Forgot password feature coming soon")
+              }
               disabled={loading}
             >
               Forgot password?
             </button>
           </div>
 
-          <button className="login-button" type="submit" disabled={loading}>
+          <button
+            className="login-button"
+            type="submit"
+            disabled={loading}
+          >
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
