@@ -7,16 +7,20 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-andoid
+# Dependencies
+node_modules/
+
+# Build
+dist/
+dist-ssr/
+
+# Local environment
 *.local
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
 *.suo
 *.ntvs*
@@ -24,9 +28,14 @@ andoid
 *.sln
 *.sw?
 
-
 # Environment variables
 .env
 .env.*
-!.env.examplesd
-andoid
+!.env.example
+
+# Capacitor generated files
+android/.gradle/
+android/build/
+android/app/build/
+android/captures/
+android/.idea/

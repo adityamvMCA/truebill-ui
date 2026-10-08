@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">True Bill</string>
+    <string name="title_activity_main">True Bill</string>
+    <string name="package_name">com.trustiq.truebill</string>
+    <string name="custom_url_scheme">com.trustiq.truebill</string>
+</resources>
