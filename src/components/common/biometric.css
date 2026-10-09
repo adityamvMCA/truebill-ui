@@ -1,0 +1,276 @@
+.biometric-modal-backdrop,
+.biometric-lock-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(9, 20, 42, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.biometric-setup-modal,
+.biometric-lock-card {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  padding: 30px 26px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: 26px;
+  background: #ffffff;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.28);
+  color: #17233b;
+  text-align: center;
+  animation: biometric-modal-enter 0.24s ease-out;
+}
+
+.biometric-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: #f1f4f9;
+  color: #536179;
+  font-size: 25px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.biometric-modal-brand,
+.biometric-lock-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 22px;
+  font-size: 19px;
+  font-weight: 750;
+  letter-spacing: -0.5px;
+}
+
+.biometric-modal-brand small,
+.biometric-lock-brand small {
+  display: block;
+  margin-top: 1px;
+  color: #74829a;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-align: left;
+}
+
+.biometric-modal-logo,
+.biometric-lock-logo {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 13px;
+  background: linear-gradient(145deg, #2764dc, #173b93);
+  color: #fff;
+  font-size: 25px;
+  font-weight: 800;
+  box-shadow: 0 6px 16px rgba(39, 100, 220, 0.24);
+}
+
+.biometric-hero-icon,
+.biometric-lock-icon {
+  display: grid;
+  width: 90px;
+  height: 90px;
+  margin: 0 auto 18px;
+  place-items: center;
+  border: 1px solid #dce8ff;
+  border-radius: 28px;
+  background: linear-gradient(145deg, #eef4ff, #e2ebff);
+  color: #2457c5;
+}
+
+.biometric-hero-icon svg,
+.biometric-lock-icon svg {
+  width: 46px;
+  height: 46px;
+}
+
+.biometric-modal-eyebrow {
+  color: #2457c5;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.biometric-setup-modal h2,
+.biometric-lock-card h2 {
+  margin: 9px 0 10px;
+  color: #14213b;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.8px;
+}
+
+.biometric-modal-description,
+.biometric-lock-description {
+  margin: 0 auto 20px;
+  max-width: 330px;
+  color: #69768d;
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+.biometric-feature-list {
+  display: grid;
+  gap: 12px;
+  margin: 20px 0 24px;
+  padding: 16px;
+  border: 1px solid #e9eef6;
+  border-radius: 16px;
+  background: #f8faff;
+  text-align: left;
+}
+
+.biometric-feature-list > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #35435b;
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.biometric-feature-icon {
+  display: grid;
+  flex: 0 0 21px;
+  width: 21px;
+  height: 21px;
+  place-items: center;
+  border-radius: 50%;
+  background: #e1f6ea;
+  color: #148449;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.biometric-unavailable {
+  color: #a15c00;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.biometric-enable-button,
+.biometric-primary-button {
+  display: flex;
+  width: 100%;
+  min-height: 49px;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(110deg, #2866df, #1745ad);
+  box-shadow: 0 8px 18px rgba(37, 91, 197, 0.23);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.biometric-enable-button:hover,
+.biometric-primary-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 11px 22px rgba(37, 91, 197, 0.28);
+}
+
+.biometric-enable-button:disabled,
+.biometric-primary-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.biometric-skip-button {
+  width: 100%;
+  margin-top: 13px;
+  padding: 10px;
+  border: none;
+  background: transparent;
+  color: #66738a;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.biometric-skip-button:hover {
+  color: #2457c5;
+}
+
+.biometric-modal-footnote {
+  margin: 9px 0 0;
+  color: #97a1b1;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.biometric-lock-screen {
+  background: linear-gradient(145deg, #101d38, #172f5c 55%, #102044);
+}
+
+.biometric-lock-card {
+  max-width: 390px;
+  padding: 35px 27px 25px;
+}
+
+.biometric-lock-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 23px;
+  color: #7a879c;
+  font-size: 11px;
+}
+
+.biometric-lock-footer-icon {
+  font-size: 13px;
+}
+
+@keyframes biometric-modal-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 480px) {
+  .biometric-setup-modal,
+  .biometric-lock-card {
+    max-width: 100%;
+    padding: 26px 20px 20px;
+    border-radius: 22px;
+  }
+
+  .biometric-setup-modal h2,
+  .biometric-lock-card h2 {
+    font-size: 23px;
+  }
+
+  .biometric-feature-list {
+    padding: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .biometric-setup-modal,
+  .biometric-lock-card {
+    animation: none;
+  }
+}

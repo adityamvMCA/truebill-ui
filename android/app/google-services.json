@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "539297161728",
+    "project_id": "truebill-b6a89",
+    "storage_bucket": "truebill-b6a89.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:539297161728:android:0202cb2f06442a8e716ee5",
+        "android_client_info": {
+          "package_name": "com.trustiq.truebill"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAW60_4wdLlNmrYv6Y-PygnBZYzn56d-hI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
