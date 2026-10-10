@@ -73,4 +73,19 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  const selectedTenantId = localStorage.getItem("selectedTenantId");
+
+  if (selectedTenantId) {
+    config.headers["X-Tenant-Id"] = selectedTenantId;
+  }
+
+  return config;
+});
 export default apiClient;
