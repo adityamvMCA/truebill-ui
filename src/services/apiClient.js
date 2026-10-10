@@ -58,5 +58,19 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    const code = error?.response?.data?.code;
 
+    if (status === 402 && window.location.pathname !== "/billing/renew") {
+      window.location.assign("/billing/renew");
+    }
+    if (status === 403 && code === "FEATURE_NOT_IN_PLAN") {
+      window.location.assign("/upgrade");
+    }
+    return Promise.reject(error);
+  }
+);
 export default apiClient;

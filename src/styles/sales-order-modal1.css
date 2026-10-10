@@ -103,7 +103,7 @@
 .sales-modal-title h2 {
   margin: 0;
 
-  font-size: 15px;
+  font-size: 18px;
   line-height: 18px;
   font-weight: 600;
 
@@ -119,7 +119,7 @@
 
   margin-top: 2px;
 
-  font-size: 10px;
+  font-size: 14px;
   line-height: 13px;
 
   color: var(--text-muted, #94a3b8);
@@ -338,7 +338,7 @@
 
   margin-bottom: 6px;
 
-  font-size: 10px;
+  font-size: 16px;
   line-height: 13px;
 
   font-weight: 500;

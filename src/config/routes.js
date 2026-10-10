@@ -7,13 +7,19 @@ const routes = {
     unauthorized: "/unauthorized",
     notFound: "/404",
   },
-
+  menu: {
+    create: "/menu-creation",
+  },
+  billing: {
+    renew: "/billing/renew",
+    upgrade: "/upgrade",
+  },
   dashboard: {
     index: "/dashboard",
   },
 
-  traders:{
-    trders:"/traders",
+  traders: {
+    trders: "/traders",
   },
   // =========================
   // SALES
@@ -131,15 +137,15 @@ const routes = {
   // =========================
   // INVOICE & BILLING
   // =========================
-  billing: {
-    index: "/billing",
+  // billing: {
+  //   index: "/billing",
 
-    salesInvoices: "/billing/sales-invoices",
-    purchaseInvoices: "/billing/purchase-invoices",
+  //   salesInvoices: "/billing/sales-invoices",
+  //   purchaseInvoices: "/billing/purchase-invoices",
 
-    creditNotes: "/billing/credit-notes",
-    debitNotes: "/billing/debit-notes",
-  },
+  //   creditNotes: "/billing/credit-notes",
+  //   debitNotes: "/billing/debit-notes",
+  // },
 
   // =========================
   // ENTRY SHEET
