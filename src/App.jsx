@@ -39,9 +39,9 @@ import AppRouter from "./app/router/AppRouter";
 import { useAppVersionCheck } from "./hooks/useAppVersionCheck";
 import AppUpdateModal from "./components/common/AppUpdateModal";
 import BiometricLock from "./components/common/BiometricLock";
+import { SubscriptionProvider } from "./context/SubscriptionContext";
 import { registerFcmToken } from "./services/fcmService";
 import "./components/common/biometric.css";
-import { SubscriptionProvider } from "./context/SubscriptionContext";
 
 function App() {
   const updateInfo = useAppVersionCheck();

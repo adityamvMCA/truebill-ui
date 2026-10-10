@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import apiClient from "../services/apiClient";
 
 const SubscriptionContext = createContext({
@@ -10,7 +16,8 @@ const SubscriptionContext = createContext({
 export const SubscriptionProvider = ({ children }) => {
   const [subscription, setSubscription] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem("subscription"));
+      const stored = localStorage.getItem("subscription");
+      return stored ? JSON.parse(stored) : null;
     } catch {
       return null;
     }
@@ -18,26 +25,51 @@ export const SubscriptionProvider = ({ children }) => {
 
   const refresh = useCallback(async () => {
     try {
-      const res = await apiClient.get("/auth/me");
-      const sub = res?.data?.subscription ?? null;
-      setSubscription(sub);
-      localStorage.setItem("subscription", JSON.stringify(sub));
-    } catch {
-      /* keep last known state */
+      const response = await apiClient.get("/auth/me");
+      const nextSubscription = response?.data?.subscription ?? null;
+
+      setSubscription(nextSubscription);
+      localStorage.setItem(
+        "subscription",
+        JSON.stringify(nextSubscription)
+      );
+
+      return nextSubscription;
+    } catch (error) {
+      console.error("Subscription refresh failed:", error);
+      return null;
     }
   }, []);
 
   useEffect(() => {
-    if (localStorage.getItem("token")) refresh();
+    if (localStorage.getItem("token")) {
+      refresh();
+    }
   }, [refresh]);
 
   const hasFeature = useCallback(
-    (code) => !code || !subscription || subscription.features?.includes(String(code).toLowerCase()),
+    (featureCode) => {
+      if (!featureCode) return true;
+
+      // Do not block while subscription information is loading/not configured.
+      if (!subscription) return true;
+
+      return subscription.features?.includes(
+        String(featureCode).trim().toLowerCase()
+      );
+    },
     [subscription]
   );
 
   return (
-    <SubscriptionContext.Provider value={{ subscription, hasFeature, refresh }}>
+    <SubscriptionContext.Provider
+      value={{
+        subscription,
+        setSubscription,
+        hasFeature,
+        refresh,
+      }}
+    >
       {children}
     </SubscriptionContext.Provider>
   );
