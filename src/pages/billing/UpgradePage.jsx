@@ -3,6 +3,7 @@ import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useSubscription } from "../../context/SubscriptionContext";
 
+
 const UpgradePage = () => {
   const { state } = useLocation();
   const navigate = useNavigate();

@@ -2,6 +2,7 @@
 import React from "react";
 import { useSubscription } from "../../context/SubscriptionContext";
 
+
 const RenewPage = () => {
   const { subscription } = useSubscription();
 
