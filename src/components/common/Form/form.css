@@ -1,39 +1,47 @@
 /* =========================================================
    REUSABLE FORM COMPONENTS
-   UI MATCHES ORIGINAL SALES ORDER FORM
+   LARGER, CLEARER TEXT
 ========================================================= */
+
 
 .form-field {
   width: 100%;
   min-width: 0;
 }
 
+
 /* =========================================================
    LABEL
 ========================================================= */
 
+
 .form-label {
   display: block;
 
-  margin-bottom: 6px;
+  margin-bottom: 7px;
 
-  font-size: 12px;
-  line-height: 13px;
+  font-size: 14px;
+  line-height: 18px;
 
-  font-weight: 700;
+  font-weight: 650;
 
-  color: var(--text-secondary, #000000);
+  color: var(--form-label-color, #475569);
 }
+
 
 .form-required {
   color: #dc2626;
 
   margin-left: 2px;
+
+  font-weight: 700;
 }
+
 
 /* =========================================================
    INPUT WRAPPER
 ========================================================= */
+
 
 .form-input-wrapper {
   position: relative;
@@ -41,17 +49,19 @@
   width: 100%;
 }
 
+
 /* =========================================================
    INPUT
 ========================================================= */
+
 
 .form-input {
   width: 100%;
   min-width: 0;
 
-  height: 36px;
+  height: 40px;
 
-  padding: 0 9px;
+  padding: 0 11px;
 
   box-sizing: border-box;
 
@@ -72,7 +82,8 @@
 
   font-family: inherit;
 
-  font-size: 11px;
+  font-size: 13px;
+  line-height: 18px;
 
   outline: none;
 
@@ -81,9 +92,15 @@
     box-shadow 0.15s ease;
 }
 
+
 .form-input::placeholder {
-  color: #a8b0bb;
+  color: #94a3b8;
+
+  font-size: 13px;
+
+  opacity: 1;
 }
+
 
 .form-input:focus {
   border-color: var(
@@ -99,6 +116,7 @@
     );
 }
 
+
 .form-input:disabled {
   background: #f8fafc;
 
@@ -107,23 +125,27 @@
   cursor: not-allowed;
 }
 
+
 .form-input[readonly] {
   background: #f8fafc;
 }
+
 
 /* =========================================================
    INPUT ICON
 ========================================================= */
 
+
 .form-input-wrapper.has-icon
   .form-input {
-  padding-left: 32px;
+  padding-left: 36px;
 }
+
 
 .form-input-icon {
   position: absolute;
 
-  left: 9px;
+  left: 11px;
   top: 50%;
 
   transform: translateY(-50%);
@@ -139,9 +161,11 @@
   z-index: 1;
 }
 
+
 /* =========================================================
    SELECT
 ========================================================= */
+
 
 .form-select-wrapper {
   position: relative;
@@ -149,13 +173,14 @@
   width: 100%;
 }
 
+
 .form-select {
   width: 100%;
   min-width: 0;
 
-  height: 36px;
+  height: 40px;
 
-  padding: 0 32px 0 9px;
+  padding: 0 36px 0 11px;
 
   box-sizing: border-box;
 
@@ -176,7 +201,8 @@
 
   font-family: inherit;
 
-  font-size: 11px;
+  font-size: 13px;
+  line-height: 18px;
 
   outline: none;
 
@@ -190,6 +216,18 @@
     border-color 0.15s ease,
     box-shadow 0.15s ease;
 }
+
+
+.form-select option {
+  font-family: inherit;
+
+  font-size: 13px;
+
+  color: #334155;
+
+  background: #ffffff;
+}
+
 
 .form-select:focus {
   border-color: var(
@@ -205,6 +243,7 @@
     );
 }
 
+
 .form-select:disabled {
   background: #f8fafc;
 
@@ -213,10 +252,11 @@
   cursor: not-allowed;
 }
 
+
 .form-select-arrow {
   position: absolute;
 
-  right: 9px;
+  right: 11px;
 
   top: 50%;
 
@@ -227,14 +267,16 @@
   pointer-events: none;
 }
 
+
 /* =========================================================
    SELECT LEFT ICON
 ========================================================= */
 
+
 .form-select-left-icon {
   position: absolute;
 
-  left: 9px;
+  left: 11px;
 
   top: 50%;
 
@@ -252,22 +294,25 @@
   z-index: 1;
 }
 
+
 .form-select.has-left-icon {
-  padding-left: 32px;
+  padding-left: 36px;
 }
+
 
 /* =========================================================
    TEXTAREA
 ========================================================= */
+
 
 .form-textarea {
   width: 100%;
 
   min-width: 0;
 
-  min-height: 80px;
+  min-height: 96px;
 
-  padding: 8px 9px;
+  padding: 10px 11px;
 
   box-sizing: border-box;
 
@@ -288,7 +333,8 @@
 
   font-family: inherit;
 
-  font-size: 11px;
+  font-size: 13px;
+  line-height: 19px;
 
   outline: none;
 
@@ -299,9 +345,15 @@
     box-shadow 0.15s ease;
 }
 
+
 .form-textarea::placeholder {
-  color: #a8b0bb;
+  color: #94a3b8;
+
+  font-size: 13px;
+
+  opacity: 1;
 }
+
 
 .form-textarea:focus {
   border-color: var(
@@ -317,6 +369,7 @@
     );
 }
 
+
 .form-textarea:disabled {
   background: #f8fafc;
 
@@ -325,15 +378,18 @@
   cursor: not-allowed;
 }
 
+
 /* =========================================================
    ERROR
 ========================================================= */
+
 
 .form-input.has-error,
 .form-select.has-error,
 .form-textarea.has-error {
   border-color: #dc2626;
 }
+
 
 .form-input.has-error:focus,
 .form-select.has-error:focus,
@@ -343,26 +399,29 @@
     rgba(220, 38, 38, 0.1);
 }
 
+
 .form-error {
   display: block;
 
-  margin-top: 4px;
+  margin-top: 5px;
 
   color: #dc2626;
 
-  font-size: 10px;
+  font-size: 11px;
 
-  line-height: 13px;
+  line-height: 15px;
 }
+
 
 /* =========================================================
    BUTTON
 ========================================================= */
 
-.form-button {
-  min-height: 32px;
 
-  padding: 0 13px;
+.form-button {
+  min-height: 36px;
+
+  padding: 0 14px;
 
   display: inline-flex;
 
@@ -370,15 +429,15 @@
 
   justify-content: center;
 
-  gap: 5px;
+  gap: 6px;
 
   border-radius: 5px;
 
   font-family: inherit;
 
-  font-size: 10px;
+  font-size: 12px;
 
-  font-weight: 500;
+  font-weight: 600;
 
   cursor: pointer;
 
@@ -392,13 +451,16 @@
     border-color 0.15s ease;
 }
 
+
 .form-button:disabled {
   opacity: 0.6;
 
   cursor: not-allowed;
 }
 
+
 /* PRIMARY */
+
 
 .form-button-primary {
   border-color:
@@ -410,26 +472,36 @@
   color: #ffffff;
 }
 
+
 .form-button-primary:hover:not(:disabled) {
   background:
     var(--primary-hover, #1d4ed8);
 }
 
+
 /* SECONDARY */
 
+
 .form-button-secondary {
-  border-color: #dfe3e8;
+  border-color:
+    var(--border-color, #dfe3e8);
 
-  background: #ffffff;
+  background:
+    var(--card-bg, #ffffff);
 
-  color: #64748b;
+  color:
+    var(--text-secondary, #64748b);
 }
+
 
 .form-button-secondary:hover:not(:disabled) {
-  background: #f8fafc;
+  background:
+    var(--page-bg, #f8fafc);
 }
 
+
 /* SUCCESS */
+
 
 .form-button-success {
   background: #16a34a;
@@ -439,7 +511,9 @@
   color: #ffffff;
 }
 
+
 /* DANGER */
+
 
 .form-button-danger {
   background: #dc2626;
@@ -449,43 +523,55 @@
   color: #ffffff;
 }
 
+
 /* SMALL */
 
+
 .form-button-small {
-  min-height: 32px;
+  min-height: 34px;
 
-  padding: 0 10px;
+  padding: 0 11px;
 
-  font-size: 10px;
+  font-size: 11px;
 }
+
 
 /* MEDIUM */
 
+
 .form-button-medium {
-  min-height: 32px;
+  min-height: 36px;
 }
+
 
 /* LARGE */
 
-.form-button-large {
-  min-height: 38px;
 
-  padding: 0 15px;
+.form-button-large {
+  min-height: 42px;
+
+  padding: 0 16px;
+
+  font-size: 13px;
 }
 
+
 /* FULL WIDTH */
+
 
 .form-button-full {
   width: 100%;
 }
 
+
 /* =========================================================
    BUTTON SPINNER
 ========================================================= */
 
+
 .form-button-spinner {
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
 
   border: 2px solid
     rgba(255, 255, 255, 0.35);
@@ -499,44 +585,79 @@
     0.7s linear infinite;
 }
 
+
 @keyframes formButtonSpin {
   to {
     transform: rotate(360deg);
   }
 }
 
+
 /* =========================================================
    MOBILE
-   SAME RESPONSIVE BEHAVIOR AS ORIGINAL
 ========================================================= */
 
+
 @media (max-width: 767px) {
+  .form-label {
+    font-size: 14px;
+    line-height: 18px;
+  }
+
+
   .form-input,
   .form-select {
-    height: 40px;
+    height: 42px;
 
-    font-size: 12px;
+    font-size: 14px;
   }
+
+
+  .form-input::placeholder {
+    font-size: 14px;
+  }
+
+
+  .form-select option {
+    font-size: 14px;
+  }
+
 
   .form-textarea {
-    font-size: 12px;
+    font-size: 14px;
+  }
+
+
+  .form-textarea::placeholder {
+    font-size: 14px;
   }
 }
+
 
 /* =========================================================
    SMALL MOBILE
 ========================================================= */
 
+
 @media (max-width: 480px) {
   .form-input,
   .form-select {
-    height: 40px;
+    height: 42px;
+  }
+
+
+  .form-button {
+    min-height: 38px;
+
+    font-size: 12px;
   }
 }
+
 
 /* =========================================================
    ACCESSIBILITY
 ========================================================= */
+
 
 @media (prefers-reduced-motion: reduce) {
   .form-input,
@@ -545,6 +666,7 @@
   .form-button {
     transition: none;
   }
+
 
   .form-button-spinner {
     animation: none;

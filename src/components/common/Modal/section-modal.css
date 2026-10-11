@@ -184,12 +184,17 @@
    SIDEBAR
 ========================================= */
 
+/* =========================================
+   SIDEBAR
+========================================= */
+
+
 .section-modal-sidebar {
-  width: 205px;
+  width: 225px;
 
   flex-shrink: 0;
 
-  padding: 16px 10px;
+  padding: 18px 12px;
 
   border-right: 1px solid
     var(--border-color, #e5e7eb);
@@ -202,10 +207,14 @@
   overflow-y: auto;
 }
 
-.section-modal-sidebar-title {
-  padding: 0 9px 9px;
 
-  font-size: 10px;
+/* SECTIONS TITLE */
+
+
+.section-modal-sidebar-title {
+  padding: 0 10px 11px;
+
+  font-size: 12px;
 
   font-weight: 700;
 
@@ -214,36 +223,41 @@
   letter-spacing: 0.06em;
 
   color: var(
-    --text-muted,
-    #6b7280
+    --text-secondary,
+    #64748b
   );
 }
+
+
+/* MENU */
+
 
 .section-modal-menu {
   display: flex;
   flex-direction: column;
 
-  gap: 3px;
+  gap: 5px;
 }
+
 
 .section-modal-menu-item {
   width: 100%;
 
   display: flex;
-  align-items: flex-start;
+  align-items: center;
 
-  gap: 9px;
+  gap: 11px;
 
-  padding: 9px;
+  padding: 11px 10px;
 
   border: 0;
-  border-radius: 8px;
+  border-radius: 9px;
 
   background: transparent;
 
   color: var(
     --text-secondary,
-    #4b5563
+    #64748b
   );
 
   text-align: left;
@@ -255,6 +269,7 @@
     color 0.15s ease;
 }
 
+
 .section-modal-menu-item:hover {
   background: var(
     --sidebar-hover,
@@ -263,9 +278,13 @@
 
   color: var(
     --text-primary,
-    #111827
+    #334155
   );
 }
+
+
+/* ACTIVE MENU ITEM */
+
 
 .section-modal-menu-active {
   background: var(
@@ -278,6 +297,77 @@
     var(--primary-color, #2563eb)
   );
 }
+
+
+/* ICON */
+
+
+.section-modal-menu-icon {
+  width: 30px;
+  height: 30px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border-radius: 7px;
+}
+
+
+.section-modal-menu-active
+  .section-modal-menu-icon {
+  background: var(
+    --primary-soft,
+    #eff6ff
+  );
+}
+
+.section-modal-menu-content {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+}
+
+.section-modal-menu-label {
+  font-size: 14px;
+
+  font-weight: 650;
+
+  line-height: 19px;
+
+  color: inherit;
+}
+
+.section-modal-menu-description {
+  margin-top: 3px;
+
+  font-size: 11px;
+
+  line-height: 15px;
+
+  color: var(
+    --text-muted,
+    #94a3b8
+  );
+}
+
+
+/* Keep description muted for active menu items */
+
+.section-modal-menu-active
+  .section-modal-menu-description {
+  color: var(
+    --sidebar-active-text,
+    var(--primary-color, #2563eb)
+  );
+
+  opacity: 0.72;
+}
+
+
 
 .section-modal-menu-icon {
   width: 27px;

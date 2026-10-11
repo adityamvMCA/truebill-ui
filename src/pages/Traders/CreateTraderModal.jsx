@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { Building2, CheckCircle2, UserRound } from "lucide-react";
+import {
+  Building2,
+  CheckCircle2,
+  UserRound,
+} from "lucide-react";
 import toast from "react-hot-toast";
 
 import BoxModal from "../../components/common/Modal/BoxModal";
@@ -9,6 +13,18 @@ import Textarea from "../../components/common/Form/Textarea";
 import Button from "../../components/common/Form/Button";
 
 import api from "../../services/api";
+
+const getMinimumSubscriptionDate = () => {
+  const tomorrow = new Date();
+
+  tomorrow.setDate(
+    tomorrow.getDate() + 1
+  );
+
+  return tomorrow
+    .toISOString()
+    .split("T")[0];
+};
 
 const initialForm = {
   businessName: "",
@@ -22,19 +38,22 @@ const initialForm = {
   state: "Karnataka",
   pincode: "",
   subscriptionPlan: "professional",
+  subscriptionEnd: "",
   adminName: "",
   adminEmail: "",
   adminPassword: "",
 };
 
-function CreateTraderModal({ show, onClose, onSuccess }) {
-  const [formData, setFormData] = useState(initialForm);
+function CreateTraderModal({
+  show,
+  onClose,
+  onSuccess,
+}) {
+  const [formData, setFormData] =
+    useState(initialForm);
 
-  const [saving, setSaving] = useState(false);
-
-  /* =====================================================
-     HANDLE CHANGE
-  ===================================================== */
+  const [saving, setSaving] =
+    useState(false);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -45,50 +64,81 @@ function CreateTraderModal({ show, onClose, onSuccess }) {
     }));
   };
 
-  /* =====================================================
-     CLOSE
-  ===================================================== */
-
   const handleClose = () => {
-    if (saving) return;
+    if (saving) {
+      return;
+    }
 
     setFormData(initialForm);
+
     onClose?.();
   };
-
-  /* =====================================================
-     SUBMIT
-  ===================================================== */
 
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    /* =========================
-       VALIDATION
-    ========================= */
-
     if (!formData.businessName.trim()) {
-      toast.error("Please enter business name");
+      toast.error(
+        "Please enter business name"
+      );
+
       return;
     }
 
     if (!formData.adminName.trim()) {
-      toast.error("Please enter admin name");
+      toast.error(
+        "Please enter admin name"
+      );
+
       return;
     }
 
     if (!formData.adminEmail.trim()) {
-      toast.error("Please enter admin email");
+      toast.error(
+        "Please enter admin email"
+      );
+
       return;
     }
 
     if (!formData.adminPassword.trim()) {
-      toast.error("Please enter admin password");
+      toast.error(
+        "Please enter admin password"
+      );
+
       return;
     }
 
     if (formData.adminPassword.length < 6) {
-      toast.error("Admin password must be at least 6 characters");
+      toast.error(
+        "Admin password must be at least 6 characters"
+      );
+
+      return;
+    }
+
+    if (!formData.subscriptionEnd) {
+      toast.error(
+        "Please select subscription end date"
+      );
+
+      return;
+    }
+
+    const subscriptionEndDate = new Date(
+      `${formData.subscriptionEnd}T23:59:59`
+    );
+
+    if (
+      Number.isNaN(
+        subscriptionEndDate.getTime()
+      ) ||
+      subscriptionEndDate <= new Date()
+    ) {
+      toast.error(
+        "Subscription end date must be in the future"
+      );
+
       return;
     }
 
@@ -96,17 +146,25 @@ function CreateTraderModal({ show, onClose, onSuccess }) {
       setSaving(true);
 
       const payload = {
-        businessName: formData.businessName.trim(),
+        businessName:
+          formData.businessName.trim(),
 
-        businessType: formData.businessType,
+        businessType:
+          formData.businessType,
 
-        email: formData.email.trim(),
+        email: formData.email
+          .trim()
+          .toLowerCase(),
 
         phone: formData.phone.trim(),
 
-        gstNo: formData.gstNo.trim().toUpperCase(),
+        gstNo: formData.gstNo
+          .trim()
+          .toUpperCase(),
 
-        panNo: formData.panNo.trim().toUpperCase(),
+        panNo: formData.panNo
+          .trim()
+          .toUpperCase(),
 
         address: formData.address.trim(),
 
@@ -116,52 +174,57 @@ function CreateTraderModal({ show, onClose, onSuccess }) {
 
         pincode: formData.pincode.trim(),
 
-        subscriptionPlan: formData.subscriptionPlan,
+        subscriptionPlan:
+          formData.subscriptionPlan,
 
-        adminName: formData.adminName.trim(),
+        subscriptionEnd:
+          formData.subscriptionEnd,
 
-        adminEmail: formData.adminEmail.trim().toLowerCase(),
+        adminName:
+          formData.adminName.trim(),
 
-        adminPassword: formData.adminPassword,
+        adminEmail: formData.adminEmail
+          .trim()
+          .toLowerCase(),
+
+        adminPassword:
+          formData.adminPassword,
       };
 
-      /*
-       * clientCode is NOT sent.
-       *
-       * Backend generates:
-       * TRD001
-       * TRD002
-       * TRD003...
-       */
-
-      const response = await api.tenants.create(payload);
+      const response =
+        await api.tenants.create(payload);
 
       const result = response?.data;
 
       if (!result?.success) {
-        throw new Error(result?.message || "Failed to create trader");
+        throw new Error(
+          result?.message ||
+            "Failed to create tenant"
+        );
       }
 
       toast.success(
         `${
-          result?.tenant?.businessName || formData.businessName
-        } created successfully`,
+          result?.tenant?.businessName ||
+          formData.businessName
+        } created successfully`
       );
 
       setFormData(initialForm);
 
-      if (onSuccess) {
-        await onSuccess(result?.tenant);
-      }
+      await onSuccess?.(result?.tenant);
 
       onClose?.();
     } catch (error) {
-      console.error("Create trader error:", error);
+      console.error(
+        "Create tenant error:",
+        error
+      );
 
       toast.error(
         error?.response?.data?.message ||
           error?.message ||
-          "Failed to create trader",
+          "Failed to create tenant"
       );
     } finally {
       setSaving(false);
@@ -172,8 +235,8 @@ function CreateTraderModal({ show, onClose, onSuccess }) {
     <BoxModal
       show={show}
       onClose={handleClose}
-      title="Add Trader"
-      subtitle="Register a new trader and administrator"
+      title="Create Tenant"
+      subtitle="Register an organization and administrator"
       icon={<Building2 size={20} />}
       width="1120px"
       footer={
@@ -189,20 +252,21 @@ function CreateTraderModal({ show, onClose, onSuccess }) {
 
           <Button
             type="submit"
-            form="create-trader-form"
+            form="create-tenant-form"
             variant="primary"
             disabled={saving}
           >
-            {saving ? "Creating..." : "Create Trader"}
+            {saving
+              ? "Creating..."
+              : "Create Tenant"}
           </Button>
         </div>
       }
     >
-      <form id="create-trader-form" onSubmit={handleSubmit}>
-        {/* =================================================
-            BUSINESS INFORMATION
-        ================================================= */}
-
+      <form
+        id="create-tenant-form"
+        onSubmit={handleSubmit}
+      >
         <div className="box-modal-section">
           <div className="box-modal-section-header">
             <div className="box-modal-section-icon">
@@ -212,13 +276,13 @@ function CreateTraderModal({ show, onClose, onSuccess }) {
             <div className="box-modal-section-header-content">
               <h3>Business Information</h3>
 
-              <p>Enter trader business details</p>
+              <p>
+                Enter organization business details
+              </p>
             </div>
           </div>
 
           <div className="box-modal-form-grid">
-            {/* Business Name */}
-
             <Input
               label="Business Name"
               name="businessName"
@@ -227,8 +291,6 @@ function CreateTraderModal({ show, onClose, onSuccess }) {
               placeholder="Enter business name"
               required
             />
-
-            {/* Business Type */}
 
             <Select
               label="Business Type"
@@ -257,13 +319,11 @@ function CreateTraderModal({ show, onClose, onSuccess }) {
                   label: "Manufacturer",
                 },
                 {
-                  value: "Service",
-                  label: "Service",
+                  value: "Service Provider",
+                  label: "Service Provider",
                 },
               ]}
             />
-
-            {/* Phone */}
 
             <Input
               label="Phone"
@@ -273,8 +333,6 @@ function CreateTraderModal({ show, onClose, onSuccess }) {
               onChange={handleChange}
               placeholder="Enter phone number"
             />
-
-            {/* Business Email */}
 
             <Input
               label="Business Email"
@@ -286,8 +344,6 @@ function CreateTraderModal({ show, onClose, onSuccess }) {
               autoComplete="off"
             />
 
-            {/* GST */}
-
             <Input
               label="GST Number"
               name="gstNo"
@@ -296,8 +352,6 @@ function CreateTraderModal({ show, onClose, onSuccess }) {
               placeholder="Enter GST number"
             />
 
-            {/* PAN */}
-
             <Input
               label="PAN Number"
               name="panNo"
@@ -305,8 +359,6 @@ function CreateTraderModal({ show, onClose, onSuccess }) {
               onChange={handleChange}
               placeholder="Enter PAN number"
             />
-
-            {/* Address */}
 
             <div className="box-modal-form-full">
               <Textarea
@@ -319,8 +371,6 @@ function CreateTraderModal({ show, onClose, onSuccess }) {
               />
             </div>
 
-            {/* City */}
-
             <Input
               label="City"
               name="city"
@@ -329,8 +379,6 @@ function CreateTraderModal({ show, onClose, onSuccess }) {
               placeholder="Enter city"
             />
 
-            {/* State */}
-
             <Input
               label="State"
               name="state"
@@ -338,8 +386,6 @@ function CreateTraderModal({ show, onClose, onSuccess }) {
               onChange={handleChange}
               placeholder="Enter state"
             />
-
-            {/* Pincode */}
 
             <Input
               label="Pincode"
@@ -352,10 +398,6 @@ function CreateTraderModal({ show, onClose, onSuccess }) {
           </div>
         </div>
 
-        {/* =================================================
-            SUBSCRIPTION
-        ================================================= */}
-
         <div className="box-modal-section">
           <div className="box-modal-section-header">
             <div className="box-modal-section-icon">
@@ -365,7 +407,9 @@ function CreateTraderModal({ show, onClose, onSuccess }) {
             <div className="box-modal-section-header-content">
               <h3>Subscription</h3>
 
-              <p>Select trader subscription plan</p>
+              <p>
+                Select a subscription plan and end date
+              </p>
             </div>
           </div>
 
@@ -390,12 +434,18 @@ function CreateTraderModal({ show, onClose, onSuccess }) {
                 },
               ]}
             />
+
+            <Input
+              label="Subscription End Date"
+              name="subscriptionEnd"
+              type="date"
+              value={formData.subscriptionEnd}
+              onChange={handleChange}
+              min={getMinimumSubscriptionDate()}
+              required
+            />
           </div>
         </div>
-
-        {/* =================================================
-            ADMINISTRATOR ACCOUNT
-        ================================================= */}
 
         <div className="box-modal-section">
           <div className="box-modal-section-header">
@@ -406,13 +456,13 @@ function CreateTraderModal({ show, onClose, onSuccess }) {
             <div className="box-modal-section-header-content">
               <h3>Administrator Account</h3>
 
-              <p>Create the trader administrator login</p>
+              <p>
+                Create the tenant administrator login
+              </p>
             </div>
           </div>
 
           <div className="box-modal-form-grid">
-            {/* Admin Name */}
-
             <Input
               label="Admin Name"
               name="adminName"
@@ -421,8 +471,6 @@ function CreateTraderModal({ show, onClose, onSuccess }) {
               placeholder="Enter admin name"
               required
             />
-
-            {/* Admin Email */}
 
             <Input
               label="Admin Email"
@@ -434,8 +482,6 @@ function CreateTraderModal({ show, onClose, onSuccess }) {
               autoComplete="new-email"
               required
             />
-
-            {/* Admin Password */}
 
             <Input
               label="Admin Password"

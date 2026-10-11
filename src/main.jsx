@@ -9,6 +9,7 @@ import "./styles/common.css";
 import "./styles/layout.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./components/common/Form/form.css";
+import "./components/common/StatusField/statusField.css";
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>

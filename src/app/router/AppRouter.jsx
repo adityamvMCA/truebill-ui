@@ -6,12 +6,12 @@ import MainLayout from "../../layouts/MainLayout";
 import GlobalSkeleton from "../../components/common/GlobalSkeleton";
 import SalesOrders1 from "../../pages/SalesOrders1";
 import PurchaseOrders from "../../pages/PurchaseOrders";
-import SalesInvoiceCreation from "../../pages/SalesInvoiceCreation";
 import Traders from "../../pages/Traders/Traders";
 import MenuCreate from "../../pages/settings/MenuCreate";
 import FeatureRoute from "./FeatureRoute";
 import DeveloperRoute from "./DeveloperRoute";
 import CustomerCreate from "../../pages/customers/CustomerCreate";
+import ProductsList from "../../pages/Products/ProductsList";
 
 const Login = lazy(() => import("../../pages/Login"));
 const Dashboard = lazy(() => import("../../pages/Dashboard"));
@@ -68,6 +68,10 @@ const AppRouter = () => (
           <Route
             path={routes.customers.index}
             element={gated("customers", <CustomerCreate />)}
+          />
+          <Route
+            path={routes.inventory.products}
+            element={gated("customers", <ProductsList />)}
           />
 
           {/* Developer-only settings */}

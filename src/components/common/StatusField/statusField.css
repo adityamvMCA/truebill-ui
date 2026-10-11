@@ -1,0 +1,77 @@
+.status-field {
+  min-height: 26px;
+
+  display: inline-flex;
+  align-items: center;
+
+  gap: 5px;
+
+  padding: 4px 8px;
+
+  border-radius: 999px;
+
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+
+  white-space: nowrap;
+}
+
+
+.status-field-success {
+  background: #ecfdf3;
+  color: #16a34a;
+}
+
+
+.status-field-info {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+
+.status-field-warning {
+  background: #fff7ed;
+  color: #d97706;
+}
+
+
+.status-field-danger {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+
+.status-field-purple {
+  background: #f5f3ff;
+  color: #7c3aed;
+}
+
+
+.status-field-neutral {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+
+.status-field-spin {
+  animation: status-field-spin 1.2s linear infinite;
+}
+
+
+@keyframes status-field-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+@media (max-width: 767px) {
+  .status-field {
+    min-height: 28px;
+
+    padding: 5px 9px;
+
+    font-size: 12px;
+  }
+}

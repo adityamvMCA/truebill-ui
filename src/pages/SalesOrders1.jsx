@@ -5,9 +5,6 @@ import DataList from "../components/common/DataList/DataList";
 import SalesOrderModal from "../components/SalesOrderModal";
 
 function SalesOrders1() {
-  /* ========================================
-     STATE
-  ======================================== */
 
   const [loading, setLoading] = useState(true);
 
