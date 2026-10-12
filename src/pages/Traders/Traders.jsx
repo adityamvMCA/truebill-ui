@@ -1,4 +1,547 @@
-import { useEffect, useState } from "react";
+
+// import { useCallback, useEffect, useMemo, useState } from "react";
+// import { useNavigate } from "react-router-dom";
+// import toast from "react-hot-toast";
+// import {
+//   Building2,
+//   Search,
+//   Plus,
+//   ArrowRight,
+//   Users,
+//   CheckCircle2,
+//   Clock,
+//   Ban,
+//   RefreshCw,
+//   ChevronLeft,
+//   ChevronRight,
+// } from "lucide-react";
+
+// import "./traders.css";
+// import api from "../../services/api";
+// import CreateTraderModal from "./CreateTraderModal";
+
+// const PAGE_SIZE = 20;
+
+// function Traders() {
+//   const navigate = useNavigate();
+
+//   const [traders, setTraders] = useState([]);
+//   const [loading, setLoading] = useState(true);
+//   const [search, setSearch] = useState("");
+//   const [debouncedSearch, setDebouncedSearch] = useState("");
+
+//   const [page, setPage] = useState(1);
+//   const [totalPages, setTotalPages] = useState(1);
+//   const [totalTraders, setTotalTraders] = useState(0);
+
+//   const [showCreateTrader, setShowCreateTrader] = useState(false);
+
+//   /* =====================================================
+//      DEBOUNCE SEARCH
+//   ===================================================== */
+
+//   useEffect(() => {
+//     const timer = setTimeout(() => {
+//       setDebouncedSearch(search.trim());
+//       setPage(1);
+//     }, 400);
+
+//     return () => clearTimeout(timer);
+//   }, [search]);
+
+//   /* =====================================================
+//      LOAD TRADERS
+//   ===================================================== */
+
+//   const loadTraders = useCallback(
+//     async ({ silent = false } = {}) => {
+//       if (!silent) {
+//         setLoading(true);
+//       }
+
+//       try {
+//         const response = await api.tenants.getAll({
+//           params: {
+//             page,
+//             limit: PAGE_SIZE,
+//             search: debouncedSearch || undefined,
+//           },
+//         });
+
+//         const result = response?.data;
+
+//         if (result?.success) {
+//           setTraders(result?.tenants || []);
+//           setTotalTraders(result?.total || 0);
+//           setTotalPages(result?.totalPages || 1);
+//         } else {
+//           toast.error(result?.message || "Unable to load traders");
+//         }
+//       } catch (error) {
+//         console.error("Load traders error:", error);
+
+//         toast.error(error?.response?.data?.message || "Unable to load traders");
+//       } finally {
+//         if (!silent) {
+//           setLoading(false);
+//         }
+//       }
+//     },
+//     [page, debouncedSearch],
+//   );
+
+//   /* =====================================================
+//      INITIAL + SEARCH LOAD
+//   ===================================================== */
+
+//   useEffect(() => {
+//     let cancelled = false;
+
+//     const fetchTraders = async () => {
+//       setLoading(true);
+
+//       try {
+//         const response = await api.tenants.getAll({
+//           params: {
+//             page,
+//             limit: PAGE_SIZE,
+//             search: debouncedSearch || undefined,
+//           },
+//         });
+
+//         if (cancelled) return;
+
+//         const result = response?.data;
+
+//         if (result?.success) {
+//           setTraders(result?.tenants || []);
+//           setTotalTraders(result?.total || 0);
+//           setTotalPages(result?.totalPages || 1);
+//         } else {
+//           toast.error(result?.message || "Unable to load traders");
+//         }
+//       } catch (error) {
+//         if (cancelled) return;
+
+//         console.error("Initial traders load error:", error);
+
+//         toast.error(error?.response?.data?.message || "Unable to load traders");
+//       } finally {
+//         if (!cancelled) {
+//           setLoading(false);
+//         }
+//       }
+//     };
+
+//     fetchTraders();
+
+//     return () => {
+//       cancelled = true;
+//     };
+//   }, [page, debouncedSearch]);
+
+//   /* =====================================================
+//      SELECT TRADER
+//   ===================================================== */
+
+//   const isTraderAccessible = (trader) => {
+//     if (!trader?.isActive) return false;
+
+//     if (trader.status === "suspended" || trader.status === "cancelled") {
+//       return false;
+//     }
+
+//     if (
+//       trader.subscriptionEnd &&
+//       new Date(trader.subscriptionEnd) <= new Date()
+//     ) {
+//       return false;
+//     }
+
+//     return true;
+//   };
+
+//   const handleSelectTrader = (trader) => {
+//     if (!trader?._id) {
+//       toast.error("Invalid trader");
+//       return;
+//     }
+
+//     if (!isTraderAccessible(trader)) {
+//       toast.error("This trader subscription is not active");
+//       return;
+//     }
+
+//     sessionStorage.setItem("selectedTenantId", trader._id);
+//     sessionStorage.setItem("selectedClientCode", trader.clientCode || "");
+
+//     window.dispatchEvent(new Event("tenantChanged"));
+
+//     toast.success(`${trader.businessName} selected`);
+
+//     navigate("/dashboard");
+//   };
+
+//   /* =====================================================
+//      SUMMARY
+//   ===================================================== */
+
+//   const summary = useMemo(() => {
+//     const active = traders.filter(
+//       (trader) => trader.status === "active",
+//     ).length;
+
+//     const trial = traders.filter((trader) => trader.status === "trial").length;
+
+//     const totalUsers = traders.reduce(
+//       (total, trader) => total + Number(trader.userCount || 0),
+//       0,
+//     );
+
+//     return {
+//       total: totalTraders || traders.length,
+//       active,
+//       trial,
+//       totalUsers,
+//     };
+//   }, [traders, totalTraders]);
+
+//   /* =====================================================
+//      CREATE TRADER SUCCESS
+//   ===================================================== */
+
+//   const handleTraderCreated = async () => {
+//     setShowCreateTrader(false);
+
+//     setPage(1);
+//     await loadTraders({ silent: true });
+//   };
+
+//   /* =====================================================
+//      STATUS ICON
+//   ===================================================== */
+
+//   const getStatusIcon = (status) => {
+//     if (status === "active") {
+//       return <CheckCircle2 size={15} />;
+//     }
+
+//     if (status === "trial") {
+//       return <Clock size={15} />;
+//     }
+
+//     return <Ban size={15} />;
+//   };
+
+//   /* =====================================================
+//      RENDER
+//   ===================================================== */
+
+//   return (
+//     <div className="traders-page">
+//       {/* =================================================
+//           HEADER
+//       ================================================= */}
+
+//       <div className="traders-header">
+//         <div>
+//           <div className="page-title-row">
+//             <div className="page-title-icon">
+//               <Building2 size={22} />
+//             </div>
+
+//             <div>
+//               <h1>Traders</h1>
+
+//               <p>Manage and access your TrustIQ ERP traders</p>
+//             </div>
+//           </div>
+//         </div>
+
+//         <div className="traders-header-actions">
+//           <button
+//             type="button"
+//             className="secondary-button"
+//             onClick={() => loadTraders()}
+//             disabled={loading}
+//           >
+//             <RefreshCw size={17} className={loading ? "spin-icon" : ""} />
+//             Refresh
+//           </button>
+
+//           <button
+//             type="button"
+//             className="traders-add-button"
+//             onClick={() => setShowCreateTrader(true)}
+//           >
+//             <Plus size={18} />
+
+//             <span>Add Trader</span>
+//           </button>
+//         </div>
+//       </div>
+
+//       {/* =================================================
+//           SUMMARY
+//       ================================================= */}
+
+//       <div className="traders-summary">
+//         <div className="summary-card">
+//           <div className="summary-icon">
+//             <Building2 size={20} />
+//           </div>
+
+//           <div>
+//             <span>Total Traders</span>
+
+//             <strong>{summary.total}</strong>
+//           </div>
+//         </div>
+
+//         <div className="summary-card">
+//           <div className="summary-icon">
+//             <CheckCircle2 size={20} />
+//           </div>
+
+//           <div>
+//             <span>Active</span>
+
+//             <strong>{summary.active}</strong>
+//           </div>
+//         </div>
+
+//         <div className="summary-card">
+//           <div className="summary-icon">
+//             <Clock size={20} />
+//           </div>
+
+//           <div>
+//             <span>Trial</span>
+
+//             <strong>{summary.trial}</strong>
+//           </div>
+//         </div>
+
+//         <div className="summary-card">
+//           <div className="summary-icon">
+//             <Users size={20} />
+//           </div>
+
+//           <div>
+//             <span>Users on Page</span>
+
+//             <strong>{summary.totalUsers}</strong>
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* =================================================
+//           TRADERS CARD
+//       ================================================= */}
+
+//       <div className="traders-card">
+//         <div className="traders-toolbar">
+//           <div>
+//             <h2>All Traders</h2>
+
+//             <span>
+//               {totalTraders} trader
+//               {totalTraders !== 1 ? "s" : ""}
+//             </span>
+//           </div>
+
+//           <div className="traders-search">
+//             <Search size={18} />
+
+//             <input
+//               type="text"
+//               placeholder="Search traders..."
+//               value={search}
+//               onChange={(event) => setSearch(event.target.value)}
+//             />
+//           </div>
+//         </div>
+
+//         {loading ? (
+//           <div className="traders-loading">
+//             <RefreshCw size={24} className="spin-icon" />
+
+//             <span>Loading traders...</span>
+//           </div>
+//         ) : traders.length === 0 ? (
+//           <div className="traders-empty">
+//             <div className="empty-icon">
+//               <Building2 size={28} />
+//             </div>
+
+//             <h3>{debouncedSearch ? "No traders found" : "No traders yet"}</h3>
+
+//             <p>
+//               {debouncedSearch
+//                 ? "Try changing your search."
+//                 : "Create your first trader to get started."}
+//             </p>
+
+//             {!debouncedSearch && (
+//               <button
+//                 type="button"
+//                 className="primary-button"
+//                 onClick={() => setShowCreateTrader(true)}
+//               >
+//                 <Plus size={17} />
+//                 Add Trader
+//               </button>
+//             )}
+//           </div>
+//         ) : (
+//           <>
+//             <div className="traders-table-wrapper">
+//               <table className="traders-table">
+//                 <thead>
+//                   <tr>
+//                     <th>Trader</th>
+
+//                     <th>Client Code</th>
+
+//                     <th>Contact</th>
+
+//                     <th>Plan</th>
+
+//                     <th>Users</th>
+
+//                     <th>Status</th>
+
+//                     <th></th>
+//                   </tr>
+//                 </thead>
+
+//                 <tbody>
+//                   {traders.map((trader) => {
+//                     const accessible = isTraderAccessible(trader);
+
+//                     return (
+//                       <tr key={trader._id}>
+//                         <td>
+//                           <div className="trader-name">
+//                             <div className="trader-avatar">
+//                               {trader.businessName?.charAt(0)?.toUpperCase() ||
+//                                 "T"}
+//                             </div>
+
+//                             <div>
+//                               <strong>{trader.businessName}</strong>
+
+//                               <span>{trader.email || "No email"}</span>
+//                             </div>
+//                           </div>
+//                         </td>
+
+//                         <td>
+//                           <span className="client-code">
+//                             {trader.clientCode}
+//                           </span>
+//                         </td>
+
+//                         <td>
+//                           <div className="contact-info">
+//                             <strong>{trader.phone || "-"}</strong>
+
+//                             <span>{trader.city || trader.state || ""}</span>
+//                           </div>
+//                         </td>
+
+//                         <td>
+//                           <span className="plan-badge">
+//                             {trader.subscriptionPlan || "-"}
+//                           </span>
+//                         </td>
+
+//                         <td>
+//                           <span className="user-count">
+//                             {trader.userCount || 0}
+//                           </span>
+//                         </td>
+
+//                         <td>
+//                           <span
+//                             className={`status-badge status-${trader.status}`}
+//                           >
+//                             {getStatusIcon(trader.status)}
+
+//                             {trader.status}
+//                           </span>
+//                         </td>
+
+//                         <td>
+//                           <button
+//                             type="button"
+//                             className="enter-trader-button"
+//                             onClick={() => handleSelectTrader(trader)}
+//                             disabled={!accessible}
+//                           >
+//                             Enter ERP
+//                             <ArrowRight size={16} />
+//                           </button>
+//                         </td>
+//                       </tr>
+//                     );
+//                   })}
+//                 </tbody>
+//               </table>
+//             </div>
+
+//             {/* =============================================
+//                 PAGINATION
+//             ============================================= */}
+
+//             {totalPages > 1 && (
+//               <div className="traders-pagination">
+//                 <button
+//                   type="button"
+//                   className="pagination-button"
+//                   onClick={() => setPage((current) => current - 1)}
+//                   disabled={page === 1 || loading}
+//                 >
+//                   <ChevronLeft size={16} />
+//                   Previous
+//                 </button>
+
+//                 <span>
+//                   Page {page} of {totalPages}
+//                 </span>
+
+//                 <button
+//                   type="button"
+//                   className="pagination-button"
+//                   onClick={() => setPage((current) => current + 1)}
+//                   disabled={page >= totalPages || loading}
+//                 >
+//                   Next
+//                   <ChevronRight size={16} />
+//                 </button>
+//               </div>
+//             )}
+//           </>
+//         )}
+//       </div>
+
+//       {/* =================================================
+//           CREATE TRADER MODAL
+//       ================================================= */}
+
+//       <CreateTraderModal
+//         show={showCreateTrader}
+//         onClose={() => setShowCreateTrader(false)}
+//         onSuccess={handleTraderCreated}
+//       />
+//     </div>
+//   );
+// }
+
+// export default Traders;
+
+
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
@@ -11,11 +554,15 @@ import {
   Clock,
   Ban,
   RefreshCw,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 import "./traders.css";
 import api from "../../services/api";
 import CreateTraderModal from "./CreateTraderModal";
+
+const PAGE_SIZE = 20;
 
 function Traders() {
   const navigate = useNavigate();
@@ -23,119 +570,55 @@ function Traders() {
   const [traders, setTraders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalTraders, setTotalTraders] = useState(0);
+
   const [showCreateTrader, setShowCreateTrader] = useState(false);
 
-  /* =====================================================
-     LOAD TRADERS
-  ===================================================== */
-
-  const loadTraders = async () => {
-    setLoading(true);
-
-    try {
-      const response = await api.tenants.getAll();
-
-      const result = response?.data;
-
-      if (result?.success) {
-        setTraders(result?.tenants || []);
-      } else {
-        toast.error(result?.message || "Unable to load traders");
-      }
-    } catch (error) {
-      console.error("Load traders error:", error);
-
-      toast.error(error?.response?.data?.message || "Unable to load traders");
-    } finally {
-      setLoading(false);
+  const getEffectiveStatus = (trader) => {
+    if (!trader?.isActive) {
+      return "inactive";
     }
+
+    if (
+      trader.subscriptionEnd &&
+      new Date(trader.subscriptionEnd) <= new Date()
+    ) {
+      return "expired";
+    }
+
+    return trader.status;
   };
 
-  /* =====================================================
-     INITIAL LOAD
-  ===================================================== */
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const fetchTraders = async () => {
-      try {
-        const response = await api.tenants.getAll();
-
-        if (cancelled) return;
-
-        const result = response?.data;
-
-        if (result?.success) {
-          setTraders(result?.tenants || []);
-        } else {
-          toast.error(result?.message || "Unable to load traders");
-        }
-      } catch (error) {
-        if (cancelled) return;
-
-        console.error("Initial traders load error:", error);
-
-        toast.error(error?.response?.data?.message || "Unable to load traders");
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchTraders();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  /* =====================================================
-     SELECT TRADER
-  ===================================================== */
-
-  const handleSelectTrader = (trader) => {
-    if (!trader?._id) {
-      toast.error("Invalid trader");
-      return;
+  const getDaysLeft = (subscriptionEnd) => {
+    if (!subscriptionEnd) {
+      return null;
     }
 
-    sessionStorage.setItem("selectedTenantId", trader._id);
+    const endDate = new Date(subscriptionEnd);
+    const now = new Date();
 
-    sessionStorage.setItem("selectedClientCode", trader.clientCode || "");
+    if (endDate <= now) {
+      return 0;
+    }
 
-    sessionStorage.setItem("selectedTenant", JSON.stringify(trader));
-
-    window.dispatchEvent(new Event("tenantChanged"));
-
-    toast.success(`${trader.businessName} selected`);
-
-    navigate("/dashboard");
+    return Math.ceil(
+      (endDate.getTime() - now.getTime()) /
+        (24 * 60 * 60 * 1000),
+    );
   };
 
-  /* =====================================================
-     FILTER TRADERS
-  ===================================================== */
-
-  const filteredTraders = traders.filter((trader) => {
-    const value = search.toLowerCase().trim();
-
-    if (!value) {
-      return true;
-    }
+  const isTraderAccessible = (trader) => {
+    const effectiveStatus = getEffectiveStatus(trader);
 
     return (
-      trader.businessName?.toLowerCase().includes(value) ||
-      trader.clientCode?.toLowerCase().includes(value) ||
-      trader.email?.toLowerCase().includes(value) ||
-      trader.phone?.toLowerCase().includes(value)
+      effectiveStatus === "active" ||
+      effectiveStatus === "trial"
     );
-  });
-
-  /* =====================================================
-     STATUS ICON
-  ===================================================== */
+  };
 
   const getStatusIcon = (status) => {
     if (status === "active") {
@@ -149,32 +632,175 @@ function Traders() {
     return <Ban size={15} />;
   };
 
-  /* =====================================================
-     CREATE TRADER SUCCESS
-  ===================================================== */
+  const loadTraders = useCallback(
+    async ({ silent = false } = {}) => {
+      if (!silent) {
+        setLoading(true);
+      }
 
-  const handleTraderCreated = async () => {
-    /*
-     * Close modal
-     */
-    setShowCreateTrader(false);
+      try {
+        const response = await api.tenants.getAll({
+          params: {
+            page,
+            limit: PAGE_SIZE,
+            search: debouncedSearch || undefined,
+          },
+        });
 
-    /*
-     * Refresh trader list
-     */
-    await loadTraders();
+        const result = response?.data;
+
+        if (result?.success) {
+          setTraders(result?.tenants || []);
+          setTotalTraders(result?.total || 0);
+          setTotalPages(result?.totalPages || 1);
+        } else {
+          toast.error(
+            result?.message || "Unable to load traders",
+          );
+        }
+      } catch (error) {
+        console.error("Load traders error:", error);
+
+        toast.error(
+          error?.response?.data?.message ||
+            "Unable to load traders",
+        );
+      } finally {
+        if (!silent) {
+          setLoading(false);
+        }
+      }
+    },
+    [page, debouncedSearch],
+  );
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      setPage(1);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchTraders = async () => {
+      setLoading(true);
+
+      try {
+        const response = await api.tenants.getAll({
+          params: {
+            page,
+            limit: PAGE_SIZE,
+            search: debouncedSearch || undefined,
+          },
+        });
+
+        if (cancelled) {
+          return;
+        }
+
+        const result = response?.data;
+
+        if (result?.success) {
+          setTraders(result?.tenants || []);
+          setTotalTraders(result?.total || 0);
+          setTotalPages(result?.totalPages || 1);
+        } else {
+          toast.error(
+            result?.message || "Unable to load traders",
+          );
+        }
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        console.error("Initial traders load error:", error);
+
+        toast.error(
+          error?.response?.data?.message ||
+            "Unable to load traders",
+        );
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchTraders();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [page, debouncedSearch]);
+
+  const handleSelectTrader = (trader) => {
+    if (!trader?._id) {
+      toast.error("Invalid trader");
+      return;
+    }
+
+    if (!isTraderAccessible(trader)) {
+      toast.error(
+        "This trader subscription is not active",
+      );
+      return;
+    }
+
+    sessionStorage.setItem("selectedTenantId", trader._id);
+    sessionStorage.setItem(
+      "selectedClientCode",
+      trader.clientCode || "",
+    );
+
+    window.dispatchEvent(new Event("tenantChanged"));
+
+    toast.success(`${trader.businessName} selected`);
+
+    navigate("/dashboard");
   };
 
-  /* =====================================================
-     RENDER
-  ===================================================== */
+  const summary = useMemo(() => {
+    const active = traders.filter((trader) => {
+      const status = getEffectiveStatus(trader);
+
+      return status === "active";
+    }).length;
+
+    const trial = traders.filter((trader) => {
+      const status = getEffectiveStatus(trader);
+
+      return status === "trial";
+    }).length;
+
+    const totalUsers = traders.reduce(
+      (total, trader) =>
+        total + Number(trader.userCount || 0),
+      0,
+    );
+
+    return {
+      total: totalTraders || traders.length,
+      active,
+      trial,
+      totalUsers,
+    };
+  }, [traders, totalTraders]);
+
+  const handleTraderCreated = async () => {
+    setShowCreateTrader(false);
+
+    setPage(1);
+
+    await loadTraders({ silent: true });
+  };
 
   return (
     <div className="traders-page">
-      {/* =================================================
-          HEADER
-      ================================================= */}
-
       <div className="traders-header">
         <div>
           <div className="page-title-row">
@@ -185,25 +811,27 @@ function Traders() {
             <div>
               <h1>Traders</h1>
 
-              <p>Manage and access your TrustIQ ERP traders</p>
+              <p>
+                Manage and access your TrustIQ ERP traders
+              </p>
             </div>
           </div>
         </div>
 
         <div className="traders-header-actions">
-          {/* REFRESH */}
-
           <button
             type="button"
             className="secondary-button"
-            onClick={loadTraders}
+            onClick={() => loadTraders()}
             disabled={loading}
           >
-            <RefreshCw size={17} className={loading ? "spin-icon" : ""} />
+            <RefreshCw
+              size={17}
+              className={loading ? "spin-icon" : ""}
+            />
+
             Refresh
           </button>
-
-          {/* ADD TRADER */}
 
           <button
             type="button"
@@ -217,13 +845,7 @@ function Traders() {
         </div>
       </div>
 
-      {/* =================================================
-          SUMMARY
-      ================================================= */}
-
       <div className="traders-summary">
-        {/* TOTAL */}
-
         <div className="summary-card">
           <div className="summary-icon">
             <Building2 size={20} />
@@ -232,11 +854,9 @@ function Traders() {
           <div>
             <span>Total Traders</span>
 
-            <strong>{traders.length}</strong>
+            <strong>{summary.total}</strong>
           </div>
         </div>
-
-        {/* ACTIVE */}
 
         <div className="summary-card">
           <div className="summary-icon">
@@ -246,13 +866,9 @@ function Traders() {
           <div>
             <span>Active</span>
 
-            <strong>
-              {traders.filter((item) => item.status === "active").length}
-            </strong>
+            <strong>{summary.active}</strong>
           </div>
         </div>
-
-        {/* TRIAL */}
 
         <div className="summary-card">
           <div className="summary-icon">
@@ -262,13 +878,9 @@ function Traders() {
           <div>
             <span>Trial</span>
 
-            <strong>
-              {traders.filter((item) => item.status === "trial").length}
-            </strong>
+            <strong>{summary.trial}</strong>
           </div>
         </div>
-
-        {/* USERS */}
 
         <div className="summary-card">
           <div className="summary-icon">
@@ -276,36 +888,23 @@ function Traders() {
           </div>
 
           <div>
-            <span>Total Users</span>
+            <span>Users on Page</span>
 
-            <strong>
-              {traders.reduce(
-                (total, trader) => total + Number(trader.userCount || 0),
-                0,
-              )}
-            </strong>
+            <strong>{summary.totalUsers}</strong>
           </div>
         </div>
       </div>
 
-      {/* =================================================
-          TRADERS CARD
-      ================================================= */}
-
       <div className="traders-card">
-        {/* TOOLBAR */}
-
         <div className="traders-toolbar">
           <div>
             <h2>All Traders</h2>
 
             <span>
-              {filteredTraders.length} trader
-              {filteredTraders.length !== 1 ? "s" : ""}
+              {totalTraders} trader
+              {totalTraders !== 1 ? "s" : ""}
             </span>
           </div>
-
-          {/* SEARCH */}
 
           <div className="traders-search">
             <Search size={18} />
@@ -314,163 +913,223 @@ function Traders() {
               type="text"
               placeholder="Search traders..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(event) =>
+                setSearch(event.target.value)
+              }
             />
           </div>
         </div>
 
-        {/* =================================================
-            LOADING
-        ================================================= */}
-
         {loading ? (
           <div className="traders-loading">
-            <RefreshCw size={24} className="spin-icon" />
+            <RefreshCw
+              size={24}
+              className="spin-icon"
+            />
 
             <span>Loading traders...</span>
           </div>
-        ) : filteredTraders.length === 0 ? (
-          /* =================================================
-             EMPTY
-          ================================================= */
-
+        ) : traders.length === 0 ? (
           <div className="traders-empty">
             <div className="empty-icon">
               <Building2 size={28} />
             </div>
 
-            <h3>{search ? "No traders found" : "No traders yet"}</h3>
+            <h3>
+              {debouncedSearch
+                ? "No traders found"
+                : "No traders yet"}
+            </h3>
 
             <p>
-              {search
+              {debouncedSearch
                 ? "Try changing your search."
                 : "Create your first trader to get started."}
             </p>
 
-            {!search && (
+            {!debouncedSearch && (
               <button
                 type="button"
                 className="primary-button"
-                onClick={() => setShowCreateTrader(true)}
+                onClick={() =>
+                  setShowCreateTrader(true)
+                }
               >
                 <Plus size={17} />
+
                 Add Trader
               </button>
             )}
           </div>
         ) : (
-          /* =================================================
-             TABLE
-          ================================================= */
+          <>
+            <div className="traders-table-wrapper">
+              <table className="traders-table">
+                <thead>
+                  <tr>
+                    <th>Trader</th>
 
-          <div className="traders-table-wrapper">
-            <table className="traders-table">
-              <thead>
-                <tr>
-                  <th>Trader</th>
+                    <th>Client Code</th>
 
-                  <th>Client Code</th>
+                    <th>Contact</th>
 
-                  <th>Contact</th>
+                    <th>Plan</th>
 
-                  <th>Plan</th>
+                    <th>Users</th>
 
-                  <th>Users</th>
+                    <th>Status</th>
 
-                  <th>Status</th>
-
-                  <th></th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredTraders.map((trader) => (
-                  <tr key={trader._id}>
-                    {/* TRADER */}
-
-                    <td>
-                      <div className="trader-name">
-                        <div className="trader-avatar">
-                          {trader.businessName?.charAt(0)?.toUpperCase() || "T"}
-                        </div>
-
-                        <div>
-                          <strong>{trader.businessName}</strong>
-
-                          <span>{trader.email || "No email"}</span>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* CLIENT CODE */}
-
-                    <td>
-                      <span className="client-code">{trader.clientCode}</span>
-                    </td>
-
-                    {/* CONTACT */}
-
-                    <td>
-                      <div className="contact-info">
-                        <strong>{trader.phone || "-"}</strong>
-
-                        <span>{trader.city || trader.state || ""}</span>
-                      </div>
-                    </td>
-
-                    {/* PLAN */}
-
-                    <td>
-                      <span className="plan-badge">
-                        {trader.subscriptionPlan || "-"}
-                      </span>
-                    </td>
-
-                    {/* USERS */}
-
-                    <td>
-                      <span className="user-count">
-                        {trader.userCount || 0}
-                      </span>
-                    </td>
-
-                    {/* STATUS */}
-
-                    <td>
-                      <span className={`status-badge status-${trader.status}`}>
-                        {getStatusIcon(trader.status)}
-
-                        {trader.status}
-                      </span>
-                    </td>
-
-                    {/* ACTION */}
-
-                    <td>
-                      <button
-                        type="button"
-                        className="enter-trader-button"
-                        onClick={() => handleSelectTrader(trader)}
-                        disabled={
-                          trader.status === "suspended" ||
-                          trader.status === "cancelled"
-                        }
-                      >
-                        Enter ERP
-                        <ArrowRight size={16} />
-                      </button>
-                    </td>
+                    <th></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+
+                <tbody>
+                  {traders.map((trader) => {
+                    const effectiveStatus =
+                      getEffectiveStatus(trader);
+
+                    const accessible =
+                      isTraderAccessible(trader);
+
+                    const daysLeft = getDaysLeft(
+                      trader.subscriptionEnd,
+                    );
+
+                    return (
+                      <tr key={trader._id}>
+                        <td>
+                          <div className="trader-name">
+                            <div className="trader-avatar">
+                              {trader.businessName
+                                ?.charAt(0)
+                                ?.toUpperCase() || "T"}
+                            </div>
+
+                            <div>
+                              <strong>
+                                {trader.businessName}
+                              </strong>
+
+                              <span>
+                                {trader.email ||
+                                  "No email"}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td>
+                          <span className="client-code">
+                            {trader.clientCode}
+                          </span>
+                        </td>
+
+                        <td>
+                          <div className="contact-info">
+                            <strong>
+                              {trader.phone || "-"}
+                            </strong>
+
+                            <span>
+                              {trader.city ||
+                                trader.state ||
+                                ""}
+                            </span>
+                          </div>
+                        </td>
+
+                        <td>
+                          <div className="plan-info">
+                            <span className="plan-badge">
+                              {trader.subscriptionPlan ||
+                                "-"}
+                            </span>
+
+                            {daysLeft !== null && (
+                              <span className="plan-expiry">
+                                {daysLeft} days left
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        <td>
+                          <span className="user-count">
+                            {trader.userCount || 0}
+                          </span>
+                        </td>
+
+                        <td>
+                          <span
+                            className={`status-badge status-${effectiveStatus}`}
+                          >
+                            {getStatusIcon(
+                              effectiveStatus,
+                            )}
+
+                            {effectiveStatus}
+                          </span>
+                        </td>
+
+                        <td>
+                          <button
+                            type="button"
+                            className="enter-trader-button"
+                            onClick={() =>
+                              handleSelectTrader(trader)
+                            }
+                            disabled={!accessible}
+                          >
+                            Enter ERP
+
+                            <ArrowRight size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {totalPages > 1 && (
+              <div className="traders-pagination">
+                <button
+                  type="button"
+                  className="pagination-button"
+                  onClick={() =>
+                    setPage((current) => current - 1)
+                  }
+                  disabled={page === 1 || loading}
+                >
+                  <ChevronLeft size={16} />
+
+                  Previous
+                </button>
+
+                <span>
+                  Page {page} of {totalPages}
+                </span>
+
+                <button
+                  type="button"
+                  className="pagination-button"
+                  onClick={() =>
+                    setPage((current) => current + 1)
+                  }
+                  disabled={
+                    page >= totalPages || loading
+                  }
+                >
+                  Next
+
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
-
-      {/* =================================================
-          CREATE TRADER MODAL
-      ================================================= */}
 
       <CreateTraderModal
         show={showCreateTrader}

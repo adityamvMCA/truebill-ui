@@ -815,3 +815,386 @@ a {
     padding: 8px;
   }
 }
+
+.sidebar-loading,
+.sidebar-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px 16px;
+  color: var(--sidebar-text-muted);
+  font-size: 13px;
+}
+
+.sidebar-submenu-item-active {
+  background: var(--sidebar-active-bg);
+  color: var(--sidebar-active-text);
+  font-weight: 600;
+}
+
+.spin-icon {
+  animation: sidebar-spin 1s linear infinite;
+}
+
+@keyframes sidebar-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =========================
+   Company Settings
+   Mobile-first responsive
+   ========================= */
+
+.company-settings-page {
+  width: 100%;
+  padding: 16px;
+  background: var(--bg-secondary);
+  min-height: 100vh;
+}
+
+/* Header */
+
+.company-settings-header {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.page-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.page-title-icon {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--primary-light);
+  color: var(--primary-color);
+}
+
+.company-settings-header h1 {
+  font-size: 1.25rem;
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+
+.company-settings-header p {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.company-settings-header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.company-settings-header-actions .button {
+  width: 100%;
+}
+
+/* Loading state */
+
+.company-settings-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 300px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+/* Cards */
+
+.company-settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 18px;
+}
+
+.settings-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.settings-card-icon {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--primary-light);
+  color: var(--primary-color);
+}
+
+.settings-card-header h2 {
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.settings-card-header p {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* Form grid: mobile = 1 column */
+
+.settings-form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.settings-form-full {
+  grid-column: 1 / -1;
+}
+
+/* Card footer */
+
+.settings-card-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.settings-card-footer .button {
+  width: 100%;
+}
+
+.settings-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--success);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+/* Theme preview */
+
+.theme-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+}
+
+.theme-preview-primary {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--primary-color);
+}
+
+.theme-preview-soft {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--primary-soft);
+}
+
+.theme-preview-text strong {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  text-transform: capitalize;
+}
+
+.theme-preview-text span {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* Subscription details: mobile = 1 column */
+
+.subscription-details {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.subscription-details > div {
+  background: var(--primary-light);
+  border-radius: var(--radius-md);
+  padding: 12px;
+}
+
+.subscription-details span {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.subscription-details strong {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+/* =========================
+   Small phones
+   ========================= */
+
+@media (max-width: 360px) {
+  .company-settings-page {
+    padding: 12px;
+  }
+
+  .settings-card {
+    padding: 14px;
+  }
+
+  .company-settings-header h1 {
+    font-size: 1.125rem;
+  }
+
+  .page-title-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .settings-card-icon {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* =========================
+   Large phones
+   ========================= */
+
+@media (min-width: 480px) {
+  .company-settings-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .company-settings-header-actions {
+    width: auto;
+  }
+
+  .company-settings-header-actions .button {
+    width: auto;
+  }
+
+  .settings-card-footer {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .settings-card-footer .button {
+    width: auto;
+  }
+}
+
+/* =========================
+   Tablets
+   ========================= */
+
+@media (min-width: 640px) {
+  .company-settings-page {
+    padding: 20px;
+  }
+
+  .settings-form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .subscription-details {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* =========================
+   Small laptops
+   ========================= */
+
+@media (min-width: 1024px) {
+  .company-settings-page {
+    padding: 24px;
+  }
+
+  .settings-form-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .subscription-details {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .company-settings-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .settings-card {
+    padding: 22px;
+  }
+}
+
+/* =========================
+   Large desktops
+   ========================= */
+
+@media (min-width: 1280px) {
+  .company-settings-page {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .settings-form-grid {
+    gap: 18px;
+  }
+}
+
+/* =========================
+   Accessibility
+   ========================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .spin-icon {
+    animation: none !important;
+  }
+}
