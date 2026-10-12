@@ -3,7 +3,6 @@ import {
   BadgeIndianRupee,
   Building2,
   Check,
-  CheckCircle2,
   ChevronDown,
   ClipboardList,
   FileText,
@@ -14,13 +13,16 @@ import {
   UserRound,
   X,
 } from "lucide-react";
+import toast from "react-hot-toast";
 
 import "../../styles/customer-create.css";
 import api from "../../services/api";
+
 import Input from "../../components/common/Form/Input";
-import Textarea from "../../components/common/Form/Textarea";
 import Select from "../../components/common/Form/Select";
-const initialForm = {
+import Textarea from "../../components/common/Form/Textarea";
+
+const INITIAL_FORM = {
   customerName: "",
   customerType: "Business",
   contactPerson: "",
@@ -45,31 +47,153 @@ const initialForm = {
   notes: "",
 };
 
-const cleanText = (value) => String(value || "").trim();
+const customerTypeOptions = [
+  {
+    value: "Business",
+    label: "Business",
+  },
+  {
+    value: "Individual",
+    label: "Individual",
+  },
+];
 
-const CustomerCreate = () => {
-  const [form, setForm] = useState(initialForm);
-  const [sameAsBilling, setSameAsBilling] = useState(false);
-  const [showBusinessDetails, setShowBusinessDetails] = useState(false);
-  const [showCreditDetails, setShowCreditDetails] = useState(false);
-  const [showNotes, setShowNotes] = useState(false);
+const statusOptions = [
+  {
+    value: "Active",
+    label: "Active",
+  },
+  {
+    value: "Inactive",
+    label: "Inactive",
+  },
+];
+
+const priceListOptions = [
+  {
+    value: "Standard",
+    label: "Standard",
+  },
+  {
+    value: "Wholesale",
+    label: "Wholesale",
+  },
+  {
+    value: "Retail",
+    label: "Retail",
+  },
+];
+
+const openingBalanceTypeOptions = [
+  {
+    value: "DEBIT",
+    label: "Debit",
+  },
+  {
+    value: "CREDIT",
+    label: "Credit",
+  },
+];
+
+const cleanText = (value) => {
+  return String(value || "").trim();
+};
+
+const createInitialForm = () => {
+  return {
+    ...INITIAL_FORM,
+  };
+};
+
+const getApiErrorMessages = (apiError) => {
+  const responseData = apiError?.response?.data;
+
+  if (
+    Array.isArray(responseData?.errors) &&
+    responseData.errors.length > 0
+  ) {
+    return responseData.errors.map((item) => {
+      if (typeof item === "string") {
+        return item;
+      }
+
+      return (
+        item?.message ||
+        item?.msg ||
+        String(item)
+      );
+    });
+  }
+
+  if (
+    typeof responseData?.message === "string"
+  ) {
+    return [responseData.message];
+  }
+
+  if (
+    typeof responseData?.error === "string"
+  ) {
+    return [responseData.error];
+  }
+
+  return [
+    apiError?.message ||
+      "Unable to create the customer. Please try again.",
+  ];
+};
+
+function CustomerCreate() {
+  const [form, setForm] = useState(
+    createInitialForm
+  );
+
+  const [sameAsBilling, setSameAsBilling] =
+    useState(false);
+
+  const [
+    showBusinessDetails,
+    setShowBusinessDetails,
+  ] = useState(false);
+
+  const [showCreditDetails, setShowCreditDetails] =
+    useState(false);
+
+  const [showNotes, setShowNotes] =
+    useState(false);
+
   const [saving, setSaving] = useState(false);
+
   const [errors, setErrors] = useState([]);
-  const [successMessage, setSuccessMessage] = useState("");
 
   const handleChange = (event) => {
-    const { name, value } = event.target;
+    const {
+      name,
+      value,
+    } = event.target;
+
     let nextValue = value;
 
-    if (name === "phone" || name === "alternatePhone") {
-      nextValue = value.replace(/[^\d+\-() ]/g, "");
+    if (
+      name === "phone" ||
+      name === "alternatePhone"
+    ) {
+      nextValue = value.replace(
+        /[^\d+\-() ]/g,
+        ""
+      );
     }
 
     if (name === "pincode") {
-      nextValue = value.replace(/\D/g, "").slice(0, 6);
+      nextValue = value
+        .replace(/\D/g, "")
+        .slice(0, 6);
     }
 
-    if (name === "gstNo" || name === "panNo") {
+    if (
+      name === "gstNo" ||
+      name === "panNo"
+    ) {
       nextValue = value.toUpperCase();
     }
 
@@ -79,12 +203,19 @@ const CustomerCreate = () => {
         [name]: nextValue,
       };
 
-      if (sameAsBilling && name === "billingAddress") {
+      if (
+        sameAsBilling &&
+        name === "billingAddress"
+      ) {
         updated.shippingAddress = nextValue;
       }
 
       return updated;
     });
+
+    if (errors.length > 0) {
+      setErrors([]);
+    }
   };
 
   const handleSameAsBilling = (checked) => {
@@ -99,83 +230,146 @@ const CustomerCreate = () => {
   };
 
   const resetForm = () => {
-    setForm(initialForm);
+    if (saving) {
+      return;
+    }
+
+    setForm(createInitialForm());
+
     setSameAsBilling(false);
+
     setShowBusinessDetails(false);
+
     setShowCreditDetails(false);
+
     setShowNotes(false);
+
     setErrors([]);
-    setSuccessMessage("");
   };
 
-  const buildPayload = () => ({
-    customerName: cleanText(form.customerName),
-    customerType: form.customerType,
-    contactPerson: cleanText(form.contactPerson),
-    phone: cleanText(form.phone),
-    alternatePhone: cleanText(form.alternatePhone),
-    email: cleanText(form.email),
-    gstNo: cleanText(form.gstNo),
-    panNo: cleanText(form.panNo),
-    billingAddress: cleanText(form.billingAddress),
-    shippingAddress: cleanText(form.shippingAddress),
-    city: cleanText(form.city),
-    state: cleanText(form.state),
-    pincode: cleanText(form.pincode),
-    country: cleanText(form.country) || "India",
-    paymentTerms: cleanText(form.paymentTerms) || "Due on Receipt",
-    creditLimit: Number(form.creditLimit || 0),
-    creditDays: Number(form.creditDays || 0),
-    openingBalance: Number(form.openingBalance || 0),
-    openingBalanceType: form.openingBalanceType,
-    priceList: cleanText(form.priceList) || "Standard",
-    status: form.status,
-    notes: cleanText(form.notes),
-  });
+  const buildPayload = () => {
+    return {
+      customerName: cleanText(
+        form.customerName
+      ),
+
+      customerType: form.customerType,
+
+      contactPerson: cleanText(
+        form.contactPerson
+      ),
+
+      phone: cleanText(form.phone),
+
+      alternatePhone: cleanText(
+        form.alternatePhone
+      ),
+
+      email: cleanText(form.email),
+
+      gstNo: cleanText(form.gstNo),
+
+      panNo: cleanText(form.panNo),
+
+      billingAddress: cleanText(
+        form.billingAddress
+      ),
+
+      shippingAddress: cleanText(
+        form.shippingAddress
+      ),
+
+      city: cleanText(form.city),
+
+      state: cleanText(form.state),
+
+      pincode: cleanText(form.pincode),
+
+      country:
+        cleanText(form.country) || "India",
+
+      paymentTerms:
+        cleanText(form.paymentTerms) ||
+        "Due on Receipt",
+
+      creditLimit:
+        Number(form.creditLimit) || 0,
+
+      creditDays:
+        Number(form.creditDays) || 0,
+
+      openingBalance:
+        Number(form.openingBalance) || 0,
+
+      openingBalanceType:
+        form.openingBalanceType,
+
+      priceList:
+        cleanText(form.priceList) ||
+        "Standard",
+
+      status: form.status,
+
+      notes: cleanText(form.notes),
+    };
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    setErrors([]);
-    setSuccessMessage("");
-
-    if (!cleanText(form.customerName)) {
-      setErrors(["Customer name is required."]);
+    if (saving) {
       return;
     }
 
-    setSaving(true);
+    setErrors([]);
+
+    if (!cleanText(form.customerName)) {
+      setErrors([
+        "Customer name is required.",
+      ]);
+
+      return;
+    }
 
     try {
-      const response = await api.customers.create(buildPayload());
-      const customer = response.data.customer;
+      setSaving(true);
 
-      setSuccessMessage(
-        `${customer.customerName} was created successfully. Customer code: ${customer.customerCode}.`
+      const response =
+        await api.customers.create(
+          buildPayload()
+        );
+
+      const customer =
+        response?.data?.customer ||
+        response?.data?.data ||
+        response?.data;
+
+      const customerName =
+        customer?.customerName ||
+        form.customerName;
+
+      const customerCode =
+        customer?.customerCode;
+
+      toast.success(
+        customerCode
+          ? `${customerName} created successfully (${customerCode})`
+          : `${customerName} created successfully`
       );
 
-      setForm(initialForm);
-      setSameAsBilling(false);
-      setShowBusinessDetails(false);
-      setShowCreditDetails(false);
-      setShowNotes(false);
-    } catch (error) {
-      const responseData = error.response?.data;
-
-      console.error("Customer create request failed:", {
-        status: error.response?.status,
-        responseData,
-        error,
-      });
-
-      setErrors(
-        Array.isArray(responseData?.errors)
-          ? responseData.errors
-          : [
-              responseData?.message ||
-                "Unable to create the customer. Please try again.",
-            ]
+      resetForm();
+    } catch (apiError) {
+      console.error(
+        "Customer create request failed:",
+        apiError
       );
+
+      const errorMessages =
+        getApiErrorMessages(apiError);
+
+      setErrors(errorMessages);
+
+      toast.error(errorMessages[0]);
     } finally {
       setSaving(false);
     }
@@ -191,7 +385,11 @@ const CustomerCreate = () => {
 
           <div className="customer-create-heading-copy">
             <h1>Create Customer</h1>
-            <p>Add a customer for invoices, sales, and receivables.</p>
+
+            <p>
+              Add a customer for invoices, sales,
+              and receivables.
+            </p>
           </div>
         </div>
 
@@ -203,6 +401,7 @@ const CustomerCreate = () => {
             disabled={saving}
           >
             <X size={15} />
+
             <span>Clear</span>
           </button>
 
@@ -213,42 +412,35 @@ const CustomerCreate = () => {
             disabled={saving}
           >
             <Save size={15} />
-            <span>{saving ? "Creating..." : "Create Customer"}</span>
+
+            <span>
+              {saving
+                ? "Creating..."
+                : "Create Customer"}
+            </span>
           </button>
         </div>
       </header>
 
       <main className="customer-create-main">
-       
-        {successMessage && (
-          <div className="customer-create-alert customer-create-alert-success">
-            <CheckCircle2 size={19} />
-
-            <div>
-              <strong>Customer created</strong>
-              <span>{successMessage}</span>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setSuccessMessage("")}
-              aria-label="Dismiss success message"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        )}
-
         {errors.length > 0 && (
           <div className="customer-create-alert customer-create-alert-error">
-            <div className="customer-create-alert-error-icon">!</div>
+            <div className="customer-create-alert-error-icon">
+              !
+            </div>
 
             <div>
-              <strong>Please review the form</strong>
+              <strong>
+                Please review the form
+              </strong>
 
               <ul>
                 {errors.map((message, index) => (
-                  <li key={`${message}-${index}`}>{message}</li>
+                  <li
+                    key={`${message}-${index}`}
+                  >
+                    {message}
+                  </li>
                 ))}
               </ul>
             </div>
@@ -276,11 +468,17 @@ const CustomerCreate = () => {
 
               <div>
                 <h3>Basic details</h3>
-                <p>Required information to create a customer.</p>
+
+                <p>
+                  Required information to create
+                  a customer.
+                </p>
               </div>
 
               <span className="customer-create-required-badge">
-                <span>*</span> Required
+                <span>*</span>
+
+                Required
               </span>
             </div>
 
@@ -306,45 +504,26 @@ const CustomerCreate = () => {
                   </div>
 
                   <small>
-                    This name appears in customer lists, invoices, and reports.
+                    This name appears in customer
+                    lists, invoices, and reports.
                   </small>
                 </div>
 
-                <div className="customer-create-field">
-                  <label htmlFor="customerType">Customer type</label>
+                <Select
+                  label="Customer Type"
+                  name="customerType"
+                  value={form.customerType}
+                  onChange={handleChange}
+                  options={customerTypeOptions}
+                />
 
-                  <div className="customer-create-select-wrap">
-                    <select
-                      id="customerType"
-                      name="customerType"
-                      value={form.customerType}
-                      onChange={handleChange}
-                    >
-                      <option value="Business">Business</option>
-                      <option value="Individual">Individual</option>
-                    </select>
-
-                    <ChevronDown size={15} />
-                  </div>
-                </div>
-
-                <div className="customer-create-field">
-                  <label htmlFor="status">Status</label>
-
-                  <div className="customer-create-select-wrap">
-                    <select
-                      id="status"
-                      name="status"
-                      value={form.status}
-                      onChange={handleChange}
-                    >
-                      <option value="Active">Active</option>
-                      <option value="Inactive">Inactive</option>
-                    </select>
-
-                    <ChevronDown size={15} />
-                  </div>
-                </div>
+                <Select
+                  label="Status"
+                  name="status"
+                  value={form.status}
+                  onChange={handleChange}
+                  options={statusOptions}
+                />
               </div>
             </div>
           </section>
@@ -358,67 +537,55 @@ const CustomerCreate = () => {
 
                 <div>
                   <h3>Contact details</h3>
-                  <p>Optional, but useful for invoices and reminders.</p>
+
+                  <p>
+                    Optional, but useful for
+                    invoices and reminders.
+                  </p>
                 </div>
               </div>
 
               <div className="customer-create-card-body">
                 <div className="customer-create-fields-grid">
-                  <div className="customer-create-field">
-                    <label htmlFor="contactPerson">Contact person</label>
+                  <Input
+                    label="Contact Person"
+                    name="contactPerson"
+                    value={form.contactPerson}
+                    onChange={handleChange}
+                    placeholder="Example: Rahul Sharma"
+                    autoComplete="name"
+                  />
 
-                    <Input
-                      id="contactPerson"
-                      name="contactPerson"
-                      value={form.contactPerson}
-                      onChange={handleChange}
-                      placeholder="Example: Rahul Sharma"
-                      autoComplete="name"
-                    />
-                  </div>
+                  <Input
+                    label="Phone Number"
+                    name="phone"
+                    type="tel"
+                    inputMode="tel"
+                    value={form.phone}
+                    onChange={handleChange}
+                    placeholder="9876543210"
+                    autoComplete="tel"
+                  />
 
-                  <div className="customer-create-field">
-                    <label htmlFor="phone">Phone number</label>
+                  <Input
+                    label="Alternate Phone"
+                    name="alternatePhone"
+                    type="tel"
+                    inputMode="tel"
+                    value={form.alternatePhone}
+                    onChange={handleChange}
+                    placeholder="Optional"
+                  />
 
-                    <Input
-                      id="phone"
-                      name="phone"
-                      type="tel"
-                      inputMode="tel"
-                      value={form.phone}
-                      onChange={handleChange}
-                      placeholder="9876543210"
-                      autoComplete="tel"
-                    />
-                  </div>
-
-                  <div className="customer-create-field">
-                    <label htmlFor="alternatePhone">Alternate phone</label>
-
-                    <Input
-                      id="alternatePhone"
-                      name="alternatePhone"
-                      type="tel"
-                      inputMode="tel"
-                      value={form.alternatePhone}
-                      onChange={handleChange}
-                      placeholder="Optional"
-                    />
-                  </div>
-
-                  <div className="customer-create-field">
-                    <label htmlFor="email">Email address</label>
-
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      value={form.email}
-                      onChange={handleChange}
-                      placeholder="accounts@example.com"
-                      autoComplete="email"
-                    />
-                  </div>
+                  <Input
+                    label="Email Address"
+                    name="email"
+                    type="email"
+                    value={form.email}
+                    onChange={handleChange}
+                    placeholder="accounts@example.com"
+                    autoComplete="email"
+                  />
                 </div>
               </div>
             </section>
@@ -431,31 +598,35 @@ const CustomerCreate = () => {
 
                 <div>
                   <h3>Address details</h3>
-                  <p>Add an address now or complete it later.</p>
+
+                  <p>
+                    Add an address now or complete
+                    it later.
+                  </p>
                 </div>
               </div>
 
               <div className="customer-create-card-body">
                 <div className="customer-create-fields-grid">
                   <div className="customer-create-field customer-create-full-field">
-                    <label htmlFor="billingAddress">Billing address</label>
-
                     <Textarea
-                      id="billingAddress"
+                      label="Billing Address"
                       name="billingAddress"
                       value={form.billingAddress}
                       onChange={handleChange}
                       placeholder="Building, street, area"
-                      rows="3"
+                      rows={3}
                     />
                   </div>
 
                   <label className="customer-create-check-row">
-                    <Input
+                    <input
                       type="checkbox"
                       checked={sameAsBilling}
                       onChange={(event) =>
-                        handleSameAsBilling(event.target.checked)
+                        handleSameAsBilling(
+                          event.target.checked
+                        )
                       }
                     />
 
@@ -463,71 +634,57 @@ const CustomerCreate = () => {
                       <Check size={11} />
                     </span>
 
-                    <span>Shipping address is same as billing address</span>
+                    <span>
+                      Shipping address is same as
+                      billing address
+                    </span>
                   </label>
 
                   <div className="customer-create-field customer-create-full-field">
-                    <label htmlFor="shippingAddress">Shipping address</label>
-
                     <Textarea
-                      id="shippingAddress"
+                      label="Shipping Address"
                       name="shippingAddress"
                       value={form.shippingAddress}
                       onChange={handleChange}
                       placeholder="Leave blank when it is the same as billing address"
-                      rows="3"
+                      rows={3}
                       disabled={sameAsBilling}
                     />
                   </div>
 
-                  <div className="customer-create-field">
-                    <label htmlFor="city">City</label>
+                  <Input
+                    label="City"
+                    name="city"
+                    value={form.city}
+                    onChange={handleChange}
+                    placeholder="Mumbai"
+                  />
 
-                    <Input
-                      id="city"
-                      name="city"
-                      value={form.city}
-                      onChange={handleChange}
-                      placeholder="Mumbai"
-                    />
-                  </div>
+                  <Input
+                    label="State"
+                    name="state"
+                    value={form.state}
+                    onChange={handleChange}
+                    placeholder="Maharashtra"
+                  />
 
-                  <div className="customer-create-field">
-                    <label htmlFor="state">State</label>
+                  <Input
+                    label="Pincode"
+                    name="pincode"
+                    inputMode="numeric"
+                    value={form.pincode}
+                    onChange={handleChange}
+                    placeholder="400001"
+                    maxLength={6}
+                  />
 
-                    <Input
-                      id="state"
-                      name="state"
-                      value={form.state}
-                      onChange={handleChange}
-                      placeholder="Maharashtra"
-                    />
-                  </div>
-
-                  <div className="customer-create-field">
-                    <label htmlFor="pincode">Pincode</label>
-
-                    <Input
-                      id="pincode"
-                      name="pincode"
-                      inputMode="numeric"
-                      value={form.pincode}
-                      onChange={handleChange}
-                      placeholder="400001"
-                      maxLength="6"
-                    />
-                  </div>
-
-                  <div className="customer-create-field">
-                    <label htmlFor="country">Country</label>
-
-                    <Input
-                      id="country"
-                      name="country"
-                      value={form.country}
-                      onChange={handleChange}
-                    />
-                  </div>
+                  <Input
+                    label="Country"
+                    name="country"
+                    value={form.country}
+                    onChange={handleChange}
+                    placeholder="India"
+                  />
                 </div>
               </div>
             </section>
@@ -537,10 +694,14 @@ const CustomerCreate = () => {
             <button
               type="button"
               className={`customer-create-expand-trigger ${
-                showBusinessDetails ? "is-open" : ""
+                showBusinessDetails
+                  ? "is-open"
+                  : ""
               }`}
               onClick={() =>
-                setShowBusinessDetails((previous) => !previous)
+                setShowBusinessDetails(
+                  (previous) => !previous
+                )
               }
               aria-expanded={showBusinessDetails}
             >
@@ -550,9 +711,14 @@ const CustomerCreate = () => {
                 </span>
 
                 <span>
-                  <strong>Tax & business details</strong>
+                  <strong>
+                    Tax & business details
+                  </strong>
+
                   <small>
-                    GST, PAN, and price-list information for business customers.
+                    GST, PAN, and price-list
+                    information for business
+                    customers.
                   </small>
                 </span>
               </span>
@@ -563,50 +729,31 @@ const CustomerCreate = () => {
             {showBusinessDetails && (
               <div className="customer-create-expand-body">
                 <div className="customer-create-fields-grid customer-create-business-grid">
-                  <div className="customer-create-field">
-                    <label htmlFor="gstNo">GST number</label>
+                  <Input
+                    label="GST Number"
+                    name="gstNo"
+                    value={form.gstNo}
+                    onChange={handleChange}
+                    placeholder="27ABCDE1234F1Z5"
+                    maxLength={15}
+                  />
 
-                    <Input
-                      id="gstNo"
-                      name="gstNo"
-                      value={form.gstNo}
-                      onChange={handleChange}
-                      placeholder="27ABCDE1234F1Z5"
-                      maxLength="15"
-                    />
-                  </div>
+                  <Input
+                    label="PAN Number"
+                    name="panNo"
+                    value={form.panNo}
+                    onChange={handleChange}
+                    placeholder="ABCDE1234F"
+                    maxLength={10}
+                  />
 
-                  <div className="customer-create-field">
-                    <label htmlFor="panNo">PAN number</label>
-
-                    <Input
-                      id="panNo"
-                      name="panNo"
-                      value={form.panNo}
-                      onChange={handleChange}
-                      placeholder="ABCDE1234F"
-                      maxLength="10"
-                    />
-                  </div>
-
-                  <div className="customer-create-field">
-                    <label htmlFor="priceList">Price list</label>
-
-                    <div className="customer-create-select-wrap">
-                      <Select
-                        id="priceList"
-                        name="priceList"
-                        value={form.priceList}
-                        onChange={handleChange}
-                      >
-                        <option value="Standard">Standard</option>
-                        <option value="Wholesale">Wholesale</option>
-                        <option value="Retail">Retail</option>
-                      </Select>
-
-                      <ChevronDown size={15} />
-                    </div>
-                  </div>
+                  <Select
+                    label="Price List"
+                    name="priceList"
+                    value={form.priceList}
+                    onChange={handleChange}
+                    options={priceListOptions}
+                  />
                 </div>
               </div>
             )}
@@ -616,9 +763,15 @@ const CustomerCreate = () => {
             <button
               type="button"
               className={`customer-create-expand-trigger ${
-                showCreditDetails ? "is-open" : ""
+                showCreditDetails
+                  ? "is-open"
+                  : ""
               }`}
-              onClick={() => setShowCreditDetails((previous) => !previous)}
+              onClick={() =>
+                setShowCreditDetails(
+                  (previous) => !previous
+                )
+              }
               aria-expanded={showCreditDetails}
             >
               <span className="customer-create-expand-title">
@@ -627,9 +780,13 @@ const CustomerCreate = () => {
                 </span>
 
                 <span>
-                  <strong>Credit & opening balance</strong>
+                  <strong>
+                    Credit & opening balance
+                  </strong>
+
                   <small>
-                    Optional. Configure only when this customer receives credit.
+                    Optional. Configure only when
+                    this customer receives credit.
                   </small>
                 </span>
               </span>
@@ -640,81 +797,57 @@ const CustomerCreate = () => {
             {showCreditDetails && (
               <div className="customer-create-expand-body">
                 <div className="customer-create-fields-grid customer-create-credit-grid">
-                  <div className="customer-create-field">
-                    <label htmlFor="paymentTerms">Payment terms</label>
+                  <Input
+                    label="Payment Terms"
+                    name="paymentTerms"
+                    value={form.paymentTerms}
+                    onChange={handleChange}
+                    placeholder="Due on Receipt"
+                  />
 
-                    <Input
-                      id="paymentTerms"
-                      name="paymentTerms"
-                      value={form.paymentTerms}
-                      onChange={handleChange}
-                      placeholder="Due on Receipt"
-                    />
-                  </div>
+                  <Input
+                    label="Credit Days"
+                    name="creditDays"
+                    type="number"
+                    min="0"
+                    inputMode="numeric"
+                    value={form.creditDays}
+                    onChange={handleChange}
+                  />
 
-                  <div className="customer-create-field">
-                    <label htmlFor="creditDays">Credit days</label>
+                  <Input
+                    label="Credit Limit (₹)"
+                    name="creditLimit"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputMode="decimal"
+                    value={form.creditLimit}
+                    onChange={handleChange}
+                  />
 
-                    <Input
-                      id="creditDays"
-                      name="creditDays"
-                      type="number"
-                      min="0"
-                      inputMode="numeric"
-                      value={form.creditDays}
-                      onChange={handleChange}
-                    />
-                  </div>
+                  <Input
+                    label="Opening Balance (₹)"
+                    name="openingBalance"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputMode="decimal"
+                    value={form.openingBalance}
+                    onChange={handleChange}
+                  />
 
-                  <div className="customer-create-field">
-                    <label htmlFor="creditLimit">Credit limit (₹)</label>
-
-                    <Input
-                      id="creditLimit"
-                      name="creditLimit"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      inputMode="decimal"
-                      value={form.creditLimit}
-                      onChange={handleChange}
-                    />
-                  </div>
-
-                  <div className="customer-create-field">
-                    <label htmlFor="openingBalance">Opening balance (₹)</label>
-
-                    <Input
-                      id="openingBalance"
-                      name="openingBalance"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      inputMode="decimal"
-                      value={form.openingBalance}
-                      onChange={handleChange}
-                    />
-                  </div>
-
-                  <div className="customer-create-field">
-                    <label htmlFor="openingBalanceType">
-                      Opening balance type
-                    </label>
-
-                    <div className="customer-create-select-wrap">
-                      <Select
-                        id="openingBalanceType"
-                        name="openingBalanceType"
-                        value={form.openingBalanceType}
-                        onChange={handleChange}
-                      >
-                        <option value="DEBIT">Debit</option>
-                        <option value="CREDIT">Credit</option>
-                      </Select>
-
-                      <ChevronDown size={15} />
-                    </div>
-                  </div>
+                  <Select
+                    label="Opening Balance Type"
+                    name="openingBalanceType"
+                    value={
+                      form.openingBalanceType
+                    }
+                    onChange={handleChange}
+                    options={
+                      openingBalanceTypeOptions
+                    }
+                  />
                 </div>
               </div>
             )}
@@ -726,7 +859,11 @@ const CustomerCreate = () => {
               className={`customer-create-expand-trigger ${
                 showNotes ? "is-open" : ""
               }`}
-              onClick={() => setShowNotes((previous) => !previous)}
+              onClick={() =>
+                setShowNotes(
+                  (previous) => !previous
+                )
+              }
               aria-expanded={showNotes}
             >
               <span className="customer-create-expand-title">
@@ -736,7 +873,11 @@ const CustomerCreate = () => {
 
                 <span>
                   <strong>Internal notes</strong>
-                  <small>Optional notes for your team only.</small>
+
+                  <small>
+                    Optional notes for your team
+                    only.
+                  </small>
                 </span>
               </span>
 
@@ -745,18 +886,14 @@ const CustomerCreate = () => {
 
             {showNotes && (
               <div className="customer-create-expand-body customer-create-notes-body">
-                <div className="customer-create-field">
-                  <label htmlFor="notes">Notes</label>
-
-                  <Textarea
-                    id="notes"
-                    name="notes"
-                    value={form.notes}
-                    onChange={handleChange}
-                    placeholder="Add payment preferences, internal instructions, or any helpful context."
-                    rows="4"
-                  />
-                </div>
+                <Textarea
+                  label="Notes"
+                  name="notes"
+                  value={form.notes}
+                  onChange={handleChange}
+                  placeholder="Add payment preferences, internal instructions, or any helpful context."
+                  rows={4}
+                />
               </div>
             )}
           </section>
@@ -764,9 +901,11 @@ const CustomerCreate = () => {
           <footer className="customer-create-footer">
             <div className="customer-create-footer-note">
               <Plus size={16} />
+
               <span>
-                You can create a customer with only a customer name. More
-                details can be added later.
+                You can create a customer with
+                only a customer name. More details
+                can be added later.
               </span>
             </div>
 
@@ -786,7 +925,12 @@ const CustomerCreate = () => {
                 disabled={saving}
               >
                 <Save size={15} />
-                {saving ? "Creating..." : "Create Customer"}
+
+                <span>
+                  {saving
+                    ? "Creating..."
+                    : "Create Customer"}
+                </span>
               </button>
             </div>
           </footer>
@@ -794,6 +938,6 @@ const CustomerCreate = () => {
       </main>
     </div>
   );
-};
+}
 
 export default CustomerCreate;

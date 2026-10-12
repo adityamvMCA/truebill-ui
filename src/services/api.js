@@ -4,6 +4,8 @@ import customerApi from "./modules/customer.api";
 import ledgerApi from "./modules/ledger.api";
 import menuApi from "./modules/menu.api";
 import productApi from "./modules/productApi";
+import stockMovementApi from "./modules/stockMovementApi";
+import supplierApi from "./modules/supplierApi";
 
 export const api = {
   auth: authApi,
@@ -11,7 +13,9 @@ export const api = {
   customers: customerApi,
   ledgers: ledgerApi,
   menu: menuApi,
-  product:productApi,
+  product: productApi,
+  stockMovement: stockMovementApi,
+  suppliers: supplierApi,
 };
 
 export default api;

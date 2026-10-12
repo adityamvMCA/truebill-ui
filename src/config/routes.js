@@ -87,6 +87,9 @@ const routes = {
     stock: "/inventory/stock",
     warehouses: "/inventory/warehouses",
 
+    sm:"/stock-movements",
+    smn:"/stock-movements/new",
+
     transfer: "/inventory/stock-transfer",
     adjustment: "/inventory/stock-adjustment",
     valuation: "/inventory/stock-valuation",

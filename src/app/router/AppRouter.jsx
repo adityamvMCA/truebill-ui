@@ -1,4 +1,4 @@
-import  { lazy, Suspense } from "react";
+import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import routes from "../../config/routes";
 import ProtectedRoute from "./ProtectedRoute";
@@ -12,6 +12,8 @@ import FeatureRoute from "./FeatureRoute";
 import DeveloperRoute from "./DeveloperRoute";
 import CustomerCreate from "../../pages/customers/CustomerCreate";
 import ProductsList from "../../pages/Products/ProductsList";
+import StockAdjustmentCreate from "../../pages/stock-movements/StockAdjustmentCreate";
+import StockMovementsList from "../../pages/stock-movements/StockMovementsList";
 
 const Login = lazy(() => import("../../pages/Login"));
 const Dashboard = lazy(() => import("../../pages/Dashboard"));
@@ -71,7 +73,15 @@ const AppRouter = () => (
           />
           <Route
             path={routes.inventory.products}
-            element={gated("customers", <ProductsList />)}
+            element={gated("inventory", <ProductsList />)}
+          />
+          <Route
+            path={routes.inventory.smn}
+            element={gated("inventory", <StockAdjustmentCreate />)}
+          />
+          <Route
+            path={routes.inventory.sm}
+            element={gated("inventory", <StockMovementsList />)}
           />
 
           {/* Developer-only settings */}
