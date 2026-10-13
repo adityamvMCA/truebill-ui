@@ -1,5 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
 import toast from "react-hot-toast";
+
 import {
   CheckCircle2,
   Pencil,
@@ -18,6 +25,10 @@ import Textarea from "../../components/common/Form/Textarea";
 import Button from "../../components/common/Form/Button";
 
 import api from "../../services/api";
+
+import {
+  getCurrentTenantContext,
+} from "../../utils/tenantContext";
 
 const ROLE_OPTIONS = [
   {
@@ -83,24 +94,33 @@ function Users() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [updatingStatusId, setUpdatingStatusId] =
+    useState(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] =
+    useState("all");
 
   const [showModal, setShowModal] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
+  const [editingUser, setEditingUser] =
+    useState(null);
 
-  const [formData, setFormData] = useState(initialForm);
-
-  const getSelectedTenantId = () =>
-    sessionStorage.getItem("selectedTenantId");
+  const [formData, setFormData] =
+    useState(initialForm);
 
   const loadUsers = useCallback(async () => {
-    const tenantId = getSelectedTenantId();
+    const { tenantId } =
+      getCurrentTenantContext();
 
     if (!tenantId) {
-      toast.error("Please select a trader first");
+      setUsers([]);
+      setLoading(false);
+
+      toast.error(
+        "Your account is not linked to a company",
+      );
+
       return;
     }
 
@@ -113,23 +133,28 @@ function Users() {
       const result = response?.data;
 
       if (!result?.success) {
-        toast.error(
+        throw new Error(
           result?.message ||
             "Unable to load users",
         );
-
-        return;
       }
 
-      setUsers(result?.users || []);
+      setUsers(
+        Array.isArray(result.users)
+          ? result.users
+          : [],
+      );
     } catch (error) {
       console.error(
         "Load users error:",
         error,
       );
 
+      setUsers([]);
+
       toast.error(
         error?.response?.data?.message ||
+          error?.message ||
           "Unable to load users",
       );
     } finally {
@@ -155,17 +180,24 @@ function Users() {
         user.email
           ?.toLowerCase()
           .includes(search) ||
-        user.phone?.includes(search);
+        user.phone?.includes(search) ||
+        user.designation
+          ?.toLowerCase()
+          .includes(search);
 
       const matchesRole =
         roleFilter === "all" ||
         user.role === roleFilter;
 
+      const isActive =
+        user.isActive !== false;
+
       const matchesStatus =
         statusFilter === "all" ||
-        (statusFilter === "active"
-          ? user.isActive !== false
-          : user.isActive === false);
+        (statusFilter === "active" &&
+          isActive) ||
+        (statusFilter === "inactive" &&
+          !isActive);
 
       return (
         matchesSearch &&
@@ -181,7 +213,10 @@ function Users() {
   ]);
 
   const handleChange = (event) => {
-    const { name, value } = event.target;
+    const {
+      name,
+      value,
+    } = event.target;
 
     setFormData((previous) => ({
       ...previous,
@@ -191,7 +226,7 @@ function Users() {
 
   const handleOpenCreate = () => {
     setEditingUser(null);
-    setFormData(initialForm);
+    setFormData({ ...initialForm });
     setShowModal(true);
   };
 
@@ -217,39 +252,20 @@ function Users() {
       return;
     }
 
-    setEditingUser(null);
-    setFormData(initialForm);
     setShowModal(false);
+    setEditingUser(null);
+    setFormData({ ...initialForm });
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
-    const tenantId =
-      getSelectedTenantId();
-
-    if (!tenantId) {
-      toast.error(
-        "Please select a trader first",
-      );
-
-      return;
-    }
-
+  const validateForm = () => {
     if (!formData.name.trim()) {
-      toast.error(
-        "Please enter user name",
-      );
-
-      return;
+      toast.error("Please enter user name");
+      return false;
     }
 
     if (!formData.email.trim()) {
-      toast.error(
-        "Please enter user email",
-      );
-
-      return;
+      toast.error("Please enter user email");
+      return false;
     }
 
     if (
@@ -261,7 +277,7 @@ function Users() {
         "Please enter a valid email address",
       );
 
-      return;
+      return false;
     }
 
     if (
@@ -272,7 +288,7 @@ function Users() {
         "Password must be at least 6 characters",
       );
 
-      return;
+      return false;
     }
 
     if (
@@ -284,6 +300,27 @@ function Users() {
         "Password must be at least 6 characters",
       );
 
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    const { tenantId } =
+      getCurrentTenantContext();
+
+    if (!tenantId) {
+      toast.error(
+        "Your account is not linked to a company",
+      );
+
+      return;
+    }
+
+    if (!validateForm()) {
       return;
     }
 
@@ -307,49 +344,43 @@ function Users() {
           formData.password;
       }
 
+      let response;
+
       if (editingUser) {
-        const response =
+        response =
           await api.tenants.updateUser(
+            tenantId,
             editingUser._id,
             payload,
           );
-
-        const result =
-          response?.data;
-
-        if (!result?.success) {
-          throw new Error(
-            result?.message ||
-              "Failed to update user",
-          );
-        }
-
-        toast.success(
-          "User updated successfully",
-        );
       } else {
-        const response =
+        response =
           await api.tenants.createUser(
             tenantId,
             payload,
           );
+      }
 
-        const result =
-          response?.data;
+      const result = response?.data;
 
-        if (!result?.success) {
-          throw new Error(
-            result?.message ||
-              "Failed to create user",
-          );
-        }
-
-        toast.success(
-          "User created successfully",
+      if (!result?.success) {
+        throw new Error(
+          result?.message ||
+            "Failed to save user",
         );
       }
 
-      handleCloseModal();
+      toast.success(
+        editingUser
+          ? "User updated successfully"
+          : "User created successfully",
+      );
+
+      // Do not call handleCloseModal() while
+      // saving=true; it intentionally blocks close.
+      setShowModal(false);
+      setEditingUser(null);
+      setFormData({ ...initialForm });
 
       await loadUsers();
     } catch (error) {
@@ -359,8 +390,7 @@ function Users() {
       );
 
       toast.error(
-        error?.response?.data
-          ?.message ||
+        error?.response?.data?.message ||
           error?.message ||
           "Failed to save user",
       );
@@ -372,20 +402,33 @@ function Users() {
   const handleToggleStatus = async (
     user,
   ) => {
+    const { tenantId } =
+      getCurrentTenantContext();
+
+    if (!tenantId) {
+      toast.error(
+        "Your account is not linked to a company",
+      );
+
+      return;
+    }
+
     const nextStatus =
       user.isActive === false;
+
+    setUpdatingStatusId(user._id);
 
     try {
       const response =
         await api.tenants.updateUserStatus(
+          tenantId,
           user._id,
           {
             isActive: nextStatus,
           },
         );
 
-      const result =
-        response?.data;
+      const result = response?.data;
 
       if (!result?.success) {
         throw new Error(
@@ -408,32 +451,30 @@ function Users() {
       );
 
       toast.error(
-        error?.response?.data
-          ?.message ||
+        error?.response?.data?.message ||
           error?.message ||
           "Failed to update user status",
       );
+    } finally {
+      setUpdatingStatusId(null);
     }
   };
 
   return (
     <div className="company-settings-page">
       <div className="company-settings-header">
-        <div>
-          <div className="page-title-row">
-            <div className="page-title-icon">
-              <UsersIcon size={22} />
-            </div>
+        <div className="page-title-row">
+          <div className="page-title-icon">
+            <UsersIcon size={22} />
+          </div>
 
-            <div>
-              <h1>Users</h1>
+          <div>
+            <h1>Users</h1>
 
-              <p>
-                Manage users, roles, and
-                access for the selected
-                trader
-              </p>
-            </div>
+            <p>
+              Manage users, roles, and
+              access for your company
+            </p>
           </div>
         </div>
 
@@ -442,7 +483,7 @@ function Users() {
             type="button"
             variant="secondary"
             onClick={loadUsers}
-            disabled={loading}
+            disabled={loading || saving}
           >
             <RefreshCw
               size={16}
@@ -460,7 +501,7 @@ function Users() {
             type="button"
             variant="primary"
             onClick={handleOpenCreate}
-            disabled={loading}
+            disabled={loading || saving}
           >
             <Plus size={16} />
 
@@ -542,8 +583,7 @@ function Users() {
             <p>
               {filteredUsers.length}{" "}
               user
-              {filteredUsers.length ===
-              1
+              {filteredUsers.length === 1
                 ? ""
                 : "s"}{" "}
               found
@@ -558,12 +598,9 @@ function Users() {
               className="spin-icon"
             />
 
-            <span>
-              Loading users...
-            </span>
+            <span>Loading users...</span>
           </div>
-        ) : filteredUsers.length ===
-          0 ? (
+        ) : filteredUsers.length === 0 ? (
           <div className="company-settings-loading">
             <UserRound size={24} />
 
@@ -571,11 +608,15 @@ function Users() {
           </div>
         ) : (
           <div className="subscription-details">
-            {filteredUsers.map(
-              (user) => (
-                <div
-                  key={user._id}
-                >
+            {filteredUsers.map((user) => {
+              const isActive =
+                user.isActive !== false;
+
+              const isUpdating =
+                updatingStatusId === user._id;
+
+              return (
+                <div key={user._id}>
                   <span>
                     {user.email}
                   </span>
@@ -590,28 +631,31 @@ function Users() {
                     />
 
                     <span>
-                      {user.role}{" "}
-                      ·{" "}
-                      {user.isActive ===
-                      false
-                        ? "Inactive"
-                        : "Active"}
+                      {user.role} ·{" "}
+                      {isActive
+                        ? "Active"
+                        : "Inactive"}
                     </span>
                   </div>
+
+                  {user.designation && (
+                    <div className="settings-info">
+                      <span>
+                        {user.designation}
+                      </span>
+                    </div>
+                  )}
 
                   <div className="settings-card-footer">
                     <Button
                       type="button"
                       variant="secondary"
                       onClick={() =>
-                        handleOpenEdit(
-                          user,
-                        )
+                        handleOpenEdit(user)
                       }
+                      disabled={isUpdating}
                     >
-                      <Pencil
-                        size={14}
-                      />
+                      <Pencil size={14} />
 
                       Edit
                     </Button>
@@ -619,30 +663,27 @@ function Users() {
                     <Button
                       type="button"
                       variant={
-                        user.isActive ===
-                        false
-                          ? "primary"
-                          : "secondary"
+                        isActive
+                          ? "secondary"
+                          : "primary"
                       }
                       onClick={() =>
-                        handleToggleStatus(
-                          user,
-                        )
+                        handleToggleStatus(user)
                       }
+                      disabled={isUpdating}
                     >
-                      <Power
-                        size={14}
-                      />
+                      <Power size={14} />
 
-                      {user.isActive ===
-                      false
-                        ? "Activate"
-                        : "Deactivate"}
+                      {isUpdating
+                        ? "Updating..."
+                        : isActive
+                          ? "Deactivate"
+                          : "Activate"}
                     </Button>
                   </div>
                 </div>
-              ),
-            )}
+              );
+            })}
           </div>
         )}
       </div>
@@ -658,20 +699,16 @@ function Users() {
         subtitle={
           editingUser
             ? "Update user details and access"
-            : "Add a new user to the selected trader"
+            : "Add a user to your company"
         }
-        icon={
-          <UserRound size={20} />
-        }
+        icon={<UserRound size={20} />}
         width="860px"
         footer={
           <div className="box-modal-footer-actions">
             <Button
               type="button"
               variant="secondary"
-              onClick={
-                handleCloseModal
-              }
+              onClick={handleCloseModal}
               disabled={saving}
             >
               Cancel
@@ -701,19 +738,15 @@ function Users() {
           <div className="box-modal-section">
             <div className="box-modal-section-header">
               <div className="box-modal-section-icon">
-                <UserRound
-                  size={17}
-                />
+                <UserRound size={17} />
               </div>
 
               <div className="box-modal-section-header-content">
-                <h3>
-                  User Information
-                </h3>
+                <h3>User Information</h3>
 
                 <p>
                   Enter the user’s basic
-                  details
+                  details and role
                 </p>
               </div>
             </div>
@@ -723,9 +756,7 @@ function Users() {
                 label="Full Name"
                 name="name"
                 value={formData.name}
-                onChange={
-                  handleChange
-                }
+                onChange={handleChange}
                 placeholder="Enter full name"
                 required
               />
@@ -735,9 +766,7 @@ function Users() {
                 name="email"
                 type="email"
                 value={formData.email}
-                onChange={
-                  handleChange
-                }
+                onChange={handleChange}
                 placeholder="user@example.com"
                 autoComplete="off"
                 required
@@ -748,9 +777,7 @@ function Users() {
                 name="phone"
                 type="tel"
                 value={formData.phone}
-                onChange={
-                  handleChange
-                }
+                onChange={handleChange}
                 placeholder="Enter phone number"
                 maxLength={10}
               />
@@ -759,23 +786,15 @@ function Users() {
                 label="Role"
                 name="role"
                 value={formData.role}
-                onChange={
-                  handleChange
-                }
-                options={
-                  ROLE_OPTIONS
-                }
+                onChange={handleChange}
+                options={ROLE_OPTIONS}
               />
 
               <Input
                 label="Designation"
                 name="designation"
-                value={
-                  formData.designation
-                }
-                onChange={
-                  handleChange
-                }
+                value={formData.designation}
+                onChange={handleChange}
                 placeholder="Enter designation"
               />
 
@@ -787,30 +806,20 @@ function Users() {
                 }
                 name="password"
                 type="password"
-                value={
-                  formData.password
-                }
-                onChange={
-                  handleChange
-                }
+                value={formData.password}
+                onChange={handleChange}
                 placeholder="Minimum 6 characters"
                 autoComplete="new-password"
                 minLength={6}
-                required={
-                  !editingUser
-                }
+                required={!editingUser}
               />
 
               <div className="box-modal-form-full">
                 <Textarea
                   label="Notes"
                   name="notes"
-                  value={
-                    formData.notes
-                  }
-                  onChange={
-                    handleChange
-                  }
+                  value={formData.notes}
+                  onChange={handleChange}
                   placeholder="Enter optional notes"
                   rows={3}
                 />

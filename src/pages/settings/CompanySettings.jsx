@@ -1,6 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+
 import toast from "react-hot-toast";
+
 import {
   Building2,
   CheckCircle2,
@@ -15,6 +20,10 @@ import Textarea from "../../components/common/Form/Textarea";
 import Button from "../../components/common/Form/Button";
 
 import api from "../../services/api";
+
+import {
+  getCurrentTenantContext,
+} from "../../utils/tenantContext";
 
 const THEME_OPTIONS = [
   {
@@ -99,29 +108,53 @@ const initialForm = {
   pincode: "",
 };
 
-function CompanySettings() {
-  const navigate = useNavigate();
+const EMAIL_REGEX =
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  const [formData, setFormData] = useState(initialForm);
+const PHONE_REGEX =
+  /^[6-9]\d{9}$/;
+
+const GST_REGEX =
+  /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+
+const PAN_REGEX =
+  /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+
+const PINCODE_REGEX =
+  /^[1-9][0-9]{5}$/;
+
+function CompanySettings() {
+  const [formData, setFormData] =
+    useState(initialForm);
+
   const [tenant, setTenant] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const [theme, setTheme] = useState(
-    () => localStorage.getItem("theme") || "blue",
+    () =>
+      localStorage.getItem("theme") ||
+      "blue",
   );
 
-  const getSelectedTenantId = () => sessionStorage.getItem("selectedTenantId");
-
   const applyTheme = (selectedTheme) => {
-    document.documentElement.setAttribute("data-theme", selectedTheme);
+    document.documentElement.setAttribute(
+      "data-theme",
+      selectedTheme,
+    );
 
-    localStorage.setItem("theme", selectedTheme);
+    localStorage.setItem(
+      "theme",
+      selectedTheme,
+    );
   };
 
   const handleChange = (event) => {
-    const { name, value } = event.target;
+    const {
+      name,
+      value,
+    } = event.target;
 
     setFormData((previous) => ({
       ...previous,
@@ -130,63 +163,97 @@ function CompanySettings() {
   };
 
   const handleThemeChange = (event) => {
-    const selectedTheme = event.target.value;
+    const selectedTheme =
+      event.target.value;
 
     setTheme(selectedTheme);
     applyTheme(selectedTheme);
 
+    const selectedLabel =
+      event.target.selectedOptions?.[0]
+        ?.label || "Theme";
+
     toast.success(
-      `${event.target.selectedOptions[0]?.label || "Theme"} applied`,
+      `${selectedLabel} applied`,
     );
   };
 
-  const loadCompanySettings = useCallback(async () => {
-    const tenantId = getSelectedTenantId();
+  const loadCompanySettings =
+    useCallback(async () => {
+      const { tenantId } =
+        getCurrentTenantContext();
 
-    if (!tenantId) {
-      toast.error("Please select a trader first");
-      navigate("/traders");
-      return;
-    }
+      if (!tenantId) {
+        setTenant(null);
+        setFormData(initialForm);
+        setLoading(false);
 
-    setLoading(true);
+        toast.error(
+          "Your account is not linked to a company",
+        );
 
-    try {
-      const response = await api.tenants.getById(tenantId);
-
-      const result = response?.data;
-
-      if (!result?.success || !result?.tenant) {
-        toast.error(result?.message || "Unable to load company settings");
         return;
       }
 
-      const loadedTenant = result.tenant;
+      setLoading(true);
 
-      setTenant(loadedTenant);
+      try {
+        const response =
+          await api.tenants.getById(
+            tenantId,
+          );
 
-      setFormData({
-        businessName: loadedTenant.businessName || "",
-        businessType: loadedTenant.businessType || "Trader",
-        email: loadedTenant.email || "",
-        phone: loadedTenant.phone || "",
-        gstNo: loadedTenant.gstNo || "",
-        panNo: loadedTenant.panNo || "",
-        address: loadedTenant.address || "",
-        city: loadedTenant.city || "",
-        state: loadedTenant.state || "",
-        pincode: loadedTenant.pincode || "",
-      });
-    } catch (error) {
-      console.error("Load company settings error:", error);
+        const result = response?.data;
 
-      toast.error(
-        error?.response?.data?.message || "Unable to load company settings",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [navigate]);
+        if (
+          !result?.success ||
+          !result?.tenant
+        ) {
+          throw new Error(
+            result?.message ||
+              "Unable to load company settings",
+          );
+        }
+
+        const loadedTenant =
+          result.tenant;
+
+        setTenant(loadedTenant);
+
+        setFormData({
+          businessName:
+            loadedTenant.businessName || "",
+          businessType:
+            loadedTenant.businessType ||
+            "Trader",
+          email: loadedTenant.email || "",
+          phone: loadedTenant.phone || "",
+          gstNo: loadedTenant.gstNo || "",
+          panNo: loadedTenant.panNo || "",
+          address:
+            loadedTenant.address || "",
+          city: loadedTenant.city || "",
+          state: loadedTenant.state || "",
+          pincode:
+            loadedTenant.pincode || "",
+        });
+      } catch (error) {
+        console.error(
+          "Load company settings error:",
+          error,
+        );
+
+        setTenant(null);
+
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Unable to load company settings",
+        );
+      } finally {
+        setLoading(false);
+      }
+    }, []);
 
   useEffect(() => {
     applyTheme(theme);
@@ -196,52 +263,109 @@ function CompanySettings() {
     loadCompanySettings();
   }, [loadCompanySettings]);
 
+  const validateForm = () => {
+    const normalizedEmail = formData.email
+      .trim()
+      .toLowerCase();
+
+    const normalizedPhone = formData.phone
+      .replace(/\D/g, "")
+      .slice(-10);
+
+    const normalizedGst = formData.gstNo
+      .trim()
+      .toUpperCase();
+
+    const normalizedPan = formData.panNo
+      .trim()
+      .toUpperCase();
+
+    const normalizedPincode =
+      formData.pincode.trim();
+
+    if (!formData.businessName.trim()) {
+      toast.error(
+        "Please enter business name",
+      );
+
+      return false;
+    }
+
+    if (
+      normalizedEmail &&
+      !EMAIL_REGEX.test(normalizedEmail)
+    ) {
+      toast.error(
+        "Please enter a valid business email",
+      );
+
+      return false;
+    }
+
+    if (
+      normalizedPhone &&
+      !PHONE_REGEX.test(normalizedPhone)
+    ) {
+      toast.error(
+        "Please enter a valid phone number",
+      );
+
+      return false;
+    }
+
+    if (
+      normalizedGst &&
+      !GST_REGEX.test(normalizedGst)
+    ) {
+      toast.error(
+        "Please enter a valid GST number",
+      );
+
+      return false;
+    }
+
+    if (
+      normalizedPan &&
+      !PAN_REGEX.test(normalizedPan)
+    ) {
+      toast.error(
+        "Please enter a valid PAN number",
+      );
+
+      return false;
+    }
+
+    if (
+      normalizedPincode &&
+      !PINCODE_REGEX.test(
+        normalizedPincode,
+      )
+    ) {
+      toast.error(
+        "Please enter a valid pincode",
+      );
+
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    const tenantId = getSelectedTenantId();
+    const { tenantId } =
+      getCurrentTenantContext();
 
     if (!tenantId) {
-      toast.error("Please select a trader first");
-      navigate("/traders");
+      toast.error(
+        "Your account is not linked to a company",
+      );
+
       return;
     }
 
-    if (!formData.businessName.trim()) {
-      toast.error("Please enter business name");
-      return;
-    }
-
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      toast.error("Please enter a valid business email");
-      return;
-    }
-
-    if (
-      formData.phone &&
-      !/^[6-9]\d{9}$/.test(formData.phone.replace(/\D/g, "").slice(-10))
-    ) {
-      toast.error("Please enter a valid phone number");
-      return;
-    }
-
-    if (
-      formData.gstNo &&
-      !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(
-        formData.gstNo,
-      )
-    ) {
-      toast.error("Please enter a valid GST number");
-      return;
-    }
-
-    if (formData.panNo && !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(formData.panNo)) {
-      toast.error("Please enter a valid PAN number");
-      return;
-    }
-
-    if (formData.pincode && !/^[1-9][0-9]{5}$/.test(formData.pincode)) {
-      toast.error("Please enter a valid pincode");
+    if (!validateForm()) {
       return;
     }
 
@@ -249,31 +373,59 @@ function CompanySettings() {
 
     try {
       const payload = {
-        businessName: formData.businessName.trim(),
-        businessType: formData.businessType,
-        email: formData.email.trim().toLowerCase(),
-        phone: formData.phone.trim(),
-        gstNo: formData.gstNo.trim().toUpperCase(),
-        panNo: formData.panNo.trim().toUpperCase(),
+        businessName:
+          formData.businessName.trim(),
+        businessType:
+          formData.businessType,
+        email: formData.email
+          .trim()
+          .toLowerCase(),
+        phone: formData.phone
+          .replace(/\D/g, "")
+          .slice(-10),
+        gstNo: formData.gstNo
+          .trim()
+          .toUpperCase(),
+        panNo: formData.panNo
+          .trim()
+          .toUpperCase(),
         address: formData.address.trim(),
         city: formData.city.trim(),
         state: formData.state.trim(),
         pincode: formData.pincode.trim(),
       };
 
-      const response = await api.tenants.update(tenantId, payload);
+      const response =
+        await api.tenants.update(
+          tenantId,
+          payload,
+        );
 
       const result = response?.data;
 
       if (!result?.success) {
-        throw new Error(result?.message || "Failed to update company settings");
+        throw new Error(
+          result?.message ||
+            "Failed to update company settings",
+        );
       }
 
-      setTenant(result.tenant || tenant);
+      const updatedTenant =
+        result.tenant || {
+          ...tenant,
+          ...payload,
+        };
 
-      toast.success("Company settings updated successfully");
+      setTenant(updatedTenant);
+
+      toast.success(
+        "Company settings updated successfully",
+      );
     } catch (error) {
-      console.error("Update company settings error:", error);
+      console.error(
+        "Update company settings error:",
+        error,
+      );
 
       toast.error(
         error?.response?.data?.message ||
@@ -288,17 +440,18 @@ function CompanySettings() {
   return (
     <div className="company-settings-page">
       <div className="company-settings-header">
-        <div>
-          <div className="page-title-row">
-            <div className="page-title-icon">
-              <Building2 size={22} />
-            </div>
+        <div className="page-title-row">
+          <div className="page-title-icon">
+            <Building2 size={22} />
+          </div>
 
-            <div>
-              <h1>Company Settings</h1>
+          <div>
+            <h1>Company Settings</h1>
 
-              <p>Manage your business profile and application appearance</p>
-            </div>
+            <p>
+              Manage your business profile
+              and application appearance
+            </p>
           </div>
         </div>
 
@@ -309,7 +462,15 @@ function CompanySettings() {
             onClick={loadCompanySettings}
             disabled={loading || saving}
           >
-            <RefreshCw size={16} className={loading ? "spin-icon" : ""} />
+            <RefreshCw
+              size={16}
+              className={
+                loading
+                  ? "spin-icon"
+                  : ""
+              }
+            />
+
             Refresh
           </Button>
         </div>
@@ -317,9 +478,14 @@ function CompanySettings() {
 
       {loading ? (
         <div className="company-settings-loading">
-          <RefreshCw size={24} className="spin-icon" />
+          <RefreshCw
+            size={24}
+            className="spin-icon"
+          />
 
-          <span>Loading company settings...</span>
+          <span>
+            Loading company settings...
+          </span>
         </div>
       ) : (
         <div className="company-settings-content">
@@ -331,9 +497,14 @@ function CompanySettings() {
                 </div>
 
                 <div>
-                  <h2>Business Information</h2>
+                  <h2>
+                    Business Information
+                  </h2>
 
-                  <p>Update your organization details</p>
+                  <p>
+                    Update your organization
+                    details
+                  </p>
                 </div>
               </div>
 
@@ -341,7 +512,9 @@ function CompanySettings() {
                 <Input
                   label="Business Name"
                   name="businessName"
-                  value={formData.businessName}
+                  value={
+                    formData.businessName
+                  }
                   onChange={handleChange}
                   placeholder="Enter business name"
                   required
@@ -350,9 +523,13 @@ function CompanySettings() {
                 <Select
                   label="Business Type"
                   name="businessType"
-                  value={formData.businessType}
+                  value={
+                    formData.businessType
+                  }
                   onChange={handleChange}
-                  options={BUSINESS_TYPE_OPTIONS}
+                  options={
+                    BUSINESS_TYPE_OPTIONS
+                  }
                 />
 
                 <Input
@@ -437,7 +614,9 @@ function CompanySettings() {
                 >
                   <Save size={16} />
 
-                  {saving ? "Saving..." : "Save Company Settings"}
+                  {saving
+                    ? "Saving..."
+                    : "Save Company Settings"}
                 </Button>
               </div>
             </div>
@@ -452,7 +631,10 @@ function CompanySettings() {
               <div>
                 <h2>Appearance</h2>
 
-                <p>Choose your application theme</p>
+                <p>
+                  Choose your application
+                  theme
+                </p>
               </div>
             </div>
 
@@ -471,9 +653,14 @@ function CompanySettings() {
                 <div className="theme-preview-soft" />
 
                 <div className="theme-preview-text">
-                  <strong>{theme} theme</strong>
+                  <strong>
+                    {theme} theme
+                  </strong>
 
-                  <span>Applied across the application</span>
+                  <span>
+                    Applied across the
+                    application
+                  </span>
                 </div>
               </div>
             </div>
@@ -482,7 +669,11 @@ function CompanySettings() {
               <div className="settings-info">
                 <CheckCircle2 size={16} />
 
-                <span>Theme is saved on this device and applied globally.</span>
+                <span>
+                  Theme is saved on this
+                  device and applied
+                  globally.
+                </span>
               </div>
             </div>
           </div>
@@ -497,7 +688,10 @@ function CompanySettings() {
                 <div>
                   <h2>Subscription</h2>
 
-                  <p>Current tenant subscription details</p>
+                  <p>
+                    Current company
+                    subscription details
+                  </p>
                 </div>
               </div>
 
@@ -505,19 +699,27 @@ function CompanySettings() {
                 <div>
                   <span>Client Code</span>
 
-                  <strong>{tenant.clientCode}</strong>
+                  <strong>
+                    {tenant.clientCode ||
+                      "-"}
+                  </strong>
                 </div>
 
                 <div>
                   <span>Plan</span>
 
-                  <strong>{tenant.subscriptionPlan}</strong>
+                  <strong>
+                    {tenant.subscriptionPlan ||
+                      "-"}
+                  </strong>
                 </div>
 
                 <div>
                   <span>Status</span>
 
-                  <strong>{tenant.status}</strong>
+                  <strong>
+                    {tenant.status || "-"}
+                  </strong>
                 </div>
 
                 <div>
@@ -525,7 +727,9 @@ function CompanySettings() {
 
                   <strong>
                     {tenant.subscriptionEnd
-                      ? new Date(tenant.subscriptionEnd).toLocaleDateString(
+                      ? new Date(
+                          tenant.subscriptionEnd,
+                        ).toLocaleDateString(
                           "en-IN",
                         )
                       : "-"}

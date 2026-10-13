@@ -29,15 +29,23 @@ const tenantApi = {
       payload,
     ),
 
-  updateUser: (userId, payload) =>
+  updateUser: (
+    tenantId,
+    userId,
+    payload,
+  ) =>
     apiClient.put(
-      `/tenants/users/${userId}`,
+      `/tenants/${tenantId}/users/${userId}`,
       payload,
     ),
 
-  updateUserStatus: (userId, payload) =>
+  updateUserStatus: (
+    tenantId,
+    userId,
+    payload,
+  ) =>
     apiClient.patch(
-      `/tenants/users/${userId}/status`,
+      `/tenants/${tenantId}/users/${userId}/status`,
       payload,
     ),
 };

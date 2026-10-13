@@ -137,6 +137,9 @@ import StockAdjustmentCreate from "../../pages/stock-movements/StockAdjustmentCr
 import StockMovementsList from "../../pages/stock-movements/StockMovementsList";
 import CompanySettings from "../../pages/settings/CompanySettings";
 import Users from "../../pages/settings/Users";
+import RolesPermissions from "../../pages/settings/RolesPermissions";
+import Appearance from "../../pages/settings/Appearance";
+import Notifications from "../../pages/settings/Notifications";
 
 const Login = lazy(() => import("../../pages/Login"));
 const Dashboard = lazy(() => import("../../pages/Dashboard"));
@@ -286,6 +289,20 @@ const AppRouter = () => (
           <Route
             path={routes.settings.users}
             element={gated("settings.users", <Users />)}
+          />
+          <Route
+            path="/settings/roles"
+            element={gated("settings.roles", <RolesPermissions />)}
+          />
+
+          <Route
+            path="/settings/appearance"
+            element={gated("settings.appearance", <Appearance />)}
+          />
+
+          <Route
+            path="/settings/notifications"
+            element={gated("settings.notifications", <Notifications />)}
           />
           {/* =====================
               PLATFORM ROUTES
