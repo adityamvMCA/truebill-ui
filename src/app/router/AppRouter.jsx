@@ -140,6 +140,7 @@ import Users from "../../pages/settings/Users";
 import RolesPermissions from "../../pages/settings/RolesPermissions";
 import Appearance from "../../pages/settings/Appearance";
 import Notifications from "../../pages/settings/Notifications";
+import SuppliersList from "../../pages/suppliers/SuppliersList";
 
 const Login = lazy(() => import("../../pages/Login"));
 const Dashboard = lazy(() => import("../../pages/Dashboard"));
@@ -271,6 +272,12 @@ const AppRouter = () => (
             path={routes.inventory.products}
             element={gated("inventory.products", <ProductsList />)}
           />
+          
+          <Route
+            path={routes.suppliers.list}
+            element={gated("inventory.products", <SuppliersList  />)}
+          />
+          
 
           <Route
             path={routes.inventory.stockMovements}
