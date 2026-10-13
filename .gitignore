@@ -39,3 +39,8 @@ android/build/
 android/app/build/
 android/captures/
 android/.idea/
+
+firebase-service-account.json
+*firebase*adminsdk*.json
+*service*account*.json
+truebill-*-firebase-adminsdk-*.json
