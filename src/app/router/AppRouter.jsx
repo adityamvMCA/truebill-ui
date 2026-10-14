@@ -141,6 +141,9 @@ import RolesPermissions from "../../pages/settings/RolesPermissions";
 import Appearance from "../../pages/settings/Appearance";
 import Notifications from "../../pages/settings/Notifications";
 import SuppliersList from "../../pages/suppliers/SuppliersList";
+import TallyGateway from "../../components/TallyGateway/TallyGateway";
+import CustomersList from "../../pages/customers/CustomersList";
+import CustomerUpdate from "../../pages/customers/CustomerUpdate";
 
 const Login = lazy(() => import("../../pages/Login"));
 const Dashboard = lazy(() => import("../../pages/Dashboard"));
@@ -255,9 +258,10 @@ const AppRouter = () => (
           />
 
           <Route
-            path={routes.customers.create}
-            element={gated("sales.customers", <CustomerCreate />)}
+            path={routes.customers.list}
+            element={gated("sales.customers", <CustomersList />)}
           />
+          <Route path={routes.customers.edit} element={<CustomerUpdate />} />
 
           {/* =====================
               INVENTORY
@@ -272,12 +276,11 @@ const AppRouter = () => (
             path={routes.inventory.products}
             element={gated("inventory.products", <ProductsList />)}
           />
-          
+
           <Route
             path={routes.suppliers.list}
-            element={gated("inventory.products", <SuppliersList  />)}
+            element={gated("inventory.products", <SuppliersList />)}
           />
-          
 
           <Route
             path={routes.inventory.stockMovements}
@@ -306,7 +309,10 @@ const AppRouter = () => (
             path="/settings/appearance"
             element={gated("settings.appearance", <Appearance />)}
           />
-
+          <Route
+            path="/tally"
+            element={gated("settings.appearance", <TallyGateway />)}
+          />
           <Route
             path="/settings/notifications"
             element={gated("settings.notifications", <Notifications />)}
