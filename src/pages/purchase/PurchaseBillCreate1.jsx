@@ -1,9 +1,4 @@
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useNavigate } from "react-router-dom";
 
@@ -108,11 +103,7 @@ const getErrors = (error) => {
     );
   }
 
-  return [
-    data?.message ||
-      error?.message ||
-      "Unable to complete the request.",
-  ];
+  return [data?.message || error?.message || "Unable to complete the request."];
 };
 
 const extractList = (response, fallbackKey) => {
@@ -127,18 +118,13 @@ const extractList = (response, fallbackKey) => {
 
 const loadAllPages = async (service, fallbackKey) => {
   if (!service?.getAll) {
-    throw new Error(
-      `The ${fallbackKey} API getAll method is not configured.`,
-    );
+    throw new Error(`The ${fallbackKey} API getAll method is not configured.`);
   }
 
   const first = await service.getAll({ page: 1, limit: 100 });
   const records = [...extractList(first, fallbackKey)];
 
-  const pages = Math.max(
-    1,
-    Number(first?.data?.pagination?.totalPages) || 1,
-  );
+  const pages = Math.max(1, Number(first?.data?.pagination?.totalPages) || 1);
 
   for (let page = 2; page <= pages; page += 1) {
     const response = await service.getAll({ page, limit: 100 });
@@ -188,8 +174,7 @@ const multiplyDivide = (first, second, divisor) => {
   const denominator = BigInt(divisor);
 
   const result = Number(
-    (BigInt(first) * BigInt(second) + denominator / 2n) /
-      denominator,
+    (BigInt(first) * BigInt(second) + denominator / 2n) / denominator,
   );
 
   if (!Number.isSafeInteger(result)) {
@@ -265,13 +250,7 @@ const calculatePreview = (item, taxMode) => {
    Supplier dropdown
 --------------------------------------------------------- */
 
-function SupplierPicker({
-  suppliers,
-  selected,
-  disabled,
-  loading,
-  onSelect,
-}) {
+function SupplierPicker({ suppliers, selected, disabled, loading, onSelect }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -284,10 +263,7 @@ function SupplierPicker({
     }
 
     const onPointerDown = (event) => {
-      if (
-        rootRef.current &&
-        !rootRef.current.contains(event.target)
-      ) {
+      if (rootRef.current && !rootRef.current.contains(event.target)) {
         setOpen(false);
       }
     };
@@ -324,9 +300,7 @@ function SupplierPicker({
             supplier.city,
           ]
             .filter(Boolean)
-            .some((value) =>
-              String(value).toLowerCase().includes(needle),
-            ),
+            .some((value) => String(value).toLowerCase().includes(needle)),
         )
       : suppliers;
 
@@ -354,18 +328,15 @@ function SupplierPicker({
             <p>{selected.supplierCode}</p>
 
             <p>
-              <span>Address:</span>{" "}
-              {formatAddress(selected) || "Not provided"}
+              <span>Address:</span> {formatAddress(selected) || "Not provided"}
             </p>
 
             <p>
-              <span>GSTIN:</span>{" "}
-              {selected.gstNo || "Not provided"}
+              <span>GSTIN:</span> {selected.gstNo || "Not provided"}
             </p>
 
             <p>
-              <span>Phone:</span>{" "}
-              {selected.phone || "Not provided"}
+              <span>Phone:</span> {selected.phone || "Not provided"}
             </p>
 
             <button
@@ -447,8 +418,7 @@ function SupplierPicker({
 
             {filtered.length > visible.length && (
               <p className="doc-picker-empty">
-                Showing the first {visible.length} matches. Refine
-                your search.
+                Showing the first {visible.length} matches. Refine your search.
               </p>
             )}
           </div>
@@ -504,15 +474,13 @@ function PurchaseBillCreate1() {
 
         setSuppliers(
           supplierRecords.filter(
-            (supplier) =>
-              supplier.status === "Active" && !supplier.isDeleted,
+            (supplier) => supplier.status === "Active" && !supplier.isDeleted,
           ),
         );
 
         setProducts(
           productRecords.filter(
-            (product) =>
-              product.status === "ACTIVE" && !product.isDeleted,
+            (product) => product.status === "ACTIVE" && !product.isDeleted,
           ),
         );
       } catch (error) {
@@ -622,7 +590,7 @@ function PurchaseBillCreate1() {
         gstRate:
           taxMode === "NONE"
             ? 0
-            : productMap.get(item.productId)?.gstRate ?? 0,
+            : (productMap.get(item.productId)?.gstRate ?? 0),
         taxCreditEligible: false,
       })),
     );
@@ -650,8 +618,7 @@ function PurchaseBillCreate1() {
               ...item,
               productId,
               unitRate: String(product?.purchasePrice ?? 0),
-              gstRate:
-                form.taxMode === "NONE" ? 0 : product?.gstRate ?? 0,
+              gstRate: form.taxMode === "NONE" ? 0 : (product?.gstRate ?? 0),
               taxCreditEligible: false,
             }
           : item,
@@ -662,9 +629,7 @@ function PurchaseBillCreate1() {
   };
 
   const removeItem = (rowId) => {
-    setItems((previous) =>
-      previous.filter((item) => item.rowId !== rowId),
-    );
+    setItems((previous) => previous.filter((item) => item.rowId !== rowId));
   };
 
   const validateForm = (action) => {
@@ -673,9 +638,7 @@ function PurchaseBillCreate1() {
     if (!selectedSupplier) {
       messages.push("Select a supplier.");
     } else if (!selectedSupplier.ledgerId) {
-      messages.push(
-        "The selected supplier has no linked accounting ledger.",
-      );
+      messages.push("The selected supplier has no linked accounting ledger.");
     }
 
     if (!form.supplierInvoiceNumber.trim()) {
@@ -692,9 +655,7 @@ function PurchaseBillCreate1() {
       messages.push("Add at least one product.");
     }
 
-    const selectedIds = items
-      .map((item) => item.productId)
-      .filter(Boolean);
+    const selectedIds = items.map((item) => item.productId).filter(Boolean);
 
     if (new Set(selectedIds).size !== selectedIds.length) {
       messages.push("A product can appear only once in a bill.");
@@ -834,10 +795,7 @@ function PurchaseBillCreate1() {
 
   return (
     <div className="doc-page">
-      <form
-        noValidate
-        onSubmit={(event) => event.preventDefault()}
-      >
+      <form noValidate onSubmit={(event) => event.preventDefault()}>
         <header className="doc-header">
           <div className="doc-header-left">
             <Button
@@ -880,9 +838,7 @@ function PurchaseBillCreate1() {
                 {loadFailed && (
                   <Button
                     variant="secondary"
-                    onClick={() =>
-                      setReloadKey((previous) => previous + 1)
-                    }
+                    onClick={() => setReloadKey((previous) => previous + 1)}
                   >
                     Retry Loading
                   </Button>
@@ -981,8 +937,8 @@ function PurchaseBillCreate1() {
                   <span>
                     Receive inventory-tracked goods when posting
                     <small>
-                      Select only when the goods have actually been
-                      received. Saving a draft never changes stock.
+                      Select only when the goods have actually been received.
+                      Saving a draft never changes stock.
                     </small>
                   </span>
                 </label>
@@ -1019,8 +975,7 @@ function PurchaseBillCreate1() {
                           (record) =>
                             record._id === item.productId ||
                             !items.some(
-                              (other) =>
-                                other.productId === record._id,
+                              (other) => other.productId === record._id,
                             ),
                         )
                         .map((record) => ({
@@ -1030,17 +985,11 @@ function PurchaseBillCreate1() {
 
                       return (
                         <tr key={item.rowId}>
-                          <td
-                            data-label="No."
-                            className="doc-cell-no"
-                          >
+                          <td data-label="No." className="doc-cell-no">
                             {index + 1}
                           </td>
 
-                          <td
-                            data-label="Item"
-                            className="doc-cell-item"
-                          >
+                          <td data-label="Item" className="doc-cell-item">
                             <Select
                               name={`product-${item.rowId}`}
                               aria-label={`Product ${index + 1}`}
@@ -1048,10 +997,7 @@ function PurchaseBillCreate1() {
                               placeholder="Select product"
                               options={options}
                               onChange={(event) =>
-                                selectProduct(
-                                  item.rowId,
-                                  event.target.value,
-                                )
+                                selectProduct(item.rowId, event.target.value)
                               }
                             />
 
@@ -1065,10 +1011,7 @@ function PurchaseBillCreate1() {
                             )}
                           </td>
 
-                          <td
-                            data-label="HSN / SAC"
-                            className="doc-cell-hsn"
-                          >
+                          <td data-label="HSN / SAC" className="doc-cell-hsn">
                             {product?.hsnSacCode || "—"}
                           </td>
 
@@ -1180,10 +1123,7 @@ function PurchaseBillCreate1() {
                             {formatPaise(previews[index].total)}
                           </td>
 
-                          <td
-                            data-label="Remove"
-                            className="doc-cell-action"
-                          >
+                          <td data-label="Remove" className="doc-cell-action">
                             <button
                               type="button"
                               className="doc-remove-button"
@@ -1243,9 +1183,7 @@ function PurchaseBillCreate1() {
               <div className="doc-extras">
                 <button
                   type="button"
-                  className={`doc-extra-row ${
-                    showNotes ? "is-open" : ""
-                  }`}
+                  className={`doc-extra-row ${showNotes ? "is-open" : ""}`}
                   aria-expanded={showNotes}
                   onClick={() => setShowNotes((previous) => !previous)}
                 >
@@ -1268,8 +1206,8 @@ function PurchaseBillCreate1() {
                 )}
 
                 <p className="doc-note">
-                  Payments are recorded separately. This form does not
-                  mark a bill as paid.
+                  Payments are recorded separately. This form does not mark a
+                  bill as paid.
                 </p>
               </div>
 

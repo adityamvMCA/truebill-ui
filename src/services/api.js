@@ -8,6 +8,7 @@ import stockMovementApi from "./modules/stockMovementApi";
 import supplierApi from "./modules/supplierApi";
 import purchaseBillApi from "./modules/purchaseBills";
 import supplierPaymentApi from "./modules/supplierPaymentApi";
+import customerReceiptApi from "./modules/customerReceiptApi";
 
 export const api = {
   auth: authApi,
@@ -20,6 +21,7 @@ export const api = {
   suppliers: supplierApi,
   purchaseBills: purchaseBillApi,
   supplierPayments: supplierPaymentApi,
+  customerReceipts: customerReceiptApi,
 };
 
 export default api;

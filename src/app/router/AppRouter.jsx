@@ -148,6 +148,8 @@ import PurchaseBillsList from "../../pages/purchase/PurchaseBillsList";
 import SalesInvoiceCreation from "../../pages/SalesInvoiceCreation";
 import PurchaseBillCreate from "../../pages/purchase/PurchaseBillCreate";
 import PurchaseBillCreate1 from "../../pages/purchase/PurchaseBillCreate1";
+import CustomerReceiptCreate from "../../pages/sales/CustomerReceiptCreate";
+import CustomerReceiptsList from "../../pages/sales/CustomerReceiptsList";
 
 const Login = lazy(() => import("../../pages/Login"));
 const Dashboard = lazy(() => import("../../pages/Dashboard"));
@@ -279,6 +281,8 @@ const AppRouter = () => (
             element={gated("sales.customers", <CustomersList />)}
           />
           <Route path={routes.customers.edit} element={<CustomerUpdate />} />
+          <Route path={routes.customerReceipts.create} element={<CustomerReceiptCreate />} />
+          <Route path={routes.customerReceipts.list} element={<CustomerReceiptsList />} />
 
           {/* =====================
               INVENTORY

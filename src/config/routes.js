@@ -92,6 +92,11 @@ const routes = {
     adjustment: "/inventory/stock-adjustment",
     valuation: "/inventory/stock-valuation",
   },
+  customerReceipts: {
+    list: "/sales/customer-receipts",
+    create: "/sales/customer-receipts/new",
+    view: "/sales/customer-receipts/:receiptNumber",
+  },
 
   customers: {
     index: "/customers",
