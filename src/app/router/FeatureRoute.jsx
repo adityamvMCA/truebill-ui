@@ -7,8 +7,10 @@ const FeatureRoute = ({ feature, children }) => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   if (user.platformRole === "developer") return children;
-  if (subscription && !subscription.valid) return <Navigate to="/billing/renew" replace />;
-  if (!hasFeature(feature)) return <Navigate to="/upgrade" replace state={{ feature }} />;
+  if (subscription && !subscription.valid)
+    return <Navigate to="/billing/renew" replace />;
+  if (!hasFeature(feature))
+    return <Navigate to="/upgrade" replace state={{ feature }} />;
 
   return children;
 };

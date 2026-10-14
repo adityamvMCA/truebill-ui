@@ -150,6 +150,10 @@ import PurchaseBillCreate from "../../pages/purchase/PurchaseBillCreate";
 import PurchaseBillCreate1 from "../../pages/purchase/PurchaseBillCreate1";
 import CustomerReceiptCreate from "../../pages/sales/CustomerReceiptCreate";
 import CustomerReceiptsList from "../../pages/sales/CustomerReceiptsList";
+import CustomerReceiptDetail from "../../pages/sales/CustomerReceiptDetail";
+import SupplierPaymentsList from "../../pages/purchase/SupplierPaymentsList";
+import SupplierPaymentCreate from "../../pages/purchase/SupplierPaymentCreate";
+import SupplierPaymentDetail from "../../pages/purchase/SupplierPaymentDetail";
 
 const Login = lazy(() => import("../../pages/Login"));
 const Dashboard = lazy(() => import("../../pages/Dashboard"));
@@ -280,9 +284,21 @@ const AppRouter = () => (
             path={routes.customers.list}
             element={gated("sales.customers", <CustomersList />)}
           />
-          <Route path={routes.customers.edit} element={<CustomerUpdate />} />
-          <Route path={routes.customerReceipts.create} element={<CustomerReceiptCreate />} />
-          <Route path={routes.customerReceipts.list} element={<CustomerReceiptsList />} />
+
+          <Route
+            path={routes.customerReceipts.list}
+            element={gated("sales.customerReceipts", <CustomerReceiptsList />)}
+          />
+
+          <Route
+            path={routes.customerReceipts.create}
+            element={gated("sales.customerReceipts", <CustomerReceiptCreate />)}
+          />
+
+          <Route
+            path={routes.customerReceipts.view}
+            element={gated("sales.customerReceipts", <CustomerReceiptDetail />)}
+          />
 
           {/* =====================
               INVENTORY
@@ -303,6 +319,27 @@ const AppRouter = () => (
             element={gated("inventory.products", <SuppliersList />)}
           />
 
+          <Route
+            path={routes.supplierPayments.list}
+            element={gated(
+              "purchase.supplierPayments",
+              <SupplierPaymentsList />,
+            )}
+          />
+          <Route
+            path={routes.supplierPayments.create}
+            element={gated(
+              "purchase.supplierPayments",
+              <SupplierPaymentCreate />,
+            )}
+          />
+          <Route
+            path={routes.supplierPayments.view}
+            element={gated(
+              "purchase.supplierPayments",
+              <SupplierPaymentDetail />,
+            )}
+          />
           <Route
             path={routes.inventory.stockMovements}
             element={gated("inventory.stock", <StockMovementsList />)}

@@ -118,6 +118,12 @@ const routes = {
     outstanding: "/suppliers/outstanding",
   },
 
+  supplierPayments: {
+    list: "/purchase/supplier-payments",
+    create: "/purchase/supplier-payments/new",
+    view: "/purchase/supplier-payments/:paymentNumber",
+  },
+
   accounting: {
     index: "/accounting",
 
