@@ -1,5 +1,7 @@
 // import { useCallback, useEffect, useMemo, useState } from "react";
 // import { useLocation, useNavigate } from "react-router-dom";
+// import toast from "react-hot-toast";
+
 // import api from "../services/api";
 // import {
 //   LayoutDashboard,
@@ -57,7 +59,7 @@
 //   CalendarDays,
 //   Monitor,
 //   Percent,
-//   HelpCircle,
+//   Bell,
 // } from "lucide-react";
 
 // const iconMap = {
@@ -70,6 +72,7 @@
 //   Users,
 //   Truck,
 //   BarChart3,
+//   ChartIcon: BarChart3,
 //   ReceiptText,
 //   Landmark,
 //   Wallet,
@@ -116,22 +119,41 @@
 //   CalendarDays,
 //   Monitor,
 //   Percent,
-//   HelpCircle,
+//   Bell,
+//   BellIcon: Bell,
 // };
 
 // const getIcon = (iconName) => {
-//   if (!iconName) return LayoutDashboard;
+//   if (!iconName) {
+//     return LayoutDashboard;
+//   }
+
 //   return iconMap[iconName] || LayoutDashboard;
 // };
 
 // const normalizePath = (path) => {
-//   if (!path) return "";
+//   if (!path) {
+//     return "";
+//   }
+
 //   const trimmed = String(path).trim();
-//   if (trimmed.length > 1) return trimmed.replace(/\/+$/, "");
+
+//   if (trimmed.length > 1) {
+//     return trimmed.replace(/\/+$/, "");
+//   }
+
 //   return trimmed;
 // };
 
-// const getApiMenuItems = (responseData) => {
+// const isPathActive = (menuPath, currentPath) => {
+//   if (!menuPath) {
+//     return false;
+//   }
+
+//   return currentPath === menuPath || currentPath.startsWith(`${menuPath}/`);
+// };
+
+// const getMenuItems = (responseData) => {
 //   const menuGroups = Array.isArray(responseData?.menuGroups)
 //     ? responseData.menuGroups
 //     : Array.isArray(responseData?.data?.menuGroups)
@@ -139,7 +161,7 @@
 //       : [];
 
 //   return menuGroups
-//     .flatMap((group) => (Array.isArray(group.items) ? group.items : []))
+//     .flatMap((group) => (Array.isArray(group?.items) ? group.items : []))
 //     .map((item) => ({
 //       ...item,
 //       label: String(item.label || ""),
@@ -155,49 +177,40 @@
 //         }))
 //         .sort((a, b) => Number(a.order || 0) - Number(b.order || 0)),
 //     }))
-//     .filter((item) => item.label && item.isActive !== false);
+//     .filter(
+//       (item) =>
+//         item.label &&
+//         item.isActive !== false &&
+//         (item.path || item.children.length > 0),
+//     );
 // };
-
-// function BellIcon(props) {
-//   return (
-//     <svg
-//       {...props}
-//       viewBox="0 0 24 24"
-//       fill="none"
-//       stroke="currentColor"
-//       strokeWidth="2"
-//       strokeLinecap="round"
-//       strokeLinejoin="round"
-//     >
-//       <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
-//       <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-//     </svg>
-//   );
-// }
-
-// iconMap.BellIcon = BellIcon;
 
 // function Sidebar({ collapsed = false, mobileOpen = false, onMobileClose }) {
 //   const [openMenu, setOpenMenu] = useState(null);
-//   const [displayMenuItems, setDisplayMenuItems] = useState([]);
+//   const [menuItems, setMenuItems] = useState([]);
 //   const [menuLoading, setMenuLoading] = useState(true);
+
 //   const navigate = useNavigate();
 //   const location = useLocation();
 
 //   const currentPath = useMemo(
 //     () => normalizePath(location.pathname),
-//     [location.pathname]
+//     [location.pathname],
 //   );
 
 //   const loadMenu = useCallback(async () => {
 //     try {
 //       setMenuLoading(true);
+
 //       const response = await api.menu.getMenu("truebill");
-//       const items = getApiMenuItems(response?.data);
-//       setDisplayMenuItems(items);
+
+//       setMenuItems(getMenuItems(response?.data));
 //     } catch (error) {
 //       console.error("Failed to load sidebar menu:", error);
-//       setDisplayMenuItems([]);
+
+//       toast.error(error?.response?.data?.message || "Unable to load menu");
+
+//       setMenuItems([]);
 //     } finally {
 //       setMenuLoading(false);
 //     }
@@ -208,18 +221,20 @@
 //   }, [loadMenu]);
 
 //   useEffect(() => {
-//     const activeParentIndex = displayMenuItems.findIndex((item) => {
+//     const activeParentIndex = menuItems.findIndex((item) => {
 //       const parentPath = normalizePath(item.path);
-//       const hasActiveChild = item.children.some(
-//         (child) => normalizePath(child.path) === currentPath
+
+//       const hasActiveChild = item.children.some((child) =>
+//         isPathActive(normalizePath(child.path), currentPath),
 //       );
-//       return hasActiveChild || (parentPath && parentPath === currentPath);
+
+//       return hasActiveChild || isPathActive(parentPath, currentPath);
 //     });
 
 //     if (activeParentIndex !== -1) {
 //       setOpenMenu(activeParentIndex);
 //     }
-//   }, [currentPath, displayMenuItems]);
+//   }, [currentPath, menuItems]);
 
 //   const closeMobileSidebar = () => {
 //     if (window.innerWidth < 768 && onMobileClose) {
@@ -233,21 +248,14 @@
 //     if (hasChildren) {
 //       setOpenMenu((previous) => (previous === index ? null : index));
 
-//       if (collapsed && window.innerWidth >= 768) {
-//         return;
-//       }
-
-//       if (item.path) {
-//         navigate(item.path);
-//         closeMobileSidebar();
-//       }
-
+//       closeMobileSidebar();
 //       return;
 //     }
 
 //     if (item.path) {
 //       navigate(item.path);
 //     }
+
 //     closeMobileSidebar();
 //   };
 
@@ -267,6 +275,7 @@
 //     if (child.path) {
 //       navigate(child.path);
 //     }
+
 //     closeMobileSidebar();
 //   };
 
@@ -281,6 +290,7 @@
 
 //         <div className="logo-text">
 //           <span className="logo-main">TrustIQ</span>
+
 //           <span className="logo-erp">ERP</span>
 //         </div>
 
@@ -295,98 +305,125 @@
 //       </div>
 
 //       <nav className="sidebar-menu">
-//         {menuLoading && displayMenuItems.length === 0 ? null : null}
+//         {menuLoading && menuItems.length === 0 ? (
+//           <div className="sidebar-loading">
+//             <RefreshCcw size={20} className="spin-icon" />
 
-//         {displayMenuItems.map((item, index) => {
-//           const Icon = item.icon || LayoutDashboard;
-//           const isOpen = openMenu === index;
-//           const parentPath = normalizePath(item.path);
-//           const childIsActive = item.children.some(
-//             (child) => normalizePath(child.path) === currentPath
-//           );
-//           const parentIsActive =
-//             (parentPath && currentPath === parentPath) || childIsActive;
-//           const hasChildren = item.children.length > 0;
+//             <span>Loading menu...</span>
+//           </div>
+//         ) : menuItems.length === 0 ? (
+//           <div className="sidebar-empty">
+//             <span>No menus available</span>
+//           </div>
+//         ) : (
+//           menuItems.map((item, index) => {
+//             const Icon = item.icon || LayoutDashboard;
 
-//           return (
-//             <div
-//               key={item._id || item.id || `${item.label}-${index}`}
-//               className="sidebar-menu-group"
-//               onMouseEnter={() => handleMouseEnter(item, index)}
-//               onMouseLeave={() => handleMouseLeave(item)}
-//             >
+//             const isOpen = openMenu === index;
+
+//             const parentPath = normalizePath(item.path);
+
+//             const childIsActive = item.children.some((child) =>
+//               isPathActive(normalizePath(child.path), currentPath),
+//             );
+
+//             const parentIsActive =
+//               isPathActive(parentPath, currentPath) || childIsActive;
+
+//             const hasChildren = item.children.length > 0;
+
+//             return (
 //               <div
-//                 role="button"
-//                 tabIndex={0}
-//                 aria-expanded={hasChildren ? isOpen : undefined}
-//                 className={`sidebar-item ${
-//                   parentIsActive ? "sidebar-item-active" : ""
-//                 } ${isOpen ? "sidebar-item-open" : ""}`}
-//                 title={collapsed ? item.label : ""}
-//                 onClick={() => handleParentClick(item, index)}
-//                 onKeyDown={(event) => {
-//                   if (event.key === "Enter" || event.key === " ") {
-//                     event.preventDefault();
-//                     handleParentClick(item, index);
-//                   }
-//                 }}
+//                 key={item._id || item.id || `${item.label}-${index}`}
+//                 className="sidebar-menu-group"
+//                 onMouseEnter={() => handleMouseEnter(item, index)}
+//                 onMouseLeave={() => handleMouseLeave(item)}
 //               >
-//                 <Icon size={19} strokeWidth={1.8} />
+//                 <div
+//                   role="button"
+//                   tabIndex={0}
+//                   aria-expanded={hasChildren ? isOpen : undefined}
+//                   className={`sidebar-item ${
+//                     parentIsActive ? "sidebar-item-active" : ""
+//                   } ${isOpen ? "sidebar-item-open" : ""}`}
+//                   title={collapsed ? item.label : ""}
+//                   onClick={() => handleParentClick(item, index)}
+//                   onKeyDown={(event) => {
+//                     if (event.key === "Enter" || event.key === " ") {
+//                       event.preventDefault();
 
-//                 <span className="sidebar-item-label">{item.label}</span>
+//                       handleParentClick(item, index);
+//                     }
+//                   }}
+//                 >
+//                   <Icon size={19} strokeWidth={1.8} />
+
+//                   <span className="sidebar-item-label">{item.label}</span>
+
+//                   {hasChildren && (
+//                     <ChevronRight
+//                       size={16}
+//                       className={`sidebar-chevron ${
+//                         isOpen ? "sidebar-chevron-open" : ""
+//                       }`}
+//                     />
+//                   )}
+//                 </div>
 
 //                 {hasChildren && (
-//                   <ChevronRight
-//                     size={16}
-//                     className={`sidebar-chevron ${
-//                       isOpen ? "sidebar-chevron-open" : ""
+//                   <div
+//                     className={`sidebar-submenu ${
+//                       isOpen ? "sidebar-submenu-open" : ""
 //                     }`}
-//                   />
+//                   >
+//                     {item.children.map((child, childIndex) => {
+//                       const ChildIcon = child.icon || LayoutDashboard;
+
+//                       const childPath = normalizePath(child.path);
+
+//                       const childIsCurrent = isPathActive(
+//                         childPath,
+//                         currentPath,
+//                       );
+
+//                       return (
+//                         <div
+//                           key={
+//                             child.id ||
+//                             child._id ||
+//                             `${child.label}-${childIndex}`
+//                           }
+//                           role="button"
+//                           tabIndex={0}
+//                           className={`sidebar-submenu-item ${
+//                             childIsCurrent ? "sidebar-submenu-item-active" : ""
+//                           }`}
+//                           title={child.label}
+//                           onClick={() => handleChildClick(child)}
+//                           onKeyDown={(event) => {
+//                             if (event.key === "Enter" || event.key === " ") {
+//                               event.preventDefault();
+
+//                               handleChildClick(child);
+//                             }
+//                           }}
+//                         >
+//                           <ChildIcon
+//                             size={15}
+//                             strokeWidth={1.8}
+//                             className="submenu-icon"
+//                           />
+
+//                           <span>{child.label}</span>
+//                         </div>
+//                       );
+//                     })}
+//                   </div>
 //                 )}
 //               </div>
-
-//               {hasChildren && (
-//                 <div
-//                   className={`sidebar-submenu ${
-//                     isOpen ? "sidebar-submenu-open" : ""
-//                   }`}
-//                 >
-//                   {item.children.map((child, childIndex) => {
-//                     const ChildIcon = child.icon || LayoutDashboard;
-//                     const childPath = normalizePath(child.path);
-//                     const childIsCurrent = childPath === currentPath;
-
-//                     return (
-//                       <div
-//                         key={child.id || child._id || `${child.label}-${childIndex}`}
-//                         role="button"
-//                         tabIndex={0}
-//                         className={`sidebar-submenu-item ${
-//                           childIsCurrent ? "sidebar-item-active" : ""
-//                         }`}
-//                         title={child.label}
-//                         onClick={() => handleChildClick(child)}
-//                         onKeyDown={(event) => {
-//                           if (event.key === "Enter" || event.key === " ") {
-//                             event.preventDefault();
-//                             handleChildClick(child);
-//                           }
-//                         }}
-//                       >
-//                         <ChildIcon
-//                           size={15}
-//                           strokeWidth={1.8}
-//                           className="submenu-icon"
-//                         />
-//                         <span>{child.label}</span>
-//                       </div>
-//                     );
-//                   })}
-//                 </div>
-//               )}
-//             </div>
-//           );
-//         })}
+//             );
+//           })
+//         )}
 //       </nav>
 //     </aside>
 //   );
@@ -547,10 +584,7 @@ const isPathActive = (menuPath, currentPath) => {
     return false;
   }
 
-  return (
-    currentPath === menuPath ||
-    currentPath.startsWith(`${menuPath}/`)
-  );
+  return currentPath === menuPath || currentPath.startsWith(`${menuPath}/`);
 };
 
 const getMenuItems = (responseData) => {
@@ -561,9 +595,7 @@ const getMenuItems = (responseData) => {
       : [];
 
   return menuGroups
-    .flatMap((group) =>
-      Array.isArray(group?.items) ? group.items : [],
-    )
+    .flatMap((group) => (Array.isArray(group?.items) ? group.items : []))
     .map((item) => ({
       ...item,
       label: String(item.label || ""),
@@ -577,10 +609,7 @@ const getMenuItems = (responseData) => {
           path: child.path || null,
           icon: getIcon(child.icon),
         }))
-        .sort(
-          (a, b) =>
-            Number(a.order || 0) - Number(b.order || 0),
-        ),
+        .sort((a, b) => Number(a.order || 0) - Number(b.order || 0)),
     }))
     .filter(
       (item) =>
@@ -590,11 +619,7 @@ const getMenuItems = (responseData) => {
     );
 };
 
-function Sidebar({
-  collapsed = false,
-  mobileOpen = false,
-  onMobileClose,
-}) {
+function Sidebar({ collapsed = false, mobileOpen = false, onMobileClose }) {
   const [openMenu, setOpenMenu] = useState(null);
   const [menuItems, setMenuItems] = useState([]);
   const [menuLoading, setMenuLoading] = useState(true);
@@ -617,10 +642,7 @@ function Sidebar({
     } catch (error) {
       console.error("Failed to load sidebar menu:", error);
 
-      toast.error(
-        error?.response?.data?.message ||
-          "Unable to load menu",
-      );
+      toast.error(error?.response?.data?.message || "Unable to load menu");
 
       setMenuItems([]);
     } finally {
@@ -640,10 +662,7 @@ function Sidebar({
         isPathActive(normalizePath(child.path), currentPath),
       );
 
-      return (
-        hasActiveChild ||
-        isPathActive(parentPath, currentPath)
-      );
+      return hasActiveChild || isPathActive(parentPath, currentPath);
     });
 
     if (activeParentIndex !== -1) {
@@ -661,11 +680,11 @@ function Sidebar({
     const hasChildren = item.children.length > 0;
 
     if (hasChildren) {
-      setOpenMenu((previous) =>
-        previous === index ? null : index,
-      );
+      // Only expand / collapse the submenu.
+      // Keep the sidebar open on mobile so the user can pick a sub menu item.
+      // The sidebar closes in handleChildClick after a sub menu is selected.
+      setOpenMenu((previous) => (previous === index ? null : index));
 
-      closeMobileSidebar();
       return;
     }
 
@@ -677,21 +696,13 @@ function Sidebar({
   };
 
   const handleMouseEnter = (item, index) => {
-    if (
-      collapsed &&
-      window.innerWidth >= 768 &&
-      item.children.length > 0
-    ) {
+    if (collapsed && window.innerWidth >= 768 && item.children.length > 0) {
       setOpenMenu(index);
     }
   };
 
   const handleMouseLeave = (item) => {
-    if (
-      collapsed &&
-      window.innerWidth >= 768 &&
-      item.children.length > 0
-    ) {
+    if (collapsed && window.innerWidth >= 768 && item.children.length > 0) {
       setOpenMenu(null);
     }
   };
@@ -706,9 +717,7 @@ function Sidebar({
 
   return (
     <aside
-      className={`sidebar ${
-        collapsed ? "sidebar-collapsed" : ""
-      } ${
+      className={`sidebar ${collapsed ? "sidebar-collapsed" : ""} ${
         mobileOpen ? "sidebar-mobile-open" : ""
       }`}
     >
@@ -750,84 +759,48 @@ function Sidebar({
 
             const parentPath = normalizePath(item.path);
 
-            const childIsActive = item.children.some(
-              (child) =>
-                isPathActive(
-                  normalizePath(child.path),
-                  currentPath,
-                ),
+            const childIsActive = item.children.some((child) =>
+              isPathActive(normalizePath(child.path), currentPath),
             );
 
             const parentIsActive =
-              isPathActive(parentPath, currentPath) ||
-              childIsActive;
+              isPathActive(parentPath, currentPath) || childIsActive;
 
-            const hasChildren =
-              item.children.length > 0;
+            const hasChildren = item.children.length > 0;
 
             return (
               <div
-                key={
-                  item._id ||
-                  item.id ||
-                  `${item.label}-${index}`
-                }
+                key={item._id || item.id || `${item.label}-${index}`}
                 className="sidebar-menu-group"
-                onMouseEnter={() =>
-                  handleMouseEnter(item, index)
-                }
-                onMouseLeave={() =>
-                  handleMouseLeave(item)
-                }
+                onMouseEnter={() => handleMouseEnter(item, index)}
+                onMouseLeave={() => handleMouseLeave(item)}
               >
                 <div
                   role="button"
                   tabIndex={0}
-                  aria-expanded={
-                    hasChildren ? isOpen : undefined
-                  }
+                  aria-expanded={hasChildren ? isOpen : undefined}
                   className={`sidebar-item ${
-                    parentIsActive
-                      ? "sidebar-item-active"
-                      : ""
-                  } ${
-                    isOpen
-                      ? "sidebar-item-open"
-                      : ""
-                  }`}
-                  title={
-                    collapsed ? item.label : ""
-                  }
-                  onClick={() =>
-                    handleParentClick(item, index)
-                  }
+                    parentIsActive ? "sidebar-item-active" : ""
+                  } ${isOpen ? "sidebar-item-open" : ""}`}
+                  title={collapsed ? item.label : ""}
+                  onClick={() => handleParentClick(item, index)}
                   onKeyDown={(event) => {
-                    if (
-                      event.key === "Enter" ||
-                      event.key === " "
-                    ) {
+                    if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
 
                       handleParentClick(item, index);
                     }
                   }}
                 >
-                  <Icon
-                    size={19}
-                    strokeWidth={1.8}
-                  />
+                  <Icon size={19} strokeWidth={1.8} />
 
-                  <span className="sidebar-item-label">
-                    {item.label}
-                  </span>
+                  <span className="sidebar-item-label">{item.label}</span>
 
                   {hasChildren && (
                     <ChevronRight
                       size={16}
                       className={`sidebar-chevron ${
-                        isOpen
-                          ? "sidebar-chevron-open"
-                          : ""
+                        isOpen ? "sidebar-chevron-open" : ""
                       }`}
                     />
                   )}
@@ -836,73 +809,51 @@ function Sidebar({
                 {hasChildren && (
                   <div
                     className={`sidebar-submenu ${
-                      isOpen
-                        ? "sidebar-submenu-open"
-                        : ""
+                      isOpen ? "sidebar-submenu-open" : ""
                     }`}
                   >
-                    {item.children.map(
-                      (child, childIndex) => {
-                        const ChildIcon =
-                          child.icon ||
-                          LayoutDashboard;
+                    {item.children.map((child, childIndex) => {
+                      const ChildIcon = child.icon || LayoutDashboard;
 
-                        const childPath =
-                          normalizePath(child.path);
+                      const childPath = normalizePath(child.path);
 
-                        const childIsCurrent =
-                          isPathActive(
-                            childPath,
-                            currentPath,
-                          );
+                      const childIsCurrent = isPathActive(
+                        childPath,
+                        currentPath,
+                      );
 
-                        return (
-                          <div
-                            key={
-                              child.id ||
-                              child._id ||
-                              `${child.label}-${childIndex}`
+                      return (
+                        <div
+                          key={
+                            child.id ||
+                            child._id ||
+                            `${child.label}-${childIndex}`
+                          }
+                          role="button"
+                          tabIndex={0}
+                          className={`sidebar-submenu-item ${
+                            childIsCurrent ? "sidebar-submenu-item-active" : ""
+                          }`}
+                          title={child.label}
+                          onClick={() => handleChildClick(child)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+
+                              handleChildClick(child);
                             }
-                            role="button"
-                            tabIndex={0}
-                            className={`sidebar-submenu-item ${
-                              childIsCurrent
-                                ? "sidebar-submenu-item-active"
-                                : ""
-                            }`}
-                            title={child.label}
-                            onClick={() =>
-                              handleChildClick(child)
-                            }
-                            onKeyDown={(
-                              event,
-                            ) => {
-                              if (
-                                event.key ===
-                                  "Enter" ||
-                                event.key === " "
-                              ) {
-                                event.preventDefault();
+                          }}
+                        >
+                          <ChildIcon
+                            size={15}
+                            strokeWidth={1.8}
+                            className="submenu-icon"
+                          />
 
-                                handleChildClick(
-                                  child,
-                                );
-                              }
-                            }}
-                          >
-                            <ChildIcon
-                              size={15}
-                              strokeWidth={1.8}
-                              className="submenu-icon"
-                            />
-
-                            <span>
-                              {child.label}
-                            </span>
-                          </div>
-                        );
-                      },
-                    )}
+                          <span>{child.label}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

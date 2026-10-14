@@ -317,10 +317,7 @@
 
 .dl-filter-grid {
   display: grid;
-  grid-template-columns: repeat(
-    4,
-    minmax(140px, 1fr)
-  );
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
   gap: 12px;
 }
 
@@ -548,14 +545,12 @@
 @keyframes dl-menu-in {
   from {
     opacity: 0;
-    transform: translateY(-3px)
-      scale(0.98);
+    transform: translateY(-3px) scale(0.98);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0)
-      scale(1);
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -724,9 +719,7 @@
   cursor: pointer;
 }
 
-.dl-pagination-buttons button:hover:not(
-    :disabled
-  ) {
+.dl-pagination-buttons button:hover:not(:disabled) {
   border-color: var(--primary-color);
   background: var(--primary-light);
   color: var(--primary-color);
@@ -786,8 +779,7 @@
     rgba(255, 255, 255, 0.45),
     transparent
   );
-  animation: dl-shimmer 1.35s
-    infinite;
+  animation: dl-shimmer 1.35s infinite;
 }
 
 @keyframes dl-shimmer {
@@ -833,10 +825,7 @@
 .dl-mobile-grid {
   margin-top: 14px;
   display: grid;
-  grid-template-columns: repeat(
-    2,
-    1fr
-  );
+  grid-template-columns: repeat(2, 1fr);
   gap: 12px;
 }
 
@@ -873,10 +862,7 @@
   }
 
   .dl-filter-grid {
-    grid-template-columns: repeat(
-      2,
-      minmax(140px, 1fr)
-    );
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
   }
 }
 
@@ -1005,7 +991,6 @@
   flex-shrink: 0;
 }
 
-
 .dl-import-button {
   min-height: 37px;
 
@@ -1037,7 +1022,6 @@
   transition: 0.18s ease;
 }
 
-
 .dl-import-button:hover:not(:disabled),
 .dl-import-button.active {
   border-color: var(--primary-color);
@@ -1047,28 +1031,23 @@
   color: var(--primary-color);
 }
 
-
 .dl-import-button:disabled {
   opacity: 0.6;
 
   cursor: not-allowed;
 }
 
-
 .dl-import-button svg {
   flex-shrink: 0;
 }
-
 
 .dl-import-chevron {
   transition: transform 0.18s ease;
 }
 
-
 .dl-import-chevron.open {
   transform: rotate(180deg);
 }
-
 
 .dl-import-menu {
   position: absolute;
@@ -1093,7 +1072,6 @@
   animation: dl-import-menu-in 0.12s ease-out;
 }
 
-
 @keyframes dl-import-menu-in {
   from {
     opacity: 0;
@@ -1107,7 +1085,6 @@
     transform: translateY(0) scale(1);
   }
 }
-
 
 .dl-import-menu-item {
   width: 100%;
@@ -1140,23 +1117,19 @@
   transition: 0.18s ease;
 }
 
-
 .dl-import-menu-item:hover {
   background: var(--sidebar-hover);
 
   color: var(--primary-color);
 }
 
-
 .dl-import-file-input {
   display: none;
 }
 
-
 .dl-refresh-icon-spin {
   animation: dl-refresh-spin 0.8s linear infinite;
 }
-
 
 @keyframes dl-refresh-spin {
   to {
@@ -1164,12 +1137,10 @@
   }
 }
 
-
 @media (max-width: 768px) {
   .dl-import-wrapper {
     flex-shrink: 0;
   }
-
 
   .dl-import-button {
     min-height: 37px;
@@ -1179,8 +1150,24 @@
     font-size: 12px;
   }
 
-
   .dl-import-menu {
     width: 200px;
   }
+}
+
+/*
+  PORTAL DROPDOWNS (Import + Columns)
+
+  These menus are rendered into document.body via
+  React Portal so they are never clipped by the
+  horizontally scrollable toolbar on mobile / Capacitor.
+  Position (top / left / width) is set inline from JS.
+*/
+
+.dl-import-menu-fixed,
+.dl-dropdown-fixed {
+  position: fixed;
+  right: auto;
+  z-index: 999999;
+  box-sizing: border-box;
 }
