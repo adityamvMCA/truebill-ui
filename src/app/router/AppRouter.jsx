@@ -144,6 +144,10 @@ import SuppliersList from "../../pages/suppliers/SuppliersList";
 import TallyGateway from "../../components/TallyGateway/TallyGateway";
 import CustomersList from "../../pages/customers/CustomersList";
 import CustomerUpdate from "../../pages/customers/CustomerUpdate";
+import PurchaseBillsList from "../../pages/purchase/PurchaseBillsList";
+import SalesInvoiceCreation from "../../pages/SalesInvoiceCreation";
+import PurchaseBillCreate from "../../pages/purchase/PurchaseBillCreate";
+import PurchaseBillCreate1 from "../../pages/purchase/PurchaseBillCreate1";
 
 const Login = lazy(() => import("../../pages/Login"));
 const Dashboard = lazy(() => import("../../pages/Dashboard"));
@@ -248,15 +252,28 @@ const AppRouter = () => (
             element={gated("purchase.quotations", <PurchaseOrders />)}
           />
 
+          <Route
+            path={routes.purchase.invoices}
+            element={gated("purchase.quotations", <PurchaseBillsList />)}
+          />
+
+          <Route
+            path={routes.purchase.createInvoice}
+            element={<PurchaseBillCreate1 />}
+          />
           {/* =====================
               CUSTOMERS
           ====================== */}
 
           <Route
-            path={routes.customers.index}
+            path={routes.customers.create}
             element={gated("sales.customers", <CustomerCreate />)}
           />
 
+          <Route
+            path={routes.customers.index}
+            element={gated("sales.customers", <CustomersList />)}
+          />
           <Route
             path={routes.customers.list}
             element={gated("sales.customers", <CustomersList />)}
@@ -312,6 +329,10 @@ const AppRouter = () => (
           <Route
             path="/tally"
             element={gated("settings.appearance", <TallyGateway />)}
+          />
+          <Route
+            path="/pnb"
+            element={gated("settings.appearance", <SalesInvoiceCreation />)}
           />
           <Route
             path="/settings/notifications"

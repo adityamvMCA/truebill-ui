@@ -6,6 +6,7 @@ import menuApi from "./modules/menu.api";
 import productApi from "./modules/productApi";
 import stockMovementApi from "./modules/stockMovementApi";
 import supplierApi from "./modules/supplierApi";
+import purchaseBillApi from "./modules/purchaseBills";
 
 export const api = {
   auth: authApi,
@@ -16,6 +17,7 @@ export const api = {
   product: productApi,
   stockMovement: stockMovementApi,
   suppliers: supplierApi,
+    purchaseBills: purchaseBillApi,
 };
 
 export default api;

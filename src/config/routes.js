@@ -69,9 +69,12 @@ const routes = {
     createGrn: "/purchase/grn/create",
 
     invoices: "/purchase/invoices",
+    createInvoice: "/purchase/invoices/create",
+    editInvoice: "/purchase/invoices/edit/:id",
+    viewInvoice: "/purchase/invoices/view/:id",
+
     returns: "/purchase/returns",
   },
-
   inventory: {
     index: "/inventory",
 
