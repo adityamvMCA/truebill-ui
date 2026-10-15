@@ -1,0 +1,357 @@
+.outstanding-report,
+.outstanding-report *,
+.outstanding-report *::before,
+.outstanding-report *::after {
+  box-sizing: border-box;
+}
+
+.outstanding-report {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+
+  margin: 0;
+  padding: 0;
+
+  color: var(--text-primary);
+  font-family: inherit;
+}
+
+.outstanding-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+
+  margin-bottom: 18px;
+}
+
+.outstanding-options {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+
+  width: 100%;
+  min-width: 0;
+}
+
+.outstanding-switch {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 5px;
+
+  max-width: 100%;
+  min-width: 0;
+  padding: 5px;
+
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+
+  background: var(--card-bg);
+}
+
+.outstanding-switch button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  min-width: 0;
+  min-height: 38px;
+  padding: 8px 14px;
+
+  border: 0;
+  border-radius: 7px;
+
+  background: transparent;
+  color: var(--text-secondary);
+
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
+}
+
+.outstanding-switch button svg {
+  flex-shrink: 0;
+}
+
+.outstanding-switch button:hover,
+.outstanding-switch button.is-active {
+  background: var(--primary-light);
+  color: var(--primary-color);
+}
+
+.outstanding-switch button:focus-visible,
+.outstanding-link:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+.outstanding-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  min-height: 38px;
+
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.outstanding-check input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+
+  accent-color: var(--primary-color);
+}
+
+.outstanding-drilldown {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  margin-bottom: 16px;
+  padding: 12px 14px;
+
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+
+  background: var(--card-bg);
+}
+
+.outstanding-drilldown > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.outstanding-drilldown strong {
+  color: var(--text-primary);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.outstanding-drilldown span {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.outstanding-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+
+  margin-bottom: 14px;
+}
+
+.outstanding-stat {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+
+  min-width: 0;
+  min-height: 104px;
+  padding: 18px;
+
+  border: 1px solid var(--card-border);
+  border-left: 3px solid var(--border-color);
+  border-radius: 12px;
+
+  background: var(--card-bg);
+  box-shadow: var(--shadow-sm);
+}
+
+.outstanding-stat-label {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.outstanding-stat-value {
+  color: var(--text-primary);
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.outstanding-stat--primary {
+  border-left-color: var(--primary-color);
+}
+
+.outstanding-stat--primary .outstanding-stat-value {
+  color: var(--primary-color);
+}
+
+.outstanding-stat--danger {
+  border-left-color: var(--danger);
+}
+
+.outstanding-stat--danger .outstanding-stat-value {
+  color: var(--danger);
+}
+
+.outstanding-stat--success {
+  border-left-color: var(--success);
+}
+
+.outstanding-stat--success .outstanding-stat-value {
+  color: var(--success);
+}
+
+.outstanding-report-note {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+
+  margin-bottom: 20px;
+}
+
+.outstanding-report-note p {
+  flex: 1 1 420px;
+  margin: 0;
+
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 19px;
+}
+
+.outstanding-report-note > span {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 19px;
+}
+
+.outstanding-link {
+  padding: 0;
+  border: 0;
+
+  background: transparent;
+  color: var(--primary-color);
+
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.outstanding-link:hover {
+  text-decoration: underline;
+}
+
+.outstanding-overdue {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.outstanding-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  margin-bottom: 18px;
+  padding: 14px;
+
+  border: 1px solid var(--danger);
+  border-radius: 9px;
+
+  background: var(--card-bg);
+  color: var(--danger);
+
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.outstanding-error > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1100px) {
+  .outstanding-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .outstanding-controls {
+    gap: 12px;
+  }
+
+  .outstanding-switch {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    width: 100%;
+  }
+
+  .outstanding-switch button {
+    min-height: 42px;
+    padding: 8px;
+
+    font-size: 11px;
+  }
+
+  .outstanding-options {
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .outstanding-stats {
+    gap: 10px;
+  }
+
+  .outstanding-stat {
+    min-height: 96px;
+    padding: 12px;
+    border-radius: 10px;
+  }
+
+  .outstanding-stat-label {
+    font-size: 11px;
+  }
+
+  .outstanding-stat-value {
+    font-size: 19px;
+  }
+
+  .outstanding-drilldown {
+    padding: 12px;
+  }
+
+  .outstanding-report-note {
+    margin-bottom: 16px;
+  }
+}
+
+@media (max-width: 350px) {
+  .outstanding-stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .outstanding-switch button {
+    flex-wrap: wrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .outstanding-report button {
+    transition: none;
+  }
+}

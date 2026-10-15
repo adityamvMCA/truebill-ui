@@ -19,20 +19,30 @@ const INITIAL_CONFIRM_STATE = {
   onConfirm: null,
 };
 
+// const PURCHASE_BILL_ROUTES = {
+//   create: routes.purchase.createInvoice,
+
+//   view: (billNumber) =>
+//     buildRoute(routes.purchase.viewInvoice, {
+//       id: encodeURIComponent(billNumber),
+//     }),
+
+//   edit: (billNumber) =>
+//     buildRoute(routes.purchase.editInvoice, {
+//       id: encodeURIComponent(billNumber),
+//     }),
+// };
 const PURCHASE_BILL_ROUTES = {
   create: routes.purchase.createInvoice,
 
   view: (billNumber) =>
-    buildRoute(routes.purchase.viewInvoice, {
-      id: encodeURIComponent(billNumber),
-    }),
+    `/purchase/invoices/view/${encodeURIComponent(billNumber)}`,
 
   edit: (billNumber) =>
     buildRoute(routes.purchase.editInvoice, {
       id: encodeURIComponent(billNumber),
     }),
 };
-
 const currencyFormatter = new Intl.NumberFormat("en-IN", {
   style: "currency",
   currency: "INR",
@@ -146,6 +156,18 @@ function PurchaseBillsList() {
   useEffect(() => {
     loadBills();
   }, [loadBills]);
+
+  const handleView = useCallback(
+  (row) => {
+    if (!row.billNumber) {
+      toast.error("Purchase bill number is missing.");
+      return;
+    }
+
+    navigate(PURCHASE_BILL_ROUTES.view(row.billNumber));
+  },
+  [navigate],
+);
 
   const columns = useMemo(
     () => [
@@ -402,9 +424,9 @@ function PurchaseBillsList() {
     },
   ];
 
-  const handleView = (row) => {
-    navigate(PURCHASE_BILL_ROUTES.view(row.billNumber));
-  };
+  // const handleView = (row) => {
+  //   navigate(PURCHASE_BILL_ROUTES.view(row.billNumber));
+  // };
 
   const handleEdit = (row) => {
     if (!isDraft(row)) {

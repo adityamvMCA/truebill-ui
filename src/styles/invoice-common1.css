@@ -808,10 +808,8 @@
   }
 
   .doc-header {
-    padding:
-      calc(10px + env(safe-area-inset-top, 0px))
-      max(10px, env(safe-area-inset-right, 0px))
-      10px
+    padding: calc(10px + env(safe-area-inset-top, 0px))
+      max(10px, env(safe-area-inset-right, 0px)) 10px
       max(10px, env(safe-area-inset-left, 0px));
   }
 
@@ -1034,9 +1032,7 @@
     flex-direction: column;
     gap: 9px;
 
-    padding:
-      10px
-      max(10px, env(safe-area-inset-right, 0px))
+    padding: 10px max(10px, env(safe-area-inset-right, 0px))
       calc(10px + env(safe-area-inset-bottom, 0px))
       max(10px, env(safe-area-inset-left, 0px));
 
@@ -1096,5 +1092,546 @@
     animation: none !important;
     transition: none !important;
     scroll-behavior: auto !important;
+  }
+}
+
+
+/* =========================================================
+   COMMON DOCUMENT ALIGNMENT
+   Applies to every .doc-page
+   ========================================================= */
+
+.doc-page {
+  --doc-gutter: 20px;
+
+  --doc-gutter-left: max(
+    var(--doc-gutter),
+    env(safe-area-inset-left, 0px)
+  );
+
+  --doc-gutter-right: max(
+    var(--doc-gutter),
+    env(safe-area-inset-right, 0px)
+  );
+
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+
+  margin: 0;
+  padding: 0;
+}
+
+.doc-page > form,
+.doc-page .doc-fieldset {
+  width: 100%;
+  min-width: 0;
+
+  margin: 0;
+  padding: 0;
+}
+
+/* ---------- Header ---------- */
+
+.doc-page .doc-header {
+  padding: 12px var(--doc-gutter-right) 12px
+    var(--doc-gutter-left);
+
+  gap: 14px;
+}
+
+.doc-page .doc-header-left,
+.doc-page .doc-title {
+  min-width: 0;
+}
+
+.doc-page .doc-title span {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Alerts ---------- */
+
+.doc-page .doc-alerts {
+  padding: 12px 0 0;
+}
+
+/* ---------- Main card ---------- */
+
+/* No extra left/right margin around the document. */
+.doc-page .doc-main {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+
+  margin: 12px 0 0;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+}
+
+/* ---------- Form panels ---------- */
+
+.doc-page .doc-panel {
+  padding: 18px var(--doc-gutter-right) 18px
+    var(--doc-gutter-left);
+}
+
+.doc-page .form-field,
+.doc-page .form-input-wrapper,
+.doc-page .form-select-wrapper {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.doc-page .form-input,
+.doc-page .form-select,
+.doc-page .form-textarea {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* ---------- Notes / extras ---------- */
+
+.doc-page .doc-extra-row {
+  padding-left: var(--doc-gutter-left);
+  padding-right: var(--doc-gutter-right);
+}
+
+.doc-page .doc-extra-content,
+.doc-page .doc-extras > .doc-note {
+  padding: 12px var(--doc-gutter-right) 12px
+    var(--doc-gutter-left);
+}
+
+/* ---------- Summary ---------- */
+
+.doc-page .doc-summary {
+  padding: 12px var(--doc-gutter-right) 16px
+    var(--doc-gutter-left);
+}
+
+/* ---------- Add item / allocation ---------- */
+
+.doc-page .doc-add-item-row {
+  padding: 12px var(--doc-gutter-right) 12px
+    var(--doc-gutter-left);
+}
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 768px) {
+  .doc-page {
+    --doc-gutter: 16px;
+  }
+
+  .doc-page .doc-header {
+    align-items: flex-start;
+  }
+
+  .doc-page .doc-header-left {
+    flex: 1 1 100%;
+    gap: 10px;
+  }
+}
+
+/* =========================================================
+   MOBILE
+   Retains existing table-to-card rules.
+   ========================================================= */
+
+@media (max-width: 600px) {
+  .doc-page {
+    --doc-gutter: 12px;
+  }
+
+  .doc-page .doc-header {
+    padding: 10px var(--doc-gutter-right) 10px
+      var(--doc-gutter-left);
+  }
+
+  .doc-page .doc-main {
+    margin: 10px 0 0;
+    border-radius: 10px;
+  }
+
+  .doc-page .doc-panel {
+    padding: 14px var(--doc-gutter-right) 14px
+      var(--doc-gutter-left);
+  }
+
+  .doc-page .doc-fields-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .doc-page .doc-table-wrap {
+    padding-left: var(--doc-gutter-left);
+    padding-right: var(--doc-gutter-right);
+  }
+
+  .doc-page .doc-summary {
+    padding: 10px var(--doc-gutter-right) 14px
+      var(--doc-gutter-left);
+  }
+
+  .doc-page .doc-mobile-bar {
+    margin: 0;
+
+    padding: 10px var(--doc-gutter-right)
+      calc(10px + env(safe-area-inset-bottom, 0px))
+      var(--doc-gutter-left);
+  }
+
+  /*
+   * One action fills the footer.
+   * Two or more actions share the available width.
+   */
+  .doc-page .doc-mobile-actions {
+    display: grid;
+    grid-template-columns: repeat(
+      auto-fit,
+      minmax(120px, 1fr)
+    );
+    gap: 10px;
+  }
+
+  .doc-page .doc-mobile-actions .form-button {
+    width: 100%;
+    min-width: 0;
+    min-height: 46px;
+  }
+}
+
+/* ---------- Very small mobile ---------- */
+
+@media (max-width: 350px) {
+  .doc-page .doc-mobile-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* =========================================================
+   COMMON READ-ONLY DOCUMENT DETAILS
+   Wrapper: .doc-page.doc-detail-page
+   ========================================================= */
+
+.doc-detail-page .doc-top {
+  align-items: stretch;
+}
+
+.doc-detail-page .doc-fields-grid {
+  align-items: start;
+  gap: 12px;
+}
+
+.doc-detail-field {
+  min-width: 0;
+  padding: 12px;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  background: #fafbfc;
+}
+
+.doc-detail-label {
+  margin: 0 0 6px;
+
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.doc-detail-value {
+  min-width: 0;
+
+  color: #334155;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+
+  overflow-wrap: anywhere;
+}
+
+.doc-detail-value .form-status,
+.doc-detail-value .dl-status {
+  max-width: 100%;
+}
+
+.doc-detail-page .doc-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.doc-detail-page .doc-party-card {
+  width: 100%;
+}
+
+.doc-detail-page .doc-extras p {
+  overflow-wrap: anywhere;
+}
+
+/* Align read-only table content without form-input offsets. */
+.doc-detail-page .doc-table td {
+  vertical-align: middle;
+}
+
+.doc-detail-page .doc-table .doc-cell-no,
+.doc-detail-page .doc-table .doc-cell-hsn,
+.doc-detail-page .doc-table .doc-cell-amount {
+  padding-top: 10px !important;
+}
+
+/* =========================================================
+   TABLET / SMALL DESKTOP
+   Stack party and details to avoid a tall empty left panel.
+   ========================================================= */
+
+@media (max-width: 1100px) {
+  .doc-detail-page .doc-top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .doc-detail-page .doc-party-panel {
+    border-right: 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+}
+
+/* =========================================================
+   MOBILE DETAIL BOXES
+   ========================================================= */
+
+@media (max-width: 600px) {
+  .doc-detail-page {
+    min-width: 0;
+  }
+
+  .doc-detail-page .doc-main {
+    overflow: hidden;
+  }
+
+  .doc-detail-page .doc-header {
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .doc-detail-page .doc-header-left {
+    width: 100%;
+    flex: 1 1 100%;
+    align-items: center;
+  }
+
+  .doc-detail-page .doc-header-left > .form-button {
+    flex-shrink: 0;
+  }
+
+  .doc-detail-page .doc-title {
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+  }
+
+  /*
+   * Detail pages currently have no mobile action footer.
+   * Keep their header actions visible instead of hiding them.
+   */
+  .doc-detail-page .doc-header-actions {
+    display: flex;
+    width: 100%;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .doc-detail-page .doc-header-actions .form-button {
+    flex: 1 1 160px;
+    min-width: 0;
+    min-height: 44px;
+  }
+
+  .doc-detail-page .doc-panel {
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+
+  .doc-detail-page .doc-fields-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .doc-detail-page .doc-detail-field {
+    padding: 10px;
+    border-radius: 7px;
+  }
+
+  .doc-detail-page .doc-detail-label {
+    margin-bottom: 5px;
+    font-size: 11px;
+    line-height: 17px;
+  }
+
+  .doc-detail-page .doc-detail-value {
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .doc-detail-page .doc-party-card {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .doc-detail-page .doc-party-copy h3 {
+    font-size: 14px;
+  }
+
+  .doc-detail-page .doc-party-copy p {
+    font-size: 12px;
+    line-height: 18px;
+  }
+
+  /* ---------- Item cards ---------- */
+
+  .doc-detail-page .doc-table-wrap {
+    overflow: visible;
+    padding-top: 0;
+    padding-bottom: 12px;
+  }
+
+  .doc-detail-page .doc-table {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .doc-detail-page .doc-table thead,
+  .doc-detail-page .doc-table tfoot {
+    display: none;
+  }
+
+  .doc-detail-page .doc-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .doc-detail-page .doc-table tbody tr {
+    position: relative;
+
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+
+    width: 100%;
+    margin: 12px 0 0;
+    padding: 12px;
+
+    border: 1px solid #dfe6ef;
+    border-radius: 8px;
+    background: #ffffff;
+  }
+
+  .doc-detail-page .doc-table tbody td {
+    display: block;
+    min-width: 0;
+    padding: 0 !important;
+
+    border: 0;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .doc-detail-page .doc-table tbody td::before {
+    display: block;
+    margin-bottom: 5px;
+
+    content: attr(data-label);
+
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 17px;
+  }
+
+  .doc-detail-page .doc-table tbody td:not([data-label])::before {
+    display: none;
+  }
+
+  .doc-detail-page .doc-table .doc-cell-no {
+    grid-column: 1 / -1;
+
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    padding-bottom: 9px !important;
+    border-bottom: 1px solid #edf1f5;
+
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .doc-detail-page .doc-table .doc-cell-no::before {
+    content: "Item";
+    margin: 0;
+    color: #334155;
+    font-size: 13px;
+  }
+
+  .doc-detail-page .doc-table .doc-cell-item {
+    grid-column: 1 / -1;
+  }
+
+  .doc-detail-page .doc-table .doc-cell-hsn,
+  .doc-detail-page .doc-table .doc-cell-amount {
+    grid-column: auto;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  /* Full-width message for empty item lists. */
+  .doc-detail-page .doc-table td[colspan] {
+    grid-column: 1 / -1;
+  }
+
+  /* ---------- Notes and summary ---------- */
+
+  .doc-detail-page .doc-bottom {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .doc-detail-page .doc-extras {
+    border-right: 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .doc-detail-page .doc-extras .doc-panel + .doc-panel {
+    border-top: 1px solid #edf1f5;
+  }
+
+  .doc-detail-page .doc-summary-row {
+    min-height: 42px;
+    font-size: 12px;
+  }
+
+  .doc-detail-page .doc-summary-total {
+    min-height: 56px;
+    font-size: 14px;
+  }
+
+  .doc-detail-page .doc-summary-total strong {
+    font-size: 18px;
+  }
+}
+
+/* Very narrow screens: one box per row. */
+@media (max-width: 350px) {
+  .doc-detail-page .doc-fields-grid,
+  .doc-detail-page .doc-table tbody tr {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

@@ -38,6 +38,8 @@ import SupplierPaymentsList from "../../pages/purchase/SupplierPaymentsList";
 import SupplierPaymentCreate from "../../pages/purchase/SupplierPaymentCreate";
 import SupplierPaymentDetail from "../../pages/purchase/SupplierPaymentDetail";
 import PurchaseBillDetail from "../../pages/purchase/PurchaseBillDetail";
+import BanksList from "../../pages/banks/BanksList";
+import OutstandingPage from "../../components/reports/OutstandingReport/OutstandingPage";
 
 const Login = lazy(() => import("../../pages/Login"));
 const Dashboard = lazy(() => import("../../pages/Dashboard"));
@@ -266,6 +268,14 @@ const AppRouter = () => (
           <Route
             path="/settings/notifications"
             element={gated("settings.notifications", <Notifications />)}
+          />
+          <Route
+            path={routes.banks.list}
+            element={gated("bank.accounts", <BanksList />)}
+          />
+          <Route
+            path={routes.reports.outstanding}
+            element={gated("reports.accounting", <OutstandingPage />)}
           />
           {/* =====================
               PLATFORM ROUTES

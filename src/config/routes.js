@@ -123,7 +123,12 @@ const routes = {
     create: "/purchase/supplier-payments/new",
     view: "/purchase/supplier-payments/:paymentNumber",
   },
-
+  banks: {
+    list: "/accounting/banks",
+    create: "/accounting/banks/create",
+    view: "/accounting/banks/:bankCode",
+    edit: "/accounting/banks/:bankCode/edit",
+  },
   accounting: {
     index: "/accounting",
 
@@ -163,6 +168,7 @@ const routes = {
 
   reports: {
     index: "/reports",
+    outstanding: "/reports/outstanding",
 
     sales: "/reports/sales",
     purchase: "/reports/purchase",

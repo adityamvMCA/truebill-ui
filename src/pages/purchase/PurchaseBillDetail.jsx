@@ -61,15 +61,25 @@ const TAX_LABELS = {
   INTER_STATE: "IGST",
 };
 
+// function DetailField({ label, children }) {
+//   return (
+//     <div>
+//       <p className="doc-note">{label}</p>
+//       <div>{children ?? "N/A"}</div>
+//     </div>
+//   );
+// }
 function DetailField({ label, children }) {
   return (
-    <div>
-      <p className="doc-note">{label}</p>
-      <div>{children ?? "N/A"}</div>
+    <div className="doc-detail-field">
+      <div className="doc-detail-label">{label}</div>
+
+      <div className="doc-detail-value">
+        {children ?? "N/A"}
+      </div>
     </div>
   );
 }
-
 function PurchaseBillDetail() {
   const navigate = useNavigate();
   const params = useParams();
@@ -193,7 +203,7 @@ function PurchaseBillDetail() {
   };
 
   return (
-    <div className="doc-page">
+    <div className="doc-page doc-detail-page">
       <header className="doc-header">
         <div className="doc-header-left">
           <Button
