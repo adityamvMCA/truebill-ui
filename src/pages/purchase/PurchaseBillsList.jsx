@@ -149,10 +149,29 @@ function PurchaseBillsList() {
 
   const columns = useMemo(
     () => [
+      // {
+      //   key: "billNumber",
+      //   label: "Bill Number",
+      //   sortable: true,
+      // },
       {
         key: "billNumber",
         label: "Bill Number",
         sortable: true,
+
+        render: (value, row) => (
+          <button
+            type="button"
+            className="doc-link-button"
+            aria-label={`View purchase bill ${value}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              handleView(row);
+            }}
+          >
+            {value || "N/A"}
+          </button>
+        ),
       },
 
       {

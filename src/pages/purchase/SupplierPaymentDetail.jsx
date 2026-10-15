@@ -139,7 +139,6 @@ function SupplierPaymentDetail() {
     typeof payment?.journalId === "object"
       ? payment.journalId?._id
       : payment?.journalId;
-
   return (
     <div className="doc-page">
       <header className="doc-header">
@@ -329,12 +328,26 @@ function SupplierPaymentDetail() {
                 </p>
               </div>
 
-              <div className="doc-panel">
+              {/* <div className="doc-panel">
                 <h2 className="doc-panel-title">Accounting Entry</h2>
 
                 <p className="doc-note">Journal ID</p>
 
                 <p style={{ overflowWrap: "anywhere" }}>{journalId || "N/A"}</p>
+
+                <p className="doc-note">
+                  Supplier payment posting: debit supplier payable and credit
+                  the selected Cash or Bank account.
+                </p>
+              </div> */}
+              <div className="doc-panel">
+                <h2 className="doc-panel-title">Accounting Entry</h2>
+
+                <p className="doc-note">Journal Number</p>
+
+                <p style={{ overflowWrap: "anywhere" }}>
+                  {payment.journalNumber || "Not available"}
+                </p>
 
                 <p className="doc-note">
                   Supplier payment posting: debit supplier payable and credit
