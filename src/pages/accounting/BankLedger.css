@@ -1,0 +1,744 @@
+/* TrueBill Bank Ledger — medium layout, readable text */
+
+.bl-page {
+  --bl-bg: var(--page-bg, #f6f7fb);
+  --bl-card: var(--card-bg, #ffffff);
+  --bl-text: var(--text-primary, #17212f);
+  --bl-secondary: var(--text-secondary, #64748b);
+  --bl-muted: var(--text-muted, #8792a2);
+  --bl-border: var(--border-color, #e5e7eb);
+  --bl-primary: var(--primary-color, #2563eb);
+  --bl-success: var(--success, #16a34a);
+  --bl-danger: var(--danger, #dc2626);
+
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 16px;
+
+  background: var(--bl-bg);
+  color: var(--bl-text);
+
+  font-family: inherit;
+  font-size: 13px;
+
+  container-name: bank-ledger;
+  container-type: inline-size;
+}
+
+.bl-page,
+.bl-page *,
+.bl-page *::before,
+.bl-page *::after {
+  box-sizing: border-box;
+}
+
+.bl-page button,
+.bl-page input,
+.bl-page select {
+  font: inherit;
+}
+
+.bl-page button {
+  cursor: pointer;
+}
+
+.bl-page button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.bl-page button:focus-visible,
+.bl-page input:focus-visible,
+.bl-page select:focus-visible,
+.bl-page .bl-table-scroll:focus-visible {
+  outline: 2px solid var(--bl-primary);
+  outline-offset: 2px;
+}
+
+/* Header */
+
+.bl-page .bl-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+
+  margin-bottom: 14px;
+}
+
+.bl-page .bl-heading {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+
+  min-width: 0;
+}
+
+.bl-page .bl-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  padding: 0;
+
+  border: 1px solid var(--bl-border);
+  border-radius: 8px;
+
+  background: var(--bl-card);
+  color: var(--bl-text);
+}
+
+.bl-page .bl-title {
+  min-width: 0;
+}
+
+.bl-page .bl-title h1 {
+  margin: 0;
+
+  font-size: 23px;
+  font-weight: 750;
+  line-height: 1.3;
+  letter-spacing: -0.4px;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.bl-page .bl-title p {
+  margin: 3px 0 0;
+
+  color: var(--bl-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.bl-page .bl-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.bl-page .bl-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  min-height: 38px;
+  padding: 0 13px;
+
+  border: 1px solid var(--bl-border);
+  border-radius: 8px;
+
+  background: var(--bl-card);
+  color: var(--bl-text);
+
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.bl-page .bl-button-primary {
+  border-color: var(--bl-primary);
+  background: var(--bl-primary);
+  color: #ffffff;
+}
+
+/* Bank selector */
+
+.bl-page .bl-account-picker {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  margin-bottom: 14px;
+}
+
+.bl-page .bl-account-picker label,
+.bl-page .bl-account-number {
+  color: var(--bl-secondary);
+  font-size: 12px;
+}
+
+.bl-page .bl-account-picker select {
+  width: min(100%, 380px);
+  min-width: 0;
+  min-height: 37px;
+  padding: 6px 10px;
+
+  border: 1px solid var(--bl-border);
+  border-radius: 7px;
+
+  background: var(--bl-card);
+  color: var(--bl-text);
+  font-size: 13px;
+}
+
+.bl-page .bl-account-number {
+  overflow-wrap: anywhere;
+}
+
+/* Summary cards */
+
+.bl-page .bl-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+
+  margin-bottom: 16px;
+}
+
+.bl-page .bl-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 7px;
+
+  min-width: 0;
+  min-height: 100px;
+  padding: 14px 16px;
+
+  border: 1px solid var(--bl-border);
+  border-radius: 11px;
+
+  background: var(--bl-card);
+  box-shadow: 0 1px 3px rgb(15 23 42 / 3%);
+}
+
+.bl-page .bl-card > span {
+  color: var(--bl-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.bl-page .bl-card > strong {
+  font-size: 22px;
+  font-weight: 750;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.bl-page .bl-card > small {
+  min-height: 15px;
+
+  color: var(--bl-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.bl-page .bl-in {
+  color: var(--bl-success);
+}
+
+.bl-page .bl-out {
+  color: var(--bl-danger);
+}
+
+.bl-page .bl-primary {
+  color: var(--bl-primary);
+}
+
+/* Filters */
+
+.bl-page .bl-filters {
+  display: grid;
+  grid-template-columns:
+    minmax(200px, 2fr)
+    minmax(145px, 1fr)
+    minmax(145px, 1fr)
+    minmax(170px, 0.95fr);
+  align-items: stretch;
+  gap: 10px;
+
+  padding: 12px;
+  margin-bottom: 16px;
+
+  border: 1px solid var(--bl-border);
+  border-radius: 11px;
+
+  background: var(--bl-card);
+}
+
+.bl-page .bl-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  min-width: 0;
+  min-height: 46px;
+  padding: 0 11px;
+
+  border: 1px solid var(--bl-border);
+  border-radius: 8px;
+
+  background: var(--bl-bg);
+  color: var(--bl-muted);
+}
+
+.bl-page .bl-search > svg {
+  flex-shrink: 0;
+}
+
+.bl-page .bl-search input {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding: 0;
+
+  border: 0;
+  outline: 0;
+
+  background: transparent;
+  color: var(--bl-text);
+  font-size: 13px;
+}
+
+.bl-page .bl-search input::placeholder {
+  color: var(--bl-muted);
+  font-size: 13px;
+}
+
+.bl-page .bl-search:focus-within {
+  outline: 2px solid var(--bl-primary);
+  outline-offset: 2px;
+}
+
+.bl-page .bl-search input:focus-visible {
+  outline: 0;
+}
+
+.bl-page .bl-date {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+
+  min-width: 0;
+  min-height: 46px;
+  padding: 5px 10px;
+
+  border: 1px solid var(--bl-border);
+  border-radius: 8px;
+
+  background: var(--bl-card);
+}
+
+.bl-page .bl-date > span {
+  color: var(--bl-secondary);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.bl-page .bl-date input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0;
+
+  border: 0;
+
+  background: transparent;
+  color: var(--bl-text);
+
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.bl-page .bl-opening-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 7px;
+
+  min-width: 0;
+  padding: 8px 10px;
+
+  border: 1px solid var(--bl-border);
+  border-radius: 8px;
+
+  background: var(--bl-bg);
+}
+
+.bl-page .bl-opening-chip > span:first-child {
+  color: var(--bl-secondary);
+  font-size: 12px;
+}
+
+.bl-page .bl-opening-chip > strong {
+  font-size: 13px;
+}
+
+/* Table */
+
+.bl-page .bl-table-card {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+
+  border: 1px solid var(--bl-border);
+  border-radius: 10px;
+
+  background: var(--bl-card);
+}
+
+.bl-page .bl-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.bl-page .bl-table {
+  width: 100%;
+  min-width: 930px;
+  margin: 0;
+  border-collapse: collapse;
+
+  font-size: 13px;
+}
+
+.bl-page .bl-table thead {
+  background: var(--bl-primary);
+  color: #ffffff;
+}
+
+.bl-page .bl-table th {
+  padding: 12px;
+
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.bl-page .bl-table th.bl-in-heading {
+  color: #bbf7d0;
+}
+
+.bl-page .bl-table th.bl-out-heading {
+  color: #fecaca;
+}
+
+.bl-page .bl-table td {
+  padding: 11px 12px;
+
+  border-bottom: 1px solid var(--bl-border);
+
+  line-height: 1.5;
+  vertical-align: middle;
+}
+
+.bl-page .bl-table .bl-number {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.bl-page .bl-table tbody tr:not(.bl-opening-row):hover {
+  background: var(--bl-bg);
+}
+
+.bl-page .bl-doc {
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.bl-page .bl-subtext {
+  display: block;
+  margin-top: 3px;
+
+  color: var(--bl-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.bl-page .bl-particulars {
+  min-width: 210px;
+  max-width: 360px;
+  overflow-wrap: anywhere;
+}
+
+.bl-page .bl-voucher {
+  display: inline-block;
+  padding: 3px 7px;
+
+  border: 1px solid var(--bl-border);
+  border-radius: 5px;
+
+  background: var(--bl-bg);
+  color: var(--bl-secondary);
+
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.bl-page .bl-nowrap {
+  white-space: nowrap;
+}
+
+.bl-page .bl-balance {
+  color: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.bl-page .bl-balance.bl-primary {
+  color: var(--bl-primary);
+}
+
+.bl-page .bl-balance small {
+  margin-left: 5px;
+
+  color: var(--bl-secondary);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.bl-page .bl-opening-row {
+  background: color-mix(
+    in srgb,
+    var(--bl-success) 7%,
+    var(--bl-card)
+  );
+
+  font-weight: 650;
+}
+
+.bl-page .bl-opening-row td {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.bl-page .bl-closing-row {
+  background: color-mix(
+    in srgb,
+    var(--bl-primary) 7%,
+    var(--bl-card)
+  );
+
+  font-weight: 700;
+}
+
+.bl-page .bl-closing-row td {
+  padding-top: 13px;
+  padding-bottom: 13px;
+
+  border-top: 2px solid var(--bl-border);
+  border-bottom: 0;
+}
+
+.bl-page .bl-table td.bl-empty {
+  height: 120px;
+
+  color: var(--bl-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Messages */
+
+.bl-page .bl-error {
+  padding: 10px 12px;
+  margin-bottom: 12px;
+
+  border: 1px solid var(--bl-danger);
+  border-radius: 8px;
+
+  background: var(--bl-card);
+  color: var(--bl-danger);
+
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.bl-page .bl-search-note {
+  margin: -4px 0 10px;
+
+  color: var(--bl-secondary);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.bl-page .bl-footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+
+  margin-top: 10px;
+
+  color: var(--bl-secondary);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+/* Loading */
+
+.bl-page .bl-spin {
+  animation: bl-spin 0.8s linear infinite;
+}
+
+@keyframes bl-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive to available content width */
+
+@container bank-ledger (max-width: 950px) {
+  .bl-page .bl-filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .bl-page .bl-search {
+    grid-column: 1 / -1;
+  }
+}
+
+@container bank-ledger (max-width: 720px) {
+  .bl-page .bl-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bl-page .bl-title h1 {
+    font-size: 21px;
+  }
+
+  .bl-page .bl-card > strong {
+    font-size: 21px;
+  }
+}
+
+@container bank-ledger (max-width: 520px) {
+  .bl-page .bl-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .bl-page .bl-actions {
+    justify-content: flex-end;
+  }
+
+  .bl-page .bl-title h1 {
+    font-size: 20px;
+  }
+
+  .bl-page .bl-account-picker {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .bl-page .bl-account-picker select {
+    width: 100%;
+  }
+
+  .bl-page .bl-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bl-page .bl-opening-chip {
+    grid-column: 1 / -1;
+    justify-content: space-between;
+  }
+
+  .bl-page .bl-card {
+    min-height: 94px;
+    padding: 12px;
+  }
+
+  .bl-page .bl-card > strong {
+    font-size: 20px;
+  }
+}
+
+/* Viewport fallback */
+
+@media (max-width: 768px) {
+  .bl-page {
+    padding: 12px;
+  }
+
+  .bl-page .bl-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bl-page .bl-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bl-page .bl-search,
+  .bl-page .bl-opening-chip {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 600px) {
+  .bl-page {
+    padding: 10px;
+  }
+
+  .bl-page .bl-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .bl-page .bl-actions {
+    justify-content: flex-end;
+  }
+
+  .bl-page .bl-cards {
+    gap: 9px;
+  }
+
+  .bl-page .bl-filters {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .bl-page .bl-button {
+    min-height: 40px;
+  }
+
+  .bl-page .bl-back {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+  }
+
+  .bl-page .bl-search input,
+  .bl-page .bl-date input,
+  .bl-page .bl-account-picker select {
+    font-size: 16px;
+  }
+
+  .bl-page .bl-search input::placeholder {
+    font-size: 13px;
+  }
+
+  .bl-page .bl-date {
+    min-height: 48px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bl-page .bl-spin {
+    animation: none;
+  }
+}

@@ -40,6 +40,7 @@ import SupplierPaymentDetail from "../../pages/purchase/SupplierPaymentDetail";
 import PurchaseBillDetail from "../../pages/purchase/PurchaseBillDetail";
 import BanksList from "../../pages/banks/BanksList";
 import OutstandingPage from "../../components/reports/OutstandingReport/OutstandingPage";
+import BankLedger from "../../pages/accounting/BankLedger";
 
 const Login = lazy(() => import("../../pages/Login"));
 const Dashboard = lazy(() => import("../../pages/Dashboard"));
@@ -276,6 +277,10 @@ const AppRouter = () => (
           <Route
             path={routes.reports.outstanding}
             element={gated("reports.accounting", <OutstandingPage />)}
+          />
+          <Route
+            path={routes.reports.bank}
+            element={gated("reports.accounting", <BankLedger />)}
           />
           {/* =====================
               PLATFORM ROUTES

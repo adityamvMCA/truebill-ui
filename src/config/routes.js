@@ -174,6 +174,7 @@ const routes = {
     purchase: "/reports/purchase",
     inventory: "/reports/inventory",
     accounting: "/reports/accounting",
+    bank: "/accounting/bank-ledger",
   },
 
   tax: {

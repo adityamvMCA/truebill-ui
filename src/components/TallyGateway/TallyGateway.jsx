@@ -1,298 +1,380 @@
-// src/components/TallyGateway/TallyGateway.jsx
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  BookOpen,
+  Building2,
+  ChevronRight,
+  ClipboardList,
+  FileText,
+  Landmark,
+  Layers,
+  Package,
+  ShoppingCart,
+  Users,
+  Wallet,
+} from "lucide-react";
+
 import "./TallyGateway.css";
 
-const COMPANY = {
-  name: "Trust BillBook Demo Company",
-  period: "1-Apr-2026 to 31-Mar-2027",
-  currentDate: "Tuesday, 13-Oct-2026",
-  lastEntry: "13-Oct-2026",
-};
-
-const MENU_GROUPS = [
+/*
+ * Hardcoded paths.
+ *
+ * The paths below match the routes discussed in this conversation
+ * where their exact values are known.
+ *
+ * Check /customers, /suppliers, and /products against your route
+ * configuration if those pages use a different path.
+ */
+const MENU_SECTIONS = [
   {
-    title: "MASTERS",
+    id: "masters",
+    category: "MASTERS",
     items: [
-      { id: "customers", label: "Customers", route: "/customers" },
-      { id: "suppliers", label: "Suppliers", route: "/suppliers" },
-      { id: "products", label: "Products / Items", route: "/products" },
       {
-        id: "accounts",
-        label: "Chart of Accounts",
-        route: "/accounts",
+        id: "customers",
+        label: "Customers",
+        route: "/customers",
+        Icon: Users,
+      },
+      {
+        id: "suppliers",
+        label: "Suppliers",
+        route: "/suppliers",
+        Icon: Building2,
+      },
+      {
+        id: "products",
+        label: "Products / Items",
+        route: "/products",
+        Icon: Package,
+      },
+      {
+        id: "banks",
+        label: "Bank Accounts",
+        route: "/accounting/banks",
+        Icon: Landmark,
+      },
+        {
+        id: "bank-ledger",
+        label: "Bank Ledger",
+        route: "/accounting/bank-ledger",
+        Icon: Landmark,
       },
     ],
   },
   {
-    title: "TRANSACTIONS",
+    id: "sales",
+    category: "SALES",
     items: [
       {
-        id: "receipts",
-        label: "Receipts / Vouchers",
-        route: "/receipts",
+        id: "sales-invoices",
+        label: "Sales Invoices",
+        route: "/sales/invoices",
+        Icon: FileText,
       },
       {
-        id: "journal",
-        label: "Journal Entries",
-        route: "/journal",
-      },
-      {
-        id: "bank",
-        label: "Banking",
-        route: "/bank",
+        id: "customer-receipts",
+        label: "Customer Receipts",
+        route: "/sales/customer-receipts",
+        Icon: ArrowDownLeft,
       },
     ],
   },
   {
-    title: "CAMPUS",
+    id: "purchase",
+    category: "PURCHASE",
     items: [
       {
-        id: "students",
-        label: "Student Ledger",
-        route: "/student-class-cards",
-      },
-      { id: "fees", label: "Fee List", route: "/fee-list" },
-      {
-        id: "applications",
-        label: "Application Payment",
-        route: "/app-payment",
+        id: "purchase-bills",
+        label: "Purchase Bills",
+        route: "/purchase/invoices",
+        Icon: ShoppingCart,
       },
       {
-        id: "payroll",
-        label: "Payroll Processing",
-        route: "/payroll",
+        id: "supplier-payments",
+        label: "Supplier Payments",
+        route: "/purchase/supplier-payments",
+        Icon: ArrowUpRight,
       },
-      {
-        id: "salaries",
-        label: "Employee Salaries",
-        route: "/emp-sal",
-      },
-    ],
-  },
-  {
-    title: "REPORTS",
-    items: [
-      {
-        id: "balance",
-        label: "Balance Sheet",
-        route: "/finance/reports",
-      },
-      {
-        id: "profit",
-        label: "Profit & Loss A/c",
-        route: "/finance/reports",
-      },
-      {
-        id: "stock",
-        label: "Stock Summary",
-        route: "/reports/stock-summary",
-      },
-      {
-        id: "more",
-        label: "Display More Reports",
-        route: "/finance/reports",
-      },
-    ],
-  },
-  {
-    title: "",
-    items: [
-      { id: "quit", label: "Quit", route: "/logout" },
     ],
   },
 ];
 
-const ALL_ITEMS = MENU_GROUPS.flatMap((group) => group.items);
+/*
+ * These extra paths are proposed frontend paths.
+ * Set enabled: true only after registering the matching pages,
+ * or replace their routes with your actual registered paths.
+ */
+const ADDITIONAL_SECTIONS = [
+  {
+    id: "inventory",
+    category: "INVENTORY",
+    enabled: false,
+    items: [
+      {
+        id: "stock-movements",
+        label: "Stock Movements",
+        route: "/inventory/stock-movements",
+        Icon: ClipboardList,
+      },
+    ],
+  },
+  {
+    id: "outstanding",
+    category: "OUTSTANDING",
+    enabled: false,
+    items: [
+      {
+        id: "customer-outstanding",
+        label: "Customer Outstanding",
+        route: "/outstanding/customers",
+        Icon: Users,
+      },
+      {
+        id: "supplier-outstanding",
+        label: "Supplier Outstanding",
+        route: "/outstanding/suppliers",
+        Icon: Wallet,
+      },
+      {
+        id: "bank-ledger",
+        label: "Bank Ledger",
+        route: "/accounting/bank-ledger",
+        Icon: Landmark,
+      },
+    ],
+  },
+  {
+    id: "accounting",
+    category: "ACCOUNTING",
+    enabled: false,
+    items: [
+      {
+        id: "chart-of-accounts",
+        label: "Chart of Accounts",
+        route: "/accounting/ledgers",
+        Icon: Layers,
+      },
+      {
+        id: "journal-entries",
+        label: "Journal Entries",
+        route: "/accounting/journals",
+        Icon: BookOpen,
+      },
+    ],
+  },
+];
 
-const TallyGateway = () => {
+const SECTIONS = [
+  ...MENU_SECTIONS,
+  ...ADDITIONAL_SECTIONS.filter((section) => section.enabled),
+];
+
+const ALL_ITEMS = SECTIONS.flatMap((section) => section.items);
+
+export default function TallyGateway() {
   const navigate = useNavigate();
-  const [selectedId, setSelectedId] = useState(ALL_ITEMS[0].id);
+
+  const [activeItem, setActiveItem] = useState(ALL_ITEMS[0]?.id || null);
+
+  const gatewayRef = useRef(null);
   const itemRefs = useRef({});
 
   useEffect(() => {
-    const handleKeyDown = (event) => {
+    const handleShortcut = (event) => {
       const target = event.target;
+
       const isEditing =
         target instanceof HTMLElement &&
         (target.isContentEditable ||
           ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));
 
-      if (isEditing || event.ctrlKey || event.metaKey) return;
-
-      if (event.altKey && event.key.toLowerCase() === "g") {
-        event.preventDefault();
-        itemRefs.current[ALL_ITEMS[0].id]?.focus();
+      if (
+        isEditing ||
+        event.ctrlKey ||
+        event.metaKey ||
+        !event.altKey ||
+        event.key.toLowerCase() !== "g"
+      ) {
         return;
       }
 
-      if (event.altKey) return;
+      event.preventDefault();
 
-      if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
-        event.preventDefault();
+      const firstItem = ALL_ITEMS[0];
 
-        const currentIndex = ALL_ITEMS.findIndex(
-          (item) => item.id === selectedId,
-        );
+      if (firstItem) {
+        gatewayRef.current?.scrollIntoView({
+          block: "nearest",
+        });
 
-        let nextIndex = currentIndex;
-
-        if (event.key === "ArrowDown") {
-          nextIndex = (currentIndex + 1) % ALL_ITEMS.length;
-        }
-
-        if (event.key === "ArrowUp") {
-          nextIndex =
-            (currentIndex - 1 + ALL_ITEMS.length) % ALL_ITEMS.length;
-        }
-
-        if (event.key === "Home") nextIndex = 0;
-        if (event.key === "End") nextIndex = ALL_ITEMS.length - 1;
-
-        const nextItem = ALL_ITEMS[nextIndex];
-        setSelectedId(nextItem.id);
-        itemRefs.current[nextItem.id]?.focus();
+        setActiveItem(firstItem.id);
+        itemRefs.current[firstItem.id]?.focus();
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleShortcut);
 
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keydown", handleShortcut);
     };
-  }, [selectedId]);
+  }, []);
+
+  const handleMenuKeyDown = (event) => {
+    if (event.altKey || event.ctrlKey || event.metaKey || !ALL_ITEMS.length) {
+      return;
+    }
+
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+      return;
+    }
+
+    const currentId = event.target
+      .closest("[data-gateway-item]")
+      ?.getAttribute("data-gateway-item");
+
+    if (!currentId) return;
+
+    event.preventDefault();
+
+    const currentIndex = Math.max(
+      0,
+      ALL_ITEMS.findIndex((item) => item.id === currentId),
+    );
+
+    let nextIndex = currentIndex;
+
+    if (event.key === "ArrowDown") {
+      nextIndex = (currentIndex + 1) % ALL_ITEMS.length;
+    }
+
+    if (event.key === "ArrowUp") {
+      nextIndex = (currentIndex - 1 + ALL_ITEMS.length) % ALL_ITEMS.length;
+    }
+
+    if (event.key === "Home") {
+      nextIndex = 0;
+    }
+
+    if (event.key === "End") {
+      nextIndex = ALL_ITEMS.length - 1;
+    }
+
+    const nextItem = ALL_ITEMS[nextIndex];
+
+    setActiveItem(nextItem.id);
+    itemRefs.current[nextItem.id]?.focus();
+  };
+
+  const handleNavigate = (item) => {
+    setActiveItem(item.id);
+    navigate(item.route);
+  };
 
   return (
-    <div className="bb-gateway">
-      <header className="bb-command-bar">
-        <div className="bb-brand">
-          <strong>Trust BillBook</strong>
-          <span>ACCOUNTING WORKSPACE</span>
-        </div>
+    <div className="tg-page" ref={gatewayRef}>
+      <section className="tg-container" aria-labelledby="tg-title">
+        <header className="tg-header">
+          <div className="tg-header-inner">
+            <span className="tg-brand-icon">
+              <Layers size={23} className="tg-header-icon" aria-hidden="true" />
+            </span>
 
-        <nav className="bb-command-links" aria-label="Quick navigation">
-          <button type="button" onClick={() => navigate("/accounts")}>
-            Accounts
-          </button>
+            <div className="tg-header-copy">
+              <h1 id="tg-title" className="tg-header-title">
+                TrueBill Gateway
+              </h1>
 
-          <button type="button" onClick={() => navigate("/journal")}>
-            Journal
-          </button>
+              <p className="tg-header-subtitle">
+                Your business. One workspace.
+              </p>
+            </div>
+          </div>
 
-          <button type="button" onClick={() => navigate("/receipts")}>
-            Vouchers
-          </button>
+          <div className="tg-header-bar" />
+        </header>
+
+        <nav
+          className="tg-body"
+          aria-label="TrueBill modules"
+          onKeyDown={handleMenuKeyDown}
+        >
+          {SECTIONS.map((section) => (
+            <section
+              key={section.id}
+              className="tg-section"
+              aria-labelledby={`tg-section-${section.id}`}
+            >
+              <div className="tg-section-header">
+                <span className="tg-section-bar" aria-hidden="true" />
+
+                <h2
+                  id={`tg-section-${section.id}`}
+                  className="tg-section-title"
+                >
+                  {section.category}
+                </h2>
+
+                <span className="tg-section-count">{section.items.length}</span>
+              </div>
+
+              <div className="tg-items">
+                {section.items.map((item) => {
+                  const Icon = item.Icon;
+
+                  return (
+                    <button
+                      key={item.id}
+                      ref={(element) => {
+                        itemRefs.current[item.id] = element;
+                      }}
+                      type="button"
+                      data-gateway-item={item.id}
+                      className={`tg-item ${
+                        activeItem === item.id ? "tg-item-active" : ""
+                      }`}
+                      onFocus={() => setActiveItem(item.id)}
+                      onMouseEnter={() => setActiveItem(item.id)}
+                      onClick={() => handleNavigate(item)}
+                    >
+                      <span className="tg-item-left">
+                        <span className="tg-item-icon-wrap">
+                          <Icon
+                            size={18}
+                            className="tg-icon"
+                            aria-hidden="true"
+                          />
+                        </span>
+
+                        <span className="tg-item-label">{item.label}</span>
+                      </span>
+
+                      <ChevronRight
+                        size={16}
+                        className="tg-item-arrow"
+                        aria-hidden="true"
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
         </nav>
 
-        <button
-          type="button"
-          className="bb-goto"
-          onClick={() => itemRefs.current[selectedId]?.focus()}
-        >
-          Go To <span>Alt + G</span>
-        </button>
-      </header>
+        <footer className="tg-footer">
+          <div className="tg-shortcut">
+            <kbd className="tg-kbd">Alt + G</kbd>
 
-      <div className="bb-title-strip">
-        <span>Business Gateway</span>
-        <span>Trust BillBook</span>
-      </div>
-
-      <main className="bb-workspace">
-        <section className="bb-company-pane" aria-label="Company information">
-          <div className="bb-period-row">
-            <div>
-              <span className="bb-field-label">Current period</span>
-              <strong>{COMPANY.period}</strong>
-            </div>
-
-            <div className="bb-date-field">
-              <span className="bb-field-label">Current date</span>
-              <strong>{COMPANY.currentDate}</strong>
-            </div>
+            <span className="tg-shortcut-text">Focus gateway</span>
           </div>
 
-          <div className="bb-company-table">
-            <div className="bb-company-table-head">
-              <span>Name of company</span>
-              <span>Date of last entry</span>
-            </div>
-
-            <div className="bb-company-table-row">
-              <strong>{COMPANY.name}</strong>
-              <span>{COMPANY.lastEntry}</span>
-            </div>
-          </div>
-
-          <div className="bb-company-caption">
-            <span>Active company</span>
-            <p>
-              Select a master, transaction or report from the gateway
-              to continue.
-            </p>
-          </div>
-        </section>
-
-        <section className="bb-menu-pane" aria-label="Gateway navigation">
-          <div className="bb-menu">
-            <h1 className="bb-menu-title">Business Gateway</h1>
-
-            <nav className="bb-menu-body" aria-label="Business modules">
-              {MENU_GROUPS.map((group, groupIndex) => (
-                <div
-                  key={group.title || "utilities"}
-                  className={`bb-menu-group ${
-                    !group.title ? "bb-menu-group-last" : ""
-                  }`}
-                >
-                  {group.title && (
-                    <h2 id={`bb-group-${groupIndex}`}>
-                      {group.title}
-                    </h2>
-                  )}
-
-                  <div
-                    role="group"
-                    aria-labelledby={
-                      group.title ? `bb-group-${groupIndex}` : undefined
-                    }
-                    aria-label={!group.title ? "Utilities" : undefined}
-                  >
-                    {group.items.map((item) => (
-                      <button
-                        key={item.id}
-                        ref={(element) => {
-                          itemRefs.current[item.id] = element;
-                        }}
-                        type="button"
-                        className={`bb-menu-item ${
-                          selectedId === item.id ? "is-selected" : ""
-                        }`}
-                        onFocus={() => setSelectedId(item.id)}
-                        onMouseEnter={() => setSelectedId(item.id)}
-                        onClick={() => navigate(item.route)}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </nav>
-          </div>
-
-          <p className="bb-menu-help">
-            ↑ ↓ Select <span>•</span> Enter Open
-          </p>
-        </section>
-      </main>
-
-      <footer className="bb-status-bar">
-        <span>Business Gateway</span>
-        <span>Alt + G — Focus menu</span>
-      </footer>
+          <span className="tg-footer-hint">↑ ↓ Navigate · Enter Open</span>
+        </footer>
+      </section>
     </div>
   );
-};
-
-export default TallyGateway;
+}
