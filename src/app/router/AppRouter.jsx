@@ -49,6 +49,8 @@ import SalesQuotationsList from "../../pages/sales/Quotations/SalesQuotationsLis
 import SalesQuotationCreate from "../../pages/sales/Quotations/SalesQuotationCreate";
 import SalesQuotationDetail from "../../pages/sales/Quotations/SalesQuotationDetail";
 import SalesQuotationComparison from "../../pages/sales/Quotations/SalesQuotationComparison";
+import SalesReturnsList from "../../pages/sales/sales-returns/SalesReturnsList";
+import TaxConfiguration from "../../pages/TaxConfiguration/TaxConfiguration";
 
 const Login = lazy(() => import("../../pages/Login"));
 const Dashboard = lazy(() => import("../../pages/Dashboard"));
@@ -236,6 +238,10 @@ const AppRouter = () => (
             path={routes.sales.createInvoice}
             element={gated("sales.invoices", <SalesInvoiceCreate />)}
           />
+          <Route
+            path={routes.sales.returns}
+            element={gated("salesReturn.view", <SalesReturnsList />)}
+          />
 
           <Route
             path={routes.sales.viewInvoice}
@@ -250,6 +256,13 @@ const AppRouter = () => (
             element={gated(
               "sales.invoices",
               <SalesInvoiceCreate mode="edit" />,
+            )}
+          />
+          <Route
+            path={routes.tax.configuration}
+            element={gated(
+              "gst.taxConfiguration",
+              <TaxConfiguration/>,
             )}
           />
           {/* =====================

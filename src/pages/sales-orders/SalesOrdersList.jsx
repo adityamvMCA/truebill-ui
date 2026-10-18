@@ -1108,6 +1108,11 @@ function SalesOrdersList() {
         sortable: false,
 
         render: (_value, row) => {
+          // Invoice already exists
+          if (row.invoiceNumber) {
+            return <span className="dl-muted-value">{row.invoiceNumber}</span>;
+          }
+
           const canCreateInvoice = [
             "CONFIRMED",
             "IN_PROGRESS",

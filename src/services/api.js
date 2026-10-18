@@ -14,6 +14,8 @@ import salesInvoiceApi from "./modules/salesInvoiceApi";
 import salesOrderApi from "./modules/salesOrderApi";
 import deliveryNoteApi from "./modules/deliveryNoteApi";
 import salesQuotationApi from "./modules/salesQuotationApi";
+import salesReturnApi from "./modules/salesReturnApi";
+import taxConfigurationApi from "./modules/taxConfigurationApi";
 
 export const api = {
   auth: authApi,
@@ -32,6 +34,8 @@ export const api = {
   salesOrder: salesOrderApi,
   deliveryNote: deliveryNoteApi,
   salesQuotations: salesQuotationApi,
+  salesReturn: salesReturnApi,
+  taxConfiguration: taxConfigurationApi,
 };
 
 export default api;
