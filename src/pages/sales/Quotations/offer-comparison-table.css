@@ -1,0 +1,1153 @@
+/* ==========================================
+   COMPARISON CARD
+   ========================================== */
+
+.oc-card {
+  --oc-blue: #2563eb;
+  --oc-blue-dark: #1d4ed8;
+  --oc-border: #e8edf4;
+  --oc-text: #182338;
+  --oc-muted: #7b8799;
+  --oc-selected: #f1f6ff;
+
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+
+  border: 1px solid var(--oc-border);
+  border-radius: 16px;
+
+  background: #fff;
+  box-shadow: 0 3px 16px rgb(24 35 56 / 3%);
+
+  animation: oc-enter 240ms ease-out both;
+}
+
+.oc-card,
+.oc-card *,
+.oc-card *::before,
+.oc-card *::after {
+  box-sizing: border-box;
+}
+
+/* ==========================================
+   TOOLBAR
+   ========================================== */
+
+.oc-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  padding: 22px 24px;
+}
+
+.oc-toolbar > div {
+  min-width: 0;
+}
+
+.oc-heading-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.oc-heading-line h2 {
+  margin: 0;
+
+  color: var(--oc-text);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.oc-count {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 4px 9px;
+  border-radius: 6px;
+
+  color: #59708f;
+  background: #f1f5f9;
+
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.oc-toolbar p {
+  margin: 7px 0 0;
+
+  color: var(--oc-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.oc-details-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-shrink: 0;
+
+  min-height: 40px;
+  padding: 9px 12px;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+
+  color: #53657d;
+  background: #fff;
+
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  cursor: pointer;
+
+  transition:
+    color 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+
+.oc-details-toggle svg {
+  flex-shrink: 0;
+}
+
+/* ==========================================
+   SCROLL CONTAINER
+   ========================================== */
+
+.oc-scroll {
+  position: relative;
+
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+
+  max-height: 68vh;
+  max-height: 68svh;
+
+  overflow: auto;
+  overscroll-behavior-x: contain;
+
+  -webkit-overflow-scrolling: touch;
+
+  scrollbar-width: thin;
+  scrollbar-color: #ccd6e4 #f8fafc;
+}
+
+.oc-scroll::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+.oc-scroll::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+
+.oc-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid #f8fafc;
+  border-radius: 10px;
+  background: #ccd6e4;
+}
+
+.oc-scroll::-webkit-scrollbar-corner {
+  background: #f8fafc;
+}
+
+/* ==========================================
+   TABLE
+
+   The component supplies the overall table
+   width and an inline first-column width.
+   Customer columns share the remaining width.
+   ========================================== */
+
+.oc-table {
+  table-layout: fixed;
+
+  margin: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+
+  color: var(--oc-text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.oc-table th,
+.oc-table td {
+  padding: 15px 20px;
+
+  border-top: 1px solid var(--oc-border);
+  border-right: 1px solid var(--oc-border);
+
+  text-align: left;
+  vertical-align: middle;
+
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.oc-table tr > :last-child {
+  border-right: 0;
+}
+
+/* Sticky customer headers */
+
+.oc-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+
+  background: #fbfcfe;
+  vertical-align: top;
+}
+
+/* Sticky product/label column */
+
+.oc-table .oc-label {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+
+  width: 220px;
+
+  color: #59677c;
+  background: #fbfcfe;
+
+  font-weight: 500;
+
+  box-shadow: 1px 0 0 var(--oc-border);
+}
+
+/* Header/label intersection */
+
+.oc-table thead .oc-corner {
+  z-index: 5;
+  background: #f8fafc;
+}
+
+.oc-cell {
+  background: #fff;
+
+  transition:
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.oc-table .oc-cell-selected {
+  background: var(--oc-selected);
+}
+
+.oc-table thead .oc-cell-selected {
+  background: #eaf2ff;
+  box-shadow: inset 0 3px 0 var(--oc-blue);
+}
+
+/* ==========================================
+   LABELS
+   ========================================== */
+
+.oc-eyebrow {
+  display: block;
+
+  margin: 2px 0 11px;
+
+  color: #8b97a9;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+}
+
+.oc-corner-title {
+  display: block;
+
+  margin-bottom: 7px;
+
+  color: var(--oc-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.oc-muted {
+  display: block;
+
+  margin-top: 4px;
+
+  color: var(--oc-muted);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+/* ==========================================
+   CUSTOMER HEADER
+   ========================================== */
+
+.oc-customer-header {
+  height: 170px;
+}
+
+.oc-customer-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+
+  min-height: 34px;
+  margin-bottom: 10px;
+}
+
+.oc-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+
+  border: 1px solid #e1e9f7;
+  border-radius: 10px;
+
+  color: #436ac0;
+  background: #eef3ff;
+
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.oc-selected-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  padding: 4px 7px;
+  border-radius: 5px;
+
+  color: var(--oc-blue-dark);
+  background: #dceaff;
+
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  animation: oc-badge-enter 180ms ease-out both;
+}
+
+.oc-selected-badge svg {
+  flex-shrink: 0;
+}
+
+.oc-customer-name {
+  color: var(--oc-text);
+
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+
+  overflow-wrap: anywhere;
+}
+
+.oc-customer-code {
+  margin-top: 2px;
+
+  color: var(--oc-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.oc-header-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  margin-top: 13px;
+}
+
+.oc-document-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  min-height: 32px;
+  max-width: 100%;
+  padding: 0;
+
+  border: 0;
+
+  color: var(--oc-blue);
+  background: transparent;
+
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.oc-document-link svg {
+  flex-shrink: 0;
+}
+
+/* ==========================================
+   PRODUCT LABELS
+   ========================================== */
+
+.oc-table .oc-product-label {
+  vertical-align: top;
+}
+
+.oc-product-name {
+  display: block;
+
+  color: #26364d;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+
+  overflow-wrap: anywhere;
+}
+
+.oc-specification {
+  display: block;
+
+  margin-top: 7px;
+
+  color: #738198;
+  font-size: 11px;
+  font-weight: 400;
+
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ==========================================
+   PRICES
+   ========================================== */
+
+.oc-price-block {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.oc-price-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.oc-price {
+  color: #1b2a41;
+
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.025em;
+
+  white-space: nowrap;
+}
+
+.oc-quantity {
+  padding: 3px 7px;
+
+  border: 1px solid #e5eaf1;
+  border-radius: 5px;
+
+  color: #64748b;
+  background: rgb(255 255 255 / 75%);
+
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.oc-price-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+
+  color: #8792a4;
+  font-size: 11px;
+}
+
+.oc-line-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+
+  padding-top: 9px;
+  border-top: 1px dashed #e2e8f0;
+
+  color: #63738b;
+
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.oc-line-total > :last-child {
+  color: #36475f;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.oc-not-quoted {
+  color: #a0aaba;
+  font-size: 12px;
+  font-style: italic;
+}
+
+/* ==========================================
+   TOTALS / EXTRA DETAILS
+   ========================================== */
+
+.oc-table .oc-total-row th,
+.oc-table .oc-total-row td {
+  padding-top: 19px;
+  padding-bottom: 19px;
+
+  border-top: 2px solid #e8edf5;
+}
+
+.oc-grand-total {
+  color: #1c2c46;
+
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.035em;
+
+  white-space: nowrap;
+}
+
+.oc-cell-selected .oc-grand-total {
+  color: var(--oc-blue-dark);
+}
+
+.oc-text-cell {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.oc-detail-row {
+  animation: oc-details-enter 180ms ease-out both;
+}
+
+/* ==========================================
+   SELECTION FOOTER
+   ========================================== */
+
+.oc-table tfoot th,
+.oc-table tfoot td {
+  padding-top: 18px;
+  padding-bottom: 18px;
+}
+
+.oc-select-button,
+.oc-order-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+
+  border: 1px solid #dce4ef;
+  border-radius: 8px;
+
+  color: #53647d;
+  background: #fff;
+
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+
+  cursor: pointer;
+
+  transition:
+    color 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.oc-select-button svg,
+.oc-order-button svg {
+  flex-shrink: 0;
+}
+
+.oc-select-button.is-selected {
+  border-color: var(--oc-blue);
+
+  color: #fff;
+  background: var(--oc-blue);
+
+  box-shadow: 0 3px 8px rgb(37 99 235 / 15%);
+}
+
+.oc-selection-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+
+  border: 1px solid #c7d3e4;
+  border-radius: 50%;
+}
+
+.oc-select-button.is-selected
+  .oc-selection-indicator {
+  border-color: rgb(255 255 255 / 65%);
+
+  color: var(--oc-blue);
+  background: #fff;
+}
+
+.oc-order-button {
+  border-color: #d2e9dc;
+
+  color: #25654a;
+  background: #f2faf6;
+}
+
+/* ==========================================
+   INTERACTION / ACCESSIBILITY
+   ========================================== */
+
+.oc-card button {
+  touch-action: manipulation;
+}
+
+.oc-card button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.oc-card button:focus-visible,
+.oc-scroll:focus-visible {
+  outline: 3px solid #93b9ff;
+  outline-offset: -3px;
+}
+
+/* Hover only on devices that support hover. */
+
+@media (hover: hover) and (pointer: fine) {
+  .oc-details-toggle:hover {
+    border-color: #c7d6ec;
+    background: #f8fafc;
+  }
+
+  .oc-document-link:hover:not(:disabled) {
+    color: var(--oc-blue-dark);
+    text-decoration: underline;
+  }
+
+  .oc-select-button:hover:not(:disabled) {
+    border-color: #a7c1f7;
+
+    color: var(--oc-blue);
+    background: #f7faff;
+  }
+
+  .oc-select-button.is-selected:hover:not(:disabled) {
+    border-color: var(--oc-blue-dark);
+
+    color: #fff;
+    background: var(--oc-blue-dark);
+  }
+
+  .oc-order-button:hover:not(:disabled) {
+    border-color: #add4bf;
+    background: #e9f6ef;
+  }
+}
+
+/* ==========================================
+   BOTTOM NOTE
+   ========================================== */
+
+.oc-bottom-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+
+  min-height: 52px;
+  padding: 14px 22px;
+
+  border-top: 1px solid var(--oc-border);
+
+  color: #7b8799;
+  background: #fcfdff;
+
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.oc-bottom-note > span {
+  min-width: 0;
+}
+
+.oc-bottom-note strong {
+  color: #375477;
+  font-weight: 600;
+}
+
+.oc-note-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 23px;
+  height: 23px;
+  margin-top: 1px;
+  flex-shrink: 0;
+
+  border-radius: 50%;
+
+  color: var(--oc-blue);
+  background: #eaf2ff;
+}
+
+/* ==========================================
+   EMPTY STATE
+   ========================================== */
+
+.oc-empty {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 60px 20px;
+
+  border: 1px solid #e8edf4;
+  border-radius: 16px;
+
+  text-align: center;
+  background: #fff;
+}
+
+.oc-empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 52px;
+  height: 52px;
+  margin-bottom: 6px;
+
+  border-radius: 15px;
+
+  color: #7291cb;
+  background: #f0f5ff;
+}
+
+.oc-empty h2 {
+  margin: 0;
+
+  color: #26364d;
+  font-size: 16px;
+}
+
+.oc-empty p {
+  margin: 0;
+
+  color: #8792a4;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.oc-sr-only {
+  position: absolute;
+
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+
+  border: 0;
+}
+
+/* ==========================================
+   ANIMATIONS
+   ========================================== */
+
+@keyframes oc-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes oc-badge-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes oc-details-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* ==========================================
+   TABLET
+   ========================================== */
+
+@media (max-width: 1024px) {
+  .oc-toolbar {
+    padding: 18px 20px;
+  }
+
+  .oc-table th,
+  .oc-table td {
+    padding: 14px 16px;
+  }
+
+  /* Overrides the inline width on the first <col>. */
+  .oc-table col:first-child {
+    width: 180px !important;
+  }
+
+  .oc-table .oc-label {
+    width: 180px;
+  }
+
+  .oc-customer-header {
+    height: auto;
+  }
+
+  .oc-price {
+    font-size: 17px;
+  }
+
+  .oc-grand-total {
+    font-size: 20px;
+  }
+}
+
+/* ==========================================
+   MOBILE
+   ========================================== */
+
+@media (max-width: 700px) {
+  .oc-card {
+    border-radius: 12px;
+  }
+
+  .oc-toolbar {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+
+    padding: 16px;
+  }
+
+  .oc-toolbar > div {
+    flex: 1 1 180px;
+    min-width: 0;
+  }
+
+  .oc-heading-line {
+    gap: 8px;
+  }
+
+  .oc-heading-line h2 {
+    font-size: 15px;
+  }
+
+  .oc-count {
+    padding: 4px 7px;
+    font-size: 10px;
+  }
+
+  .oc-toolbar p {
+    margin-top: 6px;
+    font-size: 11px;
+    line-height: 1.6;
+  }
+
+  .oc-details-toggle {
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 11px;
+  }
+
+  /*
+   * Preserve the component's dynamic table width.
+   * Customer columns scroll instead of squeezing.
+   */
+  .oc-scroll {
+    max-height: 72vh;
+    max-height: 72svh;
+  }
+
+  .oc-table {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .oc-table th,
+  .oc-table td {
+    padding: 12px 14px;
+  }
+
+  .oc-table col:first-child {
+    width: 140px !important;
+  }
+
+  .oc-table .oc-label {
+    width: 140px;
+    padding-right: 12px;
+    padding-left: 12px;
+
+    box-shadow:
+      1px 0 0 var(--oc-border),
+      5px 0 10px rgb(24 35 56 / 4%);
+  }
+
+  .oc-table thead .oc-corner {
+    z-index: 5;
+  }
+
+  .oc-eyebrow {
+    margin-bottom: 8px;
+
+    font-size: 9px;
+    letter-spacing: 0.06em;
+  }
+
+  .oc-corner-title {
+    margin-bottom: 5px;
+
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .oc-muted {
+    font-size: 10px;
+    line-height: 1.5;
+  }
+
+  .oc-customer-top {
+    min-height: 30px;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .oc-avatar {
+    width: 30px;
+    height: 30px;
+
+    border-radius: 8px;
+    font-size: 12px;
+  }
+
+  .oc-selected-badge {
+    padding: 4px 6px;
+    font-size: 9px;
+  }
+
+  .oc-customer-name {
+    font-size: 13px;
+  }
+
+  .oc-customer-code {
+    font-size: 10px;
+  }
+
+  .oc-header-bottom {
+    justify-content: flex-start;
+    gap: 8px 12px;
+    margin-top: 8px;
+  }
+
+  .oc-document-link {
+    min-height: 36px;
+    font-size: 11px;
+  }
+
+  .oc-product-name {
+    font-size: 12px;
+  }
+
+  .oc-specification {
+    margin-top: 6px;
+    font-size: 10px;
+  }
+
+  .oc-price-block {
+    gap: 8px;
+  }
+
+  .oc-price {
+    font-size: 17px;
+  }
+
+  .oc-quantity {
+    padding: 3px 6px;
+    font-size: 10px;
+  }
+
+  .oc-price-meta {
+    gap: 5px 12px;
+    font-size: 10px;
+  }
+
+  .oc-line-total {
+    gap: 6px 10px;
+    padding-top: 8px;
+    font-size: 10px;
+  }
+
+  .oc-not-quoted {
+    font-size: 11px;
+  }
+
+  .oc-table .oc-total-row th,
+  .oc-table .oc-total-row td {
+    padding-top: 15px;
+    padding-bottom: 15px;
+  }
+
+  .oc-grand-total {
+    font-size: 20px;
+  }
+
+  .oc-table tfoot th,
+  .oc-table tfoot td {
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+
+  .oc-select-button,
+  .oc-order-button {
+    min-height: 44px;
+    gap: 7px;
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  .oc-bottom-note {
+    gap: 8px;
+    min-height: auto;
+    padding: 13px 14px;
+
+    font-size: 11px;
+    line-height: 1.7;
+  }
+
+  .oc-empty {
+    padding: 40px 18px;
+    border-radius: 12px;
+  }
+
+  .oc-empty h2 {
+    font-size: 15px;
+  }
+
+  .oc-empty p {
+    font-size: 12px;
+  }
+}
+
+/* ==========================================
+   SMALL PHONES
+   ========================================== */
+
+@media (max-width: 380px) {
+  .oc-toolbar {
+    gap: 10px;
+    padding: 13px;
+  }
+
+  .oc-toolbar > div {
+    flex-basis: 100%;
+  }
+
+  .oc-details-toggle {
+    width: 100%;
+  }
+
+  .oc-table col:first-child {
+    width: 116px !important;
+  }
+
+  .oc-table .oc-label {
+    width: 116px;
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  .oc-corner-title {
+    font-size: 11px;
+  }
+
+  .oc-eyebrow {
+    font-size: 8px;
+  }
+
+  .oc-product-name {
+    font-size: 11px;
+  }
+}
+
+/* ==========================================
+   REDUCED MOTION
+   Keep this block last.
+   ========================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .oc-card,
+  .oc-card *,
+  .oc-card *::before,
+  .oc-card *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -32,7 +32,7 @@ const routes = {
     createQuotation: "/sales/quotations/create",
     viewQuotation: "/sales/quotations/view/:quotationNumber/:revision",
     editQuotation: "/sales/quotations/edit/:quotationNumber/:revision",
-
+    compareQuotations: "/sales/quotations/compare/:comparisonGroupId",
     orders: "/sales/orders",
     orders1: "/sales/orders1",
     createOrder: "/sales/orders/create",

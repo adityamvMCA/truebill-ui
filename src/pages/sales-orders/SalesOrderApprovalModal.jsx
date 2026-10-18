@@ -7,6 +7,8 @@ import {
 
 import {
   ShieldCheck,
+  Play,
+  CheckCircle2,
   Check,
   LoaderCircle,
   X,
@@ -14,16 +16,96 @@ import {
 
 import "./sales-order-approval.css";
 
-const formatMoney = (paise) =>
-  new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-  }).format(Number(paise || 0) / 100);
+const ACTION_CONFIG = {
+  confirm: {
+    title: "Approve Sales Order",
+    subtitle:
+      "Review the order and record your approval remarks.",
+
+    remarksLabel: "Approval remarks",
+
+    placeholder:
+      "Enter the reason or notes for approving this order...",
+
+    buttonText: "Approve Order",
+    loadingText: "Approving...",
+
+    HeaderIcon: ShieldCheck,
+    ButtonIcon: Check,
+
+    note:
+      "Approval changes the order to Confirmed and locks draft editing. It does not create an invoice or move stock.",
+  },
+
+  start: {
+    title: "Start Sales Order",
+    subtitle:
+      "Review the order and record your starting remarks.",
+
+    remarksLabel: "Start remarks",
+
+    placeholder:
+      "Enter the work instructions or notes for starting this order...",
+
+    buttonText: "Start Order",
+    loadingText: "Starting...",
+
+    HeaderIcon: Play,
+    ButtonIcon: Play,
+
+    note:
+      "Starting changes the order to In Progress. This action does not create an invoice or move stock.",
+  },
+
+  complete: {
+    title: "Complete Sales Order",
+    subtitle:
+      "Review the order and record your completion remarks.",
+
+    remarksLabel: "Completion remarks",
+
+    placeholder:
+      "Enter the completion details or final notes for this order...",
+
+    buttonText: "Complete Order",
+    loadingText: "Completing...",
+
+    HeaderIcon: CheckCircle2,
+    ButtonIcon: Check,
+
+    note:
+      "Completion changes the order to Completed. This action does not create an invoice or move stock.",
+  },
+};
+
+const moneyFormatter = new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: "INR",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+const formatMoney = (paise) => {
+  if (
+    paise === null ||
+    paise === undefined ||
+    paise === ""
+  ) {
+    return "N/A";
+  }
+
+  const amount = Number(paise);
+
+  return Number.isSafeInteger(amount)
+    ? moneyFormatter.format(amount / 100)
+    : "N/A";
+};
 
 function SalesOrderApprovalModal({
   order,
-  loading,
-  error,
+  action = "confirm",
+  loading = false,
+  error = "",
   onClose,
   onApprove,
 }) {
@@ -31,51 +113,76 @@ function SalesOrderApprovalModal({
 
   const dialogRef = useRef(null);
   const remarksRef = useRef(null);
+  const submitLockRef = useRef(false);
 
   const titleId = useId();
+  const descriptionId = useId();
   const remarksId = useId();
   const errorId = useId();
+  const countId = useId();
+
+  const config = ACTION_CONFIG[action];
 
   useEffect(() => {
-    if (!order) {
-      return;
-    }
+    if (!order) return;
 
     setRemarks("");
-    remarksRef.current?.focus();
-  }, [order?._id]);
+    submitLockRef.current = false;
+  }, [order?._id, action]);
 
   useEffect(() => {
-    if (!order) {
-      return undefined;
-    }
+    if (!order) return undefined;
 
-    const previousFocus = document.activeElement;
-    const previousOverflow = document.body.style.overflow;
+    const previousFocus =
+      document.activeElement;
+
+    const previousOverflow =
+      document.body.style.overflow;
 
     document.body.style.overflow = "hidden";
 
+    const timeoutId = window.setTimeout(() => {
+      remarksRef.current?.focus();
+    }, 0);
+
     return () => {
-      document.body.style.overflow = previousOverflow;
+      window.clearTimeout(timeoutId);
+
+      document.body.style.overflow =
+        previousOverflow;
 
       if (previousFocus?.isConnected) {
         previousFocus.focus?.();
       }
     };
-  }, [order?._id]);
+  }, [order?._id, action]);
 
-  if (!order) {
+  if (!order || !config) {
     return null;
   }
 
+  const HeaderIcon = config.HeaderIcon;
+  const ButtonIcon = config.ButtonIcon;
+
   const trimmedRemarks = remarks.trim();
+
+  const closeModal = () => {
+    if (
+      loading ||
+      submitLockRef.current
+    ) {
+      return;
+    }
+
+    onClose?.();
+  };
 
   const handleKeyDown = (event) => {
     if (event.key === "Escape") {
-      if (!loading) {
-        onClose();
-      }
+      event.preventDefault();
+      event.stopPropagation();
 
+      closeModal();
       return;
     }
 
@@ -85,8 +192,15 @@ function SalesOrderApprovalModal({
 
     const controls = Array.from(
       dialogRef.current?.querySelectorAll(
-        'button:not(:disabled), textarea:not(:disabled), [tabindex="0"]',
+        [
+          "button:not(:disabled)",
+          "textarea:not(:disabled)",
+          '[tabindex="0"]',
+        ].join(", "),
       ) || [],
+    ).filter(
+      (element) =>
+        element.getClientRects().length > 0,
     );
 
     if (!controls.length) {
@@ -96,22 +210,56 @@ function SalesOrderApprovalModal({
     }
 
     const first = controls[0];
-    const last = controls[controls.length - 1];
+    const last =
+      controls[controls.length - 1];
+
+    const activeElement =
+      document.activeElement;
 
     if (
       event.shiftKey &&
-      (document.activeElement === first ||
-        !controls.includes(document.activeElement))
+      (
+        activeElement === first ||
+        !controls.includes(activeElement)
+      )
     ) {
       event.preventDefault();
       last.focus();
     } else if (
       !event.shiftKey &&
-      (document.activeElement === last ||
-        !controls.includes(document.activeElement))
+      (
+        activeElement === last ||
+        !controls.includes(activeElement)
+      )
     ) {
       event.preventDefault();
       first.focus();
+    }
+  };
+
+  const submit = async (event) => {
+    event.preventDefault();
+
+    if (
+      loading ||
+      submitLockRef.current ||
+      !trimmedRemarks ||
+      typeof onApprove !== "function"
+    ) {
+      return;
+    }
+
+    submitLockRef.current = true;
+
+    try {
+      await onApprove(trimmedRemarks);
+    } catch {
+      /*
+       * The parent displays the request error through
+       * the error prop and keeps this modal open.
+       */
+    } finally {
+      submitLockRef.current = false;
     }
   };
 
@@ -120,10 +268,10 @@ function SalesOrderApprovalModal({
       className="soa-overlay"
       onClick={(event) => {
         if (
-          event.target === event.currentTarget &&
-          !loading
+          event.target ===
+          event.currentTarget
         ) {
-          onClose();
+          closeModal();
         }
       }}
     >
@@ -133,28 +281,37 @@ function SalesOrderApprovalModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        aria-describedby={descriptionId}
         aria-busy={loading}
         tabIndex={-1}
         onKeyDown={handleKeyDown}
       >
         <header className="soa-header">
           <div className="soa-heading">
-            <span className="soa-icon">
-              <ShieldCheck size={23} />
+            <span
+              className="soa-icon"
+              aria-hidden="true"
+            >
+              <HeaderIcon size={23} />
             </span>
 
             <div>
-              <h2 id={titleId}>Approve Sales Order</h2>
-              <p>Review the order and record your remarks.</p>
+              <h2 id={titleId}>
+                {config.title}
+              </h2>
+
+              <p id={descriptionId}>
+                {config.subtitle}
+              </p>
             </div>
           </div>
 
           <button
             type="button"
             className="soa-close"
-            aria-label="Close approval"
+            aria-label="Close order action"
             disabled={loading}
-            onClick={onClose}
+            onClick={closeModal}
           >
             <X size={18} />
           </button>
@@ -162,34 +319,44 @@ function SalesOrderApprovalModal({
 
         <form
           className="soa-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-
-            if (!loading && trimmedRemarks) {
-              void onApprove(trimmedRemarks);
-            }
-          }}
+          onSubmit={submit}
         >
           <div className="soa-body">
             <div className="soa-order">
               <div>
                 <span>Sales Order</span>
-                <strong>{order.orderNumber}</strong>
+
+                <strong>
+                  {order.orderNumber}
+                </strong>
               </div>
 
               <div>
                 <span>Customer</span>
-                <strong>{order.customerName}</strong>
+
+                <strong>
+                  {order.customerName}
+                </strong>
               </div>
 
               <div>
                 <span>Total Amount</span>
-                <strong>{formatMoney(order.totalAmountPaise)}</strong>
+
+                <strong>
+                  {formatMoney(
+                    order.totalAmountPaise,
+                  )}
+                </strong>
               </div>
             </div>
 
-            <label className="soa-label" htmlFor={remarksId}>
-              Approval remarks <span>*</span>
+            <label
+              className="soa-label"
+              htmlFor={remarksId}
+            >
+              {config.remarksLabel}
+              {" "}
+              <span>*</span>
             </label>
 
             <textarea
@@ -197,31 +364,47 @@ function SalesOrderApprovalModal({
               id={remarksId}
               value={remarks}
               onChange={(event) =>
-                setRemarks(event.target.value)
+                setRemarks(
+                  event.target.value,
+                )
               }
-              placeholder="Enter the reason or notes for approving this order..."
+              placeholder={
+                config.placeholder
+              }
               maxLength={1000}
               rows={4}
               required
               readOnly={loading}
-              aria-invalid={Boolean(error)}
-              aria-describedby={error ? errorId : undefined}
+              aria-invalid={
+                error ? true : undefined
+              }
+              aria-describedby={[
+                countId,
+                error ? errorId : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
             />
 
-            <div className="soa-count">
+            <div
+              id={countId}
+              className="soa-count"
+            >
               {remarks.length}/1000
             </div>
 
             {error && (
-              <p id={errorId} className="soa-error" role="alert">
+              <p
+                id={errorId}
+                className="soa-error"
+                role="alert"
+              >
                 {error}
               </p>
             )}
 
             <p className="soa-note">
-              Approval changes the order to Confirmed and locks
-              draft editing. It does not create an invoice or
-              move stock.
+              {config.note}
             </p>
           </div>
 
@@ -230,7 +413,7 @@ function SalesOrderApprovalModal({
               type="button"
               className="soa-secondary"
               disabled={loading}
-              onClick={onClose}
+              onClick={closeModal}
             >
               Back
             </button>
@@ -238,15 +421,27 @@ function SalesOrderApprovalModal({
             <button
               type="submit"
               className="soa-approve"
-              disabled={loading || !trimmedRemarks}
+              disabled={
+                loading ||
+                !trimmedRemarks
+              }
             >
               {loading ? (
-                <LoaderCircle size={16} className="soa-spinner" />
+                <LoaderCircle
+                  size={16}
+                  className="soa-spinner"
+                  aria-hidden="true"
+                />
               ) : (
-                <Check size={16} />
+                <ButtonIcon
+                  size={16}
+                  aria-hidden="true"
+                />
               )}
 
-              {loading ? "Approving..." : "Approve Order"}
+              {loading
+                ? config.loadingText
+                : config.buttonText}
             </button>
           </footer>
         </form>

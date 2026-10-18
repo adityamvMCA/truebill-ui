@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
 import toast from "react-hot-toast";
 
-
 import salesInvoiceApi from "../../../services/modules/salesInvoiceApi";
 
 import {
@@ -31,7 +30,7 @@ const INITIAL_CONFIRM = {
   action: "",
 };
 
-const isDraft = (invoice) => invoice?.status === "DRAFT";
+const isCreated = (invoice) => invoice?.status === "CREATED";
 
 function SalesInvoicesListContent() {
   const navigate = useNavigate();
@@ -147,7 +146,7 @@ function SalesInvoicesListContent() {
         type: "number",
         sortable: true,
         render: (value, row) =>
-          isDraft(row) ? (
+          isCreated(row) ? (
             <span className="dl-muted-value">N/A</span>
           ) : (
             formatPaise(value)
@@ -159,7 +158,7 @@ function SalesInvoicesListContent() {
         type: "number",
         sortable: true,
         render: (value, row) =>
-          isDraft(row) ? (
+          isCreated(row) ? (
             <span className="dl-muted-value">Not posted</span>
           ) : (
             formatPaise(value)
@@ -176,7 +175,7 @@ function SalesInvoicesListContent() {
         label: "Payment Status",
         sortable: true,
         render: (value, row) =>
-          isDraft(row) ? (
+          isCreated(row) ? (
             <span className="dl-muted-value">N/A</span>
           ) : (
             <StatusField value={value} />
@@ -237,7 +236,8 @@ function SalesInvoicesListContent() {
       key: "status",
       label: "Invoice Status",
       type: "select",
-      options: ["DRAFT", "POSTED", "CANCELLED"],
+      // options: ["DRAFT", "POSTED", "CANCELLED"],
+      options: ["CREATED", "POSTED", "CANCELLED"],
     },
     {
       key: "paymentStatus",
@@ -263,14 +263,30 @@ function SalesInvoicesListContent() {
   ];
 
   const quickFilters = [
-    { key: "status", value: "", label: "All" },
-    { key: "status", value: "DRAFT", label: "Drafts" },
-    { key: "status", value: "POSTED", label: "Posted" },
-    { key: "status", value: "CANCELLED", label: "Cancelled" },
+    {
+      key: "status",
+      value: "",
+      label: "All",
+    },
+    {
+      key: "status",
+      value: "CREATED",
+      label: "Created",
+    },
+    {
+      key: "status",
+      value: "POSTED",
+      label: "Posted",
+    },
+    {
+      key: "status",
+      value: "CANCELLED",
+      label: "Cancelled",
+    },
   ];
 
   const handleEdit = (row) => {
-    if (!isDraft(row)) {
+    if (!isCreated(row)) {
       toast.error("Only draft sales invoices can be edited.");
       return;
     }
@@ -281,7 +297,7 @@ function SalesInvoicesListContent() {
   const openAction = (rows, action) => {
     if (actionLock.current || !rows?.length) return;
 
-    if (rows.some((row) => !isDraft(row))) {
+    if (rows.some((row) => !isCreated(row))) {
       toast.error("Select only draft sales invoices.");
       return;
     }

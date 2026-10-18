@@ -1,23 +1,14 @@
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
-import {
-  ArrowLeft,
-  FileText,
-  Plus,
-  Save,
-  Trash2,
-} from "lucide-react";
+import { ArrowLeft, FileText, Plus, Save, Trash2 } from "lucide-react";
 
 import toast from "react-hot-toast";
 
 import api from "../../../services/api";
+
+import routes, { buildRoute } from "../../../config/routes";
 
 import Input from "../../../components/common/Form/Input";
 import Select from "../../../components/common/Form/Select";
@@ -38,6 +29,29 @@ const TAX_OPTIONS = [
   { value: "INTER_STATE", label: "IGST" },
 ];
 
+const NUMBER_COLUMNS = [
+  {
+    field: "quantity",
+    label: "Quantity",
+    min: "0.001",
+    max: "1000000",
+    step: "0.001",
+  },
+  {
+    field: "unitRate",
+    label: "Offered Price/Item (₹)",
+    min: "0",
+    step: "0.01",
+  },
+  {
+    field: "discountPercent",
+    label: "Discount %",
+    min: "0",
+    max: "100",
+    step: "0.01",
+  },
+];
+
 const EMPTY_TOTALS = {
   gross: 0,
   discount: 0,
@@ -55,8 +69,10 @@ const formatter = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 2,
 });
 
-const formatPaise = (value) =>
-  formatter.format(value / 100);
+const formatPaise = (value) => formatter.format(value / 100);
+
+const isObjectId = (value) =>
+  typeof value === "string" && /^[a-fA-F0-9]{24}$/.test(value);
 
 const localDate = () => {
   const now = new Date();
@@ -84,8 +100,7 @@ const validDate = (value) => {
   const date = new Date(`${value}T00:00:00.000Z`);
 
   return (
-    !Number.isNaN(date.getTime()) &&
-    date.toISOString().slice(0, 10) === value
+    !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
   );
 };
 
@@ -118,8 +133,13 @@ const newItem = () => ({
   gstRate: 0,
 });
 
-const optionalText = (value) =>
-  String(value ?? "").trim() || null;
+const optionalText = (value) => String(value ?? "").trim() || null;
+
+const formSnapshot = (form, items) =>
+  JSON.stringify({
+    form,
+    items: items.map(({ rowId, ...item }) => item),
+  });
 
 const getErrors = (error) => {
   const body = error?.response?.data;
@@ -132,11 +152,7 @@ const getErrors = (error) => {
     );
   }
 
-  return [
-    body?.message ||
-      error?.message ||
-      "Unable to complete the request.",
-  ];
+  return [body?.message || error?.message || "Unable to complete the request."];
 };
 
 const extractList = (response, key) => {
@@ -155,9 +171,7 @@ const extractList = (response, key) => {
 
 const loadAllPages = async (service, key) => {
   if (typeof service?.getAll !== "function") {
-    throw new Error(
-      `Configure the ${key} service with a getAll method.`,
-    );
+    throw new Error(`Configure the ${key} service with a getAll method.`);
   }
 
   const first = await service.getAll({
@@ -167,10 +181,7 @@ const loadAllPages = async (service, key) => {
 
   const records = [...extractList(first, key)];
 
-  const pages = Math.max(
-    1,
-    Number(first.data?.pagination?.totalPages) || 1,
-  );
+  const pages = Math.max(1, Number(first.data?.pagination?.totalPages) || 1);
 
   for (let page = 2; page <= pages; page += 1) {
     const response = await service.getAll({
@@ -182,18 +193,12 @@ const loadAllPages = async (service, key) => {
   }
 
   return Array.from(
-    new Map(
-      records.map((record) => [record._id, record]),
-    ).values(),
+    new Map(records.map((record) => [String(record._id), record])).values(),
   );
 };
 
 const scaledInteger = (value, scale) => {
-  if (
-    value === "" ||
-    value === null ||
-    value === undefined
-  ) {
+  if (value === null || value === undefined || String(value).trim() === "") {
     return null;
   }
 
@@ -217,8 +222,7 @@ const multiplyDivide = (first, second, divisor) => {
   const denominator = BigInt(divisor);
 
   const result = Number(
-    (BigInt(first) * BigInt(second) + denominator / 2n) /
-      denominator,
+    (BigInt(first) * BigInt(second) + denominator / 2n) / denominator,
   );
 
   if (!Number.isSafeInteger(result)) {
@@ -237,8 +241,8 @@ const calculatePreview = (item, taxMode) => {
   const quantity = scaledInteger(item.quantity, 1000);
   const rate = scaledInteger(item.unitRate, 100);
   const discount = scaledInteger(item.discountPercent, 100);
-  const gstRate =
-    taxMode === "NONE" ? 0 : Number(item.gstRate);
+
+  const gstRate = taxMode === "NONE" ? 0 : Number(item.gstRate);
 
   if (
     !item.productId ||
@@ -253,39 +257,29 @@ const calculatePreview = (item, taxMode) => {
     return invalid;
   }
 
-  // Match the current backend's intra-state restriction.
-  if (
-    taxMode === "INTRA_STATE" &&
-    gstRate !== 0 &&
-    gstRate % 2 !== 0
-  ) {
+  /*
+   * Retained to match the quotation backend you shared.
+   * Remove this restriction only when its matching
+   * backend validation/service restriction is corrected.
+   */
+  if (taxMode === "INTRA_STATE" && gstRate !== 0 && gstRate % 2 !== 0) {
     return invalid;
   }
 
   try {
     const gross = multiplyDivide(rate, quantity, 1000);
 
-    const discountAmount = multiplyDivide(
-      gross,
-      discount,
-      10000,
-    );
+    const discountAmount = multiplyDivide(gross, discount, 10000);
 
     const taxable = gross - discountAmount;
+
     const tax = multiplyDivide(taxable, gstRate, 100);
 
-    const cgst =
-      taxMode === "INTRA_STATE"
-        ? Math.floor(tax / 2)
-        : 0;
+    const cgst = taxMode === "INTRA_STATE" ? Math.floor(tax / 2) : 0;
 
-    const sgst =
-      taxMode === "INTRA_STATE"
-        ? tax - cgst
-        : 0;
+    const sgst = taxMode === "INTRA_STATE" ? tax - cgst : 0;
 
-    const igst =
-      taxMode === "INTER_STATE" ? tax : 0;
+    const igst = taxMode === "INTER_STATE" ? tax : 0;
 
     const total = taxable + cgst + sgst + igst;
 
@@ -308,10 +302,16 @@ const calculatePreview = (item, taxMode) => {
   }
 };
 
-function SalesQuotationCreate({
-  listPath = "/sales/quotations",
-}) {
+function SalesQuotationCreate({ listPath = routes.sales.quotations }) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const comparisonGroupId = searchParams.get("comparisonGroupId") || "";
+
+  const addingToComparison = Boolean(comparisonGroupId);
+
+  const invalidComparisonGroup =
+    addingToComparison && !isObjectId(comparisonGroupId);
 
   const [form, setForm] = useState(initialForm);
   const [items, setItems] = useState(() => [newItem()]);
@@ -325,17 +325,32 @@ function SalesQuotationCreate({
 
   const [errors, setErrors] = useState([]);
   const [saving, setSaving] = useState(false);
-  const [uncertainResult, setUncertainResult] =
-    useState(false);
 
+  const [uncertainResult, setUncertainResult] = useState(false);
+
+  const [savedQuotation, setSavedQuotation] = useState(null);
+
+  const mountedRef = useRef(false);
   const submitLock = useRef(false);
+  const savedRef = useRef(false);
 
-  const initialSnapshot = useRef(
-    JSON.stringify({ form, items }),
-  );
+  const initialSnapshot = useRef(formSnapshot(form, items));
 
   const disabled =
-    loading || loadFailed || saving || uncertainResult;
+    loading ||
+    loadFailed ||
+    saving ||
+    uncertainResult ||
+    Boolean(savedQuotation) ||
+    invalidComparisonGroup;
+
+  useEffect(() => {
+    mountedRef.current = true;
+
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -346,27 +361,23 @@ function SalesQuotationCreate({
       setErrors([]);
 
       try {
-        const [customerRecords, productRecords] =
-          await Promise.all([
-            loadAllPages(customerApi, "customers"),
-            loadAllPages(productApi, "products"),
-          ]);
+        const [customerRecords, productRecords] = await Promise.all([
+          loadAllPages(customerApi, "customers"),
+
+          loadAllPages(productApi, "products"),
+        ]);
 
         if (cancelled) return;
 
         setCustomers(
           customerRecords.filter(
-            (customer) =>
-              customer.status === "Active" &&
-              !customer.isDeleted,
+            (customer) => customer.status === "Active" && !customer.isDeleted,
           ),
         );
 
         setProducts(
           productRecords.filter(
-            (product) =>
-              product.status === "ACTIVE" &&
-              !product.isDeleted,
+            (product) => product.status === "ACTIVE" && !product.isDeleted,
           ),
         );
       } catch (error) {
@@ -393,29 +404,27 @@ function SalesQuotationCreate({
 
   const selectedCustomer = useMemo(
     () =>
-      customers.find(
-        (customer) =>
-          customer._id === form.customerId,
-      ),
+      customers.find((customer) => String(customer._id) === form.customerId),
     [customers, form.customerId],
   );
 
   const productMap = useMemo(
+    () => new Map(products.map((product) => [String(product._id), product])),
+    [products],
+  );
+
+  const productOptions = useMemo(
     () =>
-      new Map(
-        products.map((product) => [
-          product._id,
-          product,
-        ]),
-      ),
+      products.map((product) => ({
+        value: String(product._id),
+
+        label: `${product.name} ` + `(${product.productCode})`,
+      })),
     [products],
   );
 
   const previews = useMemo(
-    () =>
-      items.map((item) =>
-        calculatePreview(item, form.taxMode),
-      ),
+    () => items.map((item) => calculatePreview(item, form.taxMode)),
     [items, form.taxMode],
   );
 
@@ -431,29 +440,40 @@ function SalesQuotationCreate({
     return result;
   }, [previews]);
 
-  const isDirty =
-    JSON.stringify({ form, items }) !==
-    initialSnapshot.current;
+  const isDirty = formSnapshot(form, items) !== initialSnapshot.current;
 
   useEffect(() => {
     const handleBeforeUnload = (event) => {
-      if (!isDirty && !saving && !uncertainResult) return;
+      if (savedRef.current) return;
+
+      if (!isDirty && !saving && !uncertainResult) {
+        return;
+      }
 
       event.preventDefault();
       event.returnValue = "";
     };
 
-    window.addEventListener(
-      "beforeunload",
-      handleBeforeUnload,
-    );
+    window.addEventListener("beforeunload", handleBeforeUnload);
 
-    return () =>
-      window.removeEventListener(
-        "beforeunload",
-        handleBeforeUnload,
-      );
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
   }, [isDirty, saving, uncertainResult]);
+
+  const getComparisonPath = (groupId) => {
+    if (!isObjectId(String(groupId || ""))) {
+      throw new Error("The saved quotation has no valid comparison group.");
+    }
+
+    if (!routes.sales.compareQuotations) {
+      throw new Error("Configure routes.sales.compareQuotations.");
+    }
+
+    return buildRoute(routes.sales.compareQuotations, {
+      comparisonGroupId: encodeURIComponent(String(groupId)),
+    });
+  };
 
   const handleFieldChange = (event) => {
     const { name, value } = event.target;
@@ -467,15 +487,17 @@ function SalesQuotationCreate({
   };
 
   const handleCustomerChange = (event) => {
+    const customerId = event.target.value;
+
     const customer = customers.find(
-      (record) => record._id === event.target.value,
+      (record) => String(record._id) === customerId,
     );
 
     setForm((previous) => ({
       ...previous,
-      customerId: customer?._id || "",
-      paymentTerms:
-        customer?.paymentTerms || "Due on Receipt",
+      customerId: customer ? String(customer._id) : "",
+
+      paymentTerms: customer?.paymentTerms || "Due on Receipt",
     }));
 
     setErrors([]);
@@ -492,10 +514,11 @@ function SalesQuotationCreate({
     setItems((previous) =>
       previous.map((item) => ({
         ...item,
+
         gstRate:
           taxMode === "NONE"
             ? 0
-            : productMap.get(item.productId)?.gstRate ?? 0,
+            : (productMap.get(item.productId)?.gstRate ?? 0),
       })),
     );
 
@@ -506,7 +529,10 @@ function SalesQuotationCreate({
     setItems((previous) =>
       previous.map((item) =>
         item.rowId === rowId
-          ? { ...item, [field]: value }
+          ? {
+              ...item,
+              [field]: value,
+            }
           : item,
       ),
     );
@@ -523,12 +549,10 @@ function SalesQuotationCreate({
           ? {
               ...item,
               productId,
-              // Enter the customer's quoted selling rate.
+              specification: "",
               unitRate: "0",
-              gstRate:
-                form.taxMode === "NONE"
-                  ? 0
-                  : product?.gstRate ?? 0,
+
+              gstRate: form.taxMode === "NONE" ? 0 : (product?.gstRate ?? 0),
             }
           : item,
       ),
@@ -537,42 +561,63 @@ function SalesQuotationCreate({
     setErrors([]);
   };
 
+  const addItem = () => {
+    if (disabled || items.length >= 200) {
+      return;
+    }
+
+    setItems((previous) => [...previous, newItem()]);
+
+    setErrors([]);
+  };
+
+  const removeItem = (rowId) => {
+    if (disabled || items.length <= 1) {
+      return;
+    }
+
+    setItems((previous) => previous.filter((item) => item.rowId !== rowId));
+
+    setErrors([]);
+  };
+
   const validateForm = () => {
     const messages = [];
+
+    if (invalidComparisonGroup) {
+      messages.push(
+        "Invalid comparison group. Open the comparison page again.",
+      );
+    }
+
+    if (!routes.sales.compareQuotations) {
+      messages.push("Configure the quotation comparison route before saving.");
+    }
 
     if (!selectedCustomer) {
       messages.push("Select an active customer.");
     }
 
-    if (
-      !validDate(form.quotationDate) ||
-      !validDate(form.validUntil)
-    ) {
-      messages.push(
-        "Valid quotation and validity dates are required.",
-      );
+    if (!validDate(form.quotationDate) || !validDate(form.validUntil)) {
+      messages.push("Valid quotation and offer-validity dates are required.");
     } else if (form.validUntil < form.quotationDate) {
-      messages.push(
-        "Valid until cannot be before quotation date.",
-      );
+      messages.push("Offer validity cannot be before quotation date.");
     }
 
     if (form.expectedDeliveryDate) {
       if (!validDate(form.expectedDeliveryDate)) {
-        messages.push(
-          "Expected delivery date is invalid.",
-        );
-      } else if (
-        form.expectedDeliveryDate < form.quotationDate
-      ) {
-        messages.push(
-          "Expected delivery cannot be before quotation date.",
-        );
+        messages.push("Expected delivery date is invalid.");
+      } else if (form.expectedDeliveryDate < form.quotationDate) {
+        messages.push("Expected delivery cannot be before quotation date.");
       }
     }
 
     if (!form.paymentTerms.trim()) {
       messages.push("Payment terms are required.");
+    }
+
+    if (!TAX_OPTIONS.some((option) => option.value === form.taxMode)) {
+      messages.push("Select a valid tax treatment.");
     }
 
     if (!items.length || items.length > 200) {
@@ -582,56 +627,70 @@ function SalesQuotationCreate({
     items.forEach((item, index) => {
       const product = productMap.get(item.productId);
 
+      const label = `Item ${index + 1}`;
+
       if (!product) {
-        messages.push(
-          `Select an active product for item ${index + 1}.`,
-        );
+        messages.push(`${label}: select an active product.`);
         return;
       }
 
       if (
         !product.productCode ||
         !product.name ||
-        !product.type ||
+        !["GOODS", "SERVICE"].includes(product.type) ||
         !product.unit
       ) {
+        messages.push(`${label}: product details are incomplete.`);
+      }
+
+      if (!previews[index]?.valid) {
         messages.push(
-          `Product details are incomplete for item ${index + 1}.`,
+          `${label}: check quantity, offered price, discount, and GST.`,
         );
       }
 
-      if (!previews[index].valid) {
+      if (form.taxMode === "INTRA_STATE" && Number(item.gstRate) === 3) {
         messages.push(
-          `Check quantity, rate, discount, and GST for item ${index + 1}.`,
+          `${label}: the current backend rejects 3% intra-state GST.`,
         );
       }
 
-      if (
-        form.taxMode === "INTRA_STATE" &&
-        Number(item.gstRate) === 3
-      ) {
+      if (item.specification.trim().length > 1000) {
         messages.push(
-          `Item ${index + 1}: the current backend rejects 3% intra-state GST.`,
+          `${label}: specification cannot exceed 1,000 characters.`,
         );
       }
     });
 
+    const textLimits = [
+      ["enquiryReference", 100, "Enquiry reference"],
+      ["paymentTerms", 100, "Payment terms"],
+      ["deliveryTerms", 1000, "Delivery terms"],
+      ["notes", 1000, "Notes"],
+      ["termsAndConditions", 5000, "Terms and conditions"],
+    ];
+
+    for (const [field, maxLength, label] of textLimits) {
+      if (form[field].trim().length > maxLength) {
+        messages.push(`${label} cannot exceed ${maxLength} characters.`);
+      }
+    }
+
     if (
       Object.values(totals).some(
-        (amount) =>
-          !Number.isSafeInteger(amount) || amount < 0,
+        (amount) => !Number.isSafeInteger(amount) || amount < 0,
       )
     ) {
-      messages.push(
-        "Quotation amounts exceed the supported range.",
-      );
+      messages.push("Quotation amounts exceed the supported range.");
     }
 
     return [...new Set(messages)];
   };
 
   const saveQuotation = async () => {
-    if (disabled || submitLock.current) return;
+    if (disabled || submitLock.current || savedRef.current) {
+      return;
+    }
 
     const messages = validateForm();
 
@@ -649,25 +708,26 @@ function SalesQuotationCreate({
 
     try {
       if (typeof quotationApi?.create !== "function") {
-        throw new Error(
-          "Configure api.salesQuotations.create first.",
-        );
+        throw new Error("Configure api.salesQuotations.create first.");
       }
 
       const payload = {
         customerId: form.customerId,
 
+        ...(addingToComparison ? { comparisonGroupId } : {}),
+
         quotationDate: form.quotationDate,
+
         validUntil: form.validUntil,
 
-        expectedDeliveryDate:
-          form.expectedDeliveryDate || null,
+        expectedDeliveryDate: form.expectedDeliveryDate || null,
 
-        enquiryReference:
-          optionalText(form.enquiryReference),
+        enquiryReference: optionalText(form.enquiryReference),
 
         paymentTerms: form.paymentTerms.trim(),
+
         deliveryTerms: optionalText(form.deliveryTerms),
+
         taxMode: form.taxMode,
 
         items: items.map((item) => {
@@ -679,32 +739,24 @@ function SalesQuotationCreate({
             productName: product.name,
             productType: product.type,
             unit: product.unit,
+
             hsnSacCode: product.hsnSacCode || null,
 
-            specification:
-              optionalText(item.specification),
+            specification: optionalText(item.specification),
 
             quantity: Number(item.quantity),
 
-            unitRatePaise: scaledInteger(
-              item.unitRate,
-              100,
-            ),
+            unitRatePaise: scaledInteger(item.unitRate, 100),
 
-            discountPercent:
-              Number(item.discountPercent),
+            discountPercent: Number(item.discountPercent),
 
-            gstRate:
-              form.taxMode === "NONE"
-                ? 0
-                : Number(item.gstRate),
+            gstRate: form.taxMode === "NONE" ? 0 : Number(item.gstRate),
           };
         }),
 
         notes: optionalText(form.notes),
 
-        termsAndConditions:
-          optionalText(form.termsAndConditions),
+        termsAndConditions: optionalText(form.termsAndConditions),
       };
 
       requestStarted = true;
@@ -720,29 +772,56 @@ function SalesQuotationCreate({
       ) {
         const error = new Error(
           response?.data?.message ||
-            "The server did not return a valid quotation. Check the list before creating another.",
+            "The server did not return a valid quotation. Check the quotation list before submitting again.",
         );
 
         error.uncertainResult = true;
         throw error;
       }
 
+      /*
+       * The create request succeeded.
+       * Never create another record because navigation
+       * or the comparison-group response is invalid.
+       */
+      savedRef.current = true;
+
+      if (!mountedRef.current) {
+        return;
+      }
+
+      setSavedQuotation(quotation);
+
       toast.success(
-        `${quotation.quotationNumber} draft created successfully`,
+        `${quotation.quotationNumber} customer offer saved successfully`,
       );
 
-      navigate(listPath, { replace: true });
+      const returnedGroupId = String(quotation.comparisonGroupId || "");
+
+      if (
+        !isObjectId(returnedGroupId) ||
+        (addingToComparison &&
+          returnedGroupId.toLowerCase() !== comparisonGroupId.toLowerCase())
+      ) {
+        setErrors([
+          "The offer was saved, but the server returned a missing or different comparison group. Check the quotation list; do not save it again.",
+        ]);
+
+        return;
+      }
+
+      navigate(getComparisonPath(returnedGroupId), { replace: true });
     } catch (error) {
+      if (!mountedRef.current) {
+        return;
+      }
+
       const status = error?.response?.status;
 
       if (
+        !savedRef.current &&
         requestStarted &&
-        (
-          error.uncertainResult ||
-          !status ||
-          status >= 500 ||
-          status === 408
-        )
+        (error.uncertainResult || !status || status >= 500 || status === 408)
       ) {
         setUncertainResult(true);
       }
@@ -753,22 +832,37 @@ function SalesQuotationCreate({
       toast.error(messages[0]);
     } finally {
       submitLock.current = false;
-      setSaving(false);
+
+      if (mountedRef.current) {
+        setSaving(false);
+      }
     }
   };
 
   const exitPage = () => {
     if (saving) return;
 
-    const message = uncertainResult
-      ? "The quotation may already have been saved. Open the list and verify it?"
-      : "Discard this quotation and leave?";
-
-    if (
-      (isDirty || uncertainResult) &&
-      !window.confirm(message)
-    ) {
+    if (savedRef.current) {
+      navigate(listPath);
       return;
+    }
+
+    const message = uncertainResult
+      ? "The offer may already have been saved. Open the quotation list and verify it?"
+      : "Discard this customer offer and leave?";
+
+    if ((isDirty || uncertainResult) && !window.confirm(message)) {
+      return;
+    }
+
+    if (!uncertainResult && addingToComparison && !invalidComparisonGroup) {
+      try {
+        navigate(getComparisonPath(comparisonGroupId));
+
+        return;
+      } catch {
+        // Fall back to the quotation list.
+      }
     }
 
     navigate(listPath);
@@ -782,16 +876,13 @@ function SalesQuotationCreate({
       disabled={disabled}
       onClick={saveQuotation}
     >
-      Save Draft
+      Save & Compare
     </Button>
   );
 
   return (
     <div className="doc-page">
-      <form
-        noValidate
-        onSubmit={(event) => event.preventDefault()}
-      >
+      <form noValidate onSubmit={(event) => event.preventDefault()}>
         <header className="doc-header">
           <div className="doc-header-left">
             <Button
@@ -806,81 +897,91 @@ function SalesQuotationCreate({
 
             <div className="doc-title">
               <FileText size={18} />
-              <span>Create Quotation</span>
+
+              <span>
+                {addingToComparison
+                  ? "Add Customer Offer"
+                  : "Create Customer Quotation"}
+              </span>
             </div>
           </div>
 
-          <div className="doc-header-actions">
-            {saveButton}
-          </div>
+          <div className="doc-header-actions">{saveButton}</div>
         </header>
 
-        {(loading ||
-          errors.length > 0 ||
-          uncertainResult) && (
-          <div className="doc-alerts">
-            {loading && (
-              <div className="doc-alert" role="status">
-                Loading customers and products...
-              </div>
-            )}
+        <div className="doc-alerts">
+          <div className="doc-alert">
+            {addingToComparison
+              ? "This customer offer will be added to the existing comparison."
+              : "This offer starts a new comparison. After saving, use Add Customer Offer on the comparison page to record another customer's price."}
+          </div>
 
-            {errors.length > 0 && (
-              <div
-                className="doc-alert doc-alert-error"
-                role="alert"
-              >
-                <strong>Please review the following</strong>
+          {invalidComparisonGroup && (
+            <div className="doc-alert doc-alert-error" role="alert">
+              Invalid comparison group. Return to the quotation list and open
+              the comparison again.
+            </div>
+          )}
 
-                <ul>
-                  {errors.map((message, index) => (
-                    <li key={`${index}-${message}`}>
-                      {message}
-                    </li>
-                  ))}
-                </ul>
+          {loading && (
+            <div className="doc-alert" role="status">
+              Loading customers and products...
+            </div>
+          )}
 
-                {loadFailed && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() =>
-                      setReloadKey((value) => value + 1)
-                    }
-                  >
-                    Retry Loading
-                  </Button>
-                )}
-              </div>
-            )}
+          {errors.length > 0 && (
+            <div className="doc-alert doc-alert-error" role="alert">
+              <strong>Please review the following</strong>
 
-            {uncertainResult && (
-              <div className="doc-alert" role="alert">
-                The save result is uncertain.
-                Submission is locked to avoid duplicates.
+              <ul>
+                {errors.map((message, index) => (
+                  <li key={`${index}-${message}`}>{message}</li>
+                ))}
+              </ul>
 
+              {loadFailed && (
                 <Button
                   type="button"
                   variant="secondary"
-                  onClick={exitPage}
+                  disabled={loading}
+                  onClick={() => setReloadKey((value) => value + 1)}
                 >
-                  Check Quotations
+                  Retry Loading
                 </Button>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
 
-        <fieldset
-          className="doc-fieldset"
-          disabled={disabled}
-        >
+          {uncertainResult && (
+            <div className="doc-alert" role="alert">
+              The save result is uncertain. Submission is locked to avoid
+              duplicate offers.
+              <Button type="button" variant="secondary" onClick={exitPage}>
+                Check Quotations
+              </Button>
+            </div>
+          )}
+
+          {savedQuotation && (
+            <div className="doc-alert" role="status">
+              {savedQuotation.quotationNumber} was saved. Submission is locked
+              to avoid creating it again.
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => navigate(listPath)}
+              >
+                Open Quotations
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <fieldset className="doc-fieldset" disabled={disabled}>
           <main className="doc-main">
             <section className="doc-top">
               <div className="doc-panel doc-party-panel">
-                <h2 className="doc-panel-title">
-                  Quote To
-                </h2>
+                <h2 className="doc-panel-title">Customer Offer</h2>
 
                 <Select
                   label="Customer"
@@ -888,7 +989,8 @@ function SalesQuotationCreate({
                   value={form.customerId}
                   placeholder="Select customer"
                   options={customers.map((customer) => ({
-                    value: customer._id,
+                    value: String(customer._id),
+
                     label:
                       `${customer.customerName} ` +
                       `(${customer.customerCode})`,
@@ -900,44 +1002,41 @@ function SalesQuotationCreate({
                 {selectedCustomer && (
                   <div className="doc-party-card">
                     <div className="doc-avatar">
-                      {selectedCustomer.customerName
-                        ?.charAt(0)
-                        .toUpperCase()}
+                      {selectedCustomer.customerName?.charAt(0).toUpperCase() ||
+                        "C"}
                     </div>
 
                     <div className="doc-party-copy">
-                      <h3>
-                        {selectedCustomer.customerName}
-                      </h3>
+                      <h3>{selectedCustomer.customerName}</h3>
 
                       <p>{selectedCustomer.customerCode}</p>
 
                       <p>
                         <span>Billing:</span>{" "}
-                        {selectedCustomer.billingAddress ||
-                          "Not provided"}
+                        {selectedCustomer.billingAddress || "Not provided"}
                       </p>
 
                       <p>
                         <span>Shipping:</span>{" "}
-                        {selectedCustomer.shippingAddress ||
-                          "Not provided"}
+                        {selectedCustomer.shippingAddress || "Not provided"}
                       </p>
 
                       <p>
                         <span>GSTIN:</span>{" "}
-                        {selectedCustomer.gstNo ||
-                          "Not provided"}
+                        {selectedCustomer.gstNo || "Not provided"}
                       </p>
                     </div>
                   </div>
                 )}
+
+                <p className="doc-note">
+                  Enter the prices and terms communicated by this customer over
+                  the phone.
+                </p>
               </div>
 
               <div className="doc-panel">
-                <h2 className="doc-panel-title">
-                  Quotation Details
-                </h2>
+                <h2 className="doc-panel-title">Offer Details</h2>
 
                 <div className="doc-fields-grid">
                   <Input
@@ -948,12 +1047,12 @@ function SalesQuotationCreate({
                   />
 
                   <Input
-                    label="Enquiry Reference"
+                    label="Enquiry / Requirement Reference"
                     name="enquiryReference"
                     value={form.enquiryReference}
                     onChange={handleFieldChange}
                     maxLength={100}
-                    placeholder="Customer enquiry reference"
+                    placeholder="Requirement or call reference"
                   />
 
                   <Input
@@ -966,7 +1065,7 @@ function SalesQuotationCreate({
                   />
 
                   <Input
-                    label="Valid Until"
+                    label="Offer Valid Until"
                     name="validUntil"
                     type="date"
                     value={form.validUntil}
@@ -1001,6 +1100,12 @@ function SalesQuotationCreate({
                     onChange={handleTaxModeChange}
                   />
                 </div>
+
+                <p className="doc-note">
+                  The enquiry reference is descriptive. Offers are grouped by
+                  the comparison link, not automatically by matching reference
+                  text.
+                </p>
               </div>
             </section>
 
@@ -1013,58 +1118,44 @@ function SalesQuotationCreate({
                       <th>Items</th>
                       <th>HSN / SAC</th>
                       <th>Qty</th>
-                      <th>Price/Item (₹)</th>
+                      <th>Offered Price/Item (₹)</th>
                       <th>Discount %</th>
                       <th>GST</th>
                       <th>Amount</th>
+
                       <th>
-                        <span className="doc-sr-only">
-                          Remove
-                        </span>
+                        <span className="doc-sr-only">Remove</span>
                       </th>
                     </tr>
                   </thead>
 
                   <tbody>
                     {items.map((item, index) => {
-                      const product =
-                        productMap.get(item.productId);
+                      const product = productMap.get(item.productId);
 
                       return (
                         <tr key={item.rowId}>
-                          <td
-                            data-label="No."
-                            className="doc-cell-no"
-                          >
+                          <td data-label="No." className="doc-cell-no">
                             {index + 1}
                           </td>
 
-                          <td
-                            data-label="Item"
-                            className="doc-cell-item"
-                          >
+                          <td data-label="Item" className="doc-cell-item">
                             <Select
                               name={`product-${item.rowId}`}
                               aria-label={`Product ${index + 1}`}
                               value={item.productId}
                               placeholder="Select product"
-                              options={products.map((record) => ({
-                                value: record._id,
-                                label:
-                                  `${record.name} ` +
-                                  `(${record.productCode})`,
-                              }))}
+                              options={productOptions}
                               onChange={(event) =>
-                                selectProduct(
-                                  item.rowId,
-                                  event.target.value,
-                                )
+                                selectProduct(item.rowId, event.target.value)
                               }
                             />
 
                             {product && (
                               <small className="doc-item-meta">
-                                {product.unit} · {product.type}
+                                {product.unit}
+                                {" · "}
+                                {product.type}
                               </small>
                             )}
 
@@ -1084,39 +1175,12 @@ function SalesQuotationCreate({
                             />
                           </td>
 
-                          <td
-                            data-label="HSN / SAC"
-                            className="doc-cell-hsn"
-                          >
+                          <td data-label="HSN / SAC" className="doc-cell-hsn">
                             {product?.hsnSacCode || "—"}
                           </td>
 
-                          {[
-                            {
-                              field: "quantity",
-                              label: "Quantity",
-                              min: "0.001",
-                              max: "1000000",
-                              step: "0.001",
-                            },
-                            {
-                              field: "unitRate",
-                              label: "Price/Item (₹)",
-                              min: "0",
-                              step: "0.01",
-                            },
-                            {
-                              field: "discountPercent",
-                              label: "Discount %",
-                              min: "0",
-                              max: "100",
-                              step: "0.01",
-                            },
-                          ].map((column) => (
-                            <td
-                              key={column.field}
-                              data-label={column.label}
-                            >
+                          {NUMBER_COLUMNS.map((column) => (
+                            <td key={column.field} data-label={column.label}>
                               <Input
                                 name={`${column.field}-${item.rowId}`}
                                 aria-label={`${column.label} ${index + 1}`}
@@ -1145,6 +1209,7 @@ function SalesQuotationCreate({
                               disabled={form.taxMode === "NONE"}
                               options={GST_RATES.map((rate) => ({
                                 value: rate,
+
                                 label: `${rate}%`,
                               }))}
                               onChange={(event) =>
@@ -1157,36 +1222,19 @@ function SalesQuotationCreate({
                             />
                           </td>
 
-                          <td
-                            data-label="Amount"
-                            className="doc-cell-amount"
-                          >
+                          <td data-label="Amount" className="doc-cell-amount">
                             {previews[index].valid
-                              ? formatPaise(
-                                  previews[index].total,
-                                )
+                              ? formatPaise(previews[index].total)
                               : "—"}
                           </td>
 
-                          <td
-                            data-label="Remove"
-                            className="doc-cell-action"
-                          >
+                          <td data-label="Remove" className="doc-cell-action">
                             <button
                               type="button"
                               className="doc-remove-button"
                               aria-label={`Remove item ${index + 1}`}
                               disabled={items.length === 1}
-                              onClick={() => {
-                                setItems((previous) =>
-                                  previous.filter(
-                                    (record) =>
-                                      record.rowId !== item.rowId,
-                                  ),
-                                );
-
-                                setErrors([]);
-                              }}
+                              onClick={() => removeItem(item.rowId)}
                             >
                               <Trash2 size={16} />
                             </button>
@@ -1203,12 +1251,7 @@ function SalesQuotationCreate({
                   type="button"
                   className="doc-dashed-line"
                   disabled={items.length >= 200}
-                  onClick={() =>
-                    setItems((previous) => [
-                      ...previous,
-                      newItem(),
-                    ])
-                  }
+                  onClick={addItem}
                 >
                   <Plus size={15} />
                   Add Item
@@ -1225,17 +1268,17 @@ function SalesQuotationCreate({
                   onChange={handleFieldChange}
                   maxLength={1000}
                   rows={2}
-                  placeholder="Delivery arrangements..."
+                  placeholder="Delivery arrangements discussed during the call..."
                 />
 
                 <Textarea
-                  label="Notes"
+                  label="Call Notes"
                   name="notes"
                   value={form.notes}
                   onChange={handleFieldChange}
                   maxLength={1000}
                   rows={3}
-                  placeholder="Quotation notes..."
+                  placeholder="Customer's offered price, discussion notes, or conditions..."
                 />
 
                 <Textarea
@@ -1245,12 +1288,13 @@ function SalesQuotationCreate({
                   onChange={handleFieldChange}
                   maxLength={5000}
                   rows={4}
-                  placeholder="Quotation terms and conditions..."
+                  placeholder="Other agreed or proposed terms..."
                 />
 
                 <p className="doc-note">
-                  Saving creates a draft. Issue the quotation
-                  separately from the quotation list.
+                  Saving records the customer's offer as a draft. The admin can
+                  compare offers and select one to create a Sales Order. No
+                  customer login or approval is required.
                 </p>
               </div>
 
@@ -1271,25 +1315,22 @@ function SalesQuotationCreate({
                     ? [["IGST", totals.igst]]
                     : []),
                 ].map(([label, amount]) => (
-                  <div
-                    className="doc-summary-row"
-                    key={label}
-                  >
+                  <div className="doc-summary-row" key={label}>
                     <span>{label}</span>
+
                     <strong>{formatPaise(amount)}</strong>
                   </div>
                 ))}
 
                 <div className="doc-summary-total">
-                  <span>Total Amount:</span>
-                  <strong>
-                    {formatPaise(totals.total)}
-                  </strong>
+                  <span>Total Offer:</span>
+
+                  <strong>{formatPaise(totals.total)}</strong>
                 </div>
 
                 <p className="doc-note">
-                  Preview only. The server calculates final totals.
-                  Incomplete lines are excluded from this preview.
+                  Preview only. The server calculates final totals. Incomplete
+                  lines are excluded from this preview.
                 </p>
               </div>
             </section>
@@ -1298,13 +1339,12 @@ function SalesQuotationCreate({
 
         <div className="doc-mobile-bar">
           <div className="doc-mobile-total">
-            <span>Total</span>
+            <span>Total Offer</span>
+
             <strong>{formatPaise(totals.total)}</strong>
           </div>
 
-          <div className="doc-mobile-actions">
-            {saveButton}
-          </div>
+          <div className="doc-mobile-actions">{saveButton}</div>
         </div>
       </form>
     </div>

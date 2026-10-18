@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
@@ -16,19 +10,11 @@ import ConfirmModal from "../../../components/common/ConfirmModal/ConfirmModal";
 import Button from "../../../components/common/Form/Button";
 
 import api from "../../../services/api";
-import routes, {
-  buildRoute,
-} from "../../../config/routes";
+import routes, { buildRoute } from "../../../config/routes";
 
 const quotationApi = api.salesQuotations;
 
-const STATUSES = [
-  "DRAFT",
-  "ISSUED",
-  "ACCEPTED",
-  "REJECTED",
-  "CANCELLED",
-];
+const STATUSES = ["DRAFT", "ISSUED", "ACCEPTED", "REJECTED", "CANCELLED"];
 
 const STATUS_LABELS = {
   DRAFT: "Drafts",
@@ -50,11 +36,7 @@ const FILTERS = [
     key: "taxMode",
     label: "Tax Mode",
     type: "select",
-    options: [
-      "NONE",
-      "INTRA_STATE",
-      "INTER_STATE",
-    ],
+    options: ["NONE", "INTRA_STATE", "INTER_STATE"],
   },
 ];
 
@@ -87,8 +69,7 @@ const ACTIONS = {
     title: "Accept quotation?",
     confirmText: "Accept Quotation",
     allowedStatus: "ISSUED",
-    description:
-      "Record this quotation as accepted by the customer.",
+    description: "Record this quotation as accepted by the customer.",
   },
 
   reject: {
@@ -96,8 +77,7 @@ const ACTIONS = {
     title: "Reject quotation?",
     confirmText: "Reject Quotation",
     allowedStatus: "ISSUED",
-    description:
-      "Record this quotation as rejected by the customer.",
+    description: "Record this quotation as rejected by the customer.",
   },
 
   cancel: {
@@ -105,8 +85,7 @@ const ACTIONS = {
     title: "Cancel quotation?",
     confirmText: "Cancel Quotation",
     allowedStatus: "DRAFT",
-    description:
-      "This cancels the draft quotation.",
+    description: "This cancels the draft quotation.",
   },
 
   delete: {
@@ -114,8 +93,7 @@ const ACTIONS = {
     title: "Delete quotation draft?",
     confirmText: "Delete Draft",
     allowedStatus: "DRAFT",
-    description:
-      "This draft will be marked as deleted.",
+    description: "This draft will be marked as deleted.",
   },
 };
 
@@ -133,11 +111,7 @@ const currencyFormatter = new Intl.NumberFormat("en-IN", {
 });
 
 const formatPaise = (value) => {
-  if (
-    value === null ||
-    value === undefined ||
-    value === ""
-  ) {
+  if (value === null || value === undefined || value === "") {
     return "—";
   }
 
@@ -178,18 +152,12 @@ const getErrorMessage = (error) => {
       .join(", ");
   }
 
-  return (
-    body?.message ||
-    error?.message ||
-    "Unable to complete the request."
-  );
+  return body?.message || error?.message || "Unable to complete the request.";
 };
 
 const assertSuccess = (response) => {
   if (response?.data?.success !== true) {
-    throw new Error(
-      response?.data?.message || "Request failed",
-    );
+    throw new Error(response?.data?.message || "Request failed");
   }
 };
 
@@ -216,35 +184,24 @@ const extractQuotation = (response) => {
 };
 
 const assertVersion = (quotation) => {
-  if (
-    !Number.isSafeInteger(quotation.__v) ||
-    quotation.__v < 0
-  ) {
-    throw new Error(
-      "Quotation version is missing. Refresh the list.",
-    );
+  if (!Number.isSafeInteger(quotation.__v) || quotation.__v < 0) {
+    throw new Error("Quotation version is missing. Refresh the list.");
   }
 };
 
 const getRouteParams = (quotation) => {
-  const quotationNumber =
-    quotation?.quotationNumber?.trim();
+  const quotationNumber = quotation?.quotationNumber?.trim();
 
   if (!quotationNumber) {
     throw new Error("Quotation number is missing.");
   }
 
-  if (
-    !Number.isSafeInteger(quotation.revision) ||
-    quotation.revision < 1
-  ) {
+  if (!Number.isSafeInteger(quotation.revision) || quotation.revision < 1) {
     throw new Error("Quotation revision is missing.");
   }
 
   return {
-    quotationNumber: encodeURIComponent(
-      quotationNumber,
-    ),
+    quotationNumber: encodeURIComponent(quotationNumber),
     revision: String(quotation.revision),
   };
 };
@@ -259,11 +216,9 @@ function SalesQuotationsList() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
-  const [confirmState, setConfirmState] =
-    useState(emptyConfirmState);
+  const [confirmState, setConfirmState] = useState(emptyConfirmState);
 
-  const [confirmLoading, setConfirmLoading] =
-    useState(false);
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const mountedRef = useRef(false);
   const requestRef = useRef(0);
@@ -286,9 +241,7 @@ function SalesQuotationsList() {
 
     try {
       if (typeof quotationApi?.getAll !== "function") {
-        throw new Error(
-          "Configure api.salesQuotations.getAll first.",
-        );
+        throw new Error("Configure api.salesQuotations.getAll first.");
       }
 
       const firstResponse = await quotationApi.getAll({
@@ -300,20 +253,11 @@ function SalesQuotationsList() {
 
       const totalPages = Math.max(
         1,
-        Number(
-          firstResponse.data.pagination?.totalPages,
-        ) || 1,
+        Number(firstResponse.data.pagination?.totalPages) || 1,
       );
 
-      for (
-        let page = 2;
-        page <= totalPages;
-        page += 1
-      ) {
-        if (
-          !mountedRef.current ||
-          requestId !== requestRef.current
-        ) {
+      for (let page = 2; page <= totalPages; page += 1) {
+        if (!mountedRef.current || requestId !== requestRef.current) {
           return;
         }
 
@@ -325,38 +269,26 @@ function SalesQuotationsList() {
         records.push(...extractList(response));
       }
 
-      if (
-        !mountedRef.current ||
-        requestId !== requestRef.current
-      ) {
+      if (!mountedRef.current || requestId !== requestRef.current) {
         return;
       }
 
       setQuotations(
         Array.from(
           new Map(
-            records.map((quotation) => [
-              quotation._id,
-              quotation,
-            ]),
+            records.map((quotation) => [quotation._id, quotation]),
           ).values(),
         ),
       );
     } catch (error) {
-      if (
-        mountedRef.current &&
-        requestId === requestRef.current
-      ) {
+      if (mountedRef.current && requestId === requestRef.current) {
         const message = getErrorMessage(error);
 
         setLoadError(message);
         toast.error(message);
       }
     } finally {
-      if (
-        mountedRef.current &&
-        requestId === requestRef.current
-      ) {
+      if (mountedRef.current && requestId === requestRef.current) {
         setLoading(false);
       }
     }
@@ -371,12 +303,7 @@ function SalesQuotationsList() {
       if (mutationLockRef.current) return;
 
       try {
-        navigate(
-          buildRoute(
-            routes.sales.viewQuotation,
-            getRouteParams(row),
-          ),
-        );
+        navigate(buildRoute(routes.sales.viewQuotation, getRouteParams(row)));
       } catch (error) {
         toast.error(getErrorMessage(error));
       }
@@ -389,19 +316,12 @@ function SalesQuotationsList() {
       if (mutationLockRef.current) return;
 
       if (row.status !== "DRAFT") {
-        toast.error(
-          "Only draft quotations can be edited.",
-        );
+        toast.error("Only draft quotations can be edited.");
         return;
       }
 
       try {
-        navigate(
-          buildRoute(
-            routes.sales.editQuotation,
-            getRouteParams(row),
-          ),
-        );
+        navigate(buildRoute(routes.sales.editQuotation, getRouteParams(row)));
       } catch (error) {
         toast.error(getErrorMessage(error));
       }
@@ -450,11 +370,7 @@ function SalesQuotationsList() {
     const { action, quotation } = confirmState;
     const config = ACTIONS[action];
 
-    if (
-      mutationLockRef.current ||
-      !quotation ||
-      !config
-    ) {
+    if (mutationLockRef.current || !quotation || !config) {
       return;
     }
 
@@ -469,16 +385,12 @@ function SalesQuotationsList() {
         typeof quotationApi?.getById !== "function" ||
         typeof quotationApi[action] !== "function"
       ) {
-        throw new Error(
-          "Quotation API methods are not configured.",
-        );
+        throw new Error("Quotation API methods are not configured.");
       }
 
       // Existing workflow endpoints still identify
       // the exact database record by its internal ID.
-      const latestResponse = await quotationApi.getById(
-        quotation._id,
-      );
+      const latestResponse = await quotationApi.getById(quotation._id);
 
       const latest = extractQuotation(latestResponse);
 
@@ -494,19 +406,15 @@ function SalesQuotationsList() {
         );
       }
 
-      const response = await quotationApi[action](
-        quotation._id,
-        {
-          version: quotation.__v,
-        },
-      );
+      const response = await quotationApi[action](quotation._id, {
+        version: quotation.__v,
+      });
 
       assertSuccess(response);
 
       if (mountedRef.current) {
         toast.success(
-          response.data.message ||
-            "Quotation updated successfully",
+          response.data.message || "Quotation updated successfully",
         );
       }
     } catch (error) {
@@ -600,54 +508,64 @@ function SalesQuotationsList() {
       },
 
       {
-        key: "status",
+        key: "conversionStatus",
         label: "Status",
         sortable: true,
 
-        render: (value) => (
-          <StatusField value={value} />
-        ),
+        render: (_value, row) => {
+          if (row.conversionStatus === "CONVERTED") {
+            return (
+              <div className="dl-customer">
+                <strong>Converted</strong>
+
+                <span>
+                  {row.existingOrder?.orderNumber || "Sales Order created"}
+                </span>
+              </div>
+            );
+          }
+
+          if (row.conversionStatus === "COMPARISON_CLOSED") {
+            return (
+              <div className="dl-customer">
+                <strong>Comparison Closed</strong>
+
+                <span>
+                  {row.groupExistingOrder?.orderNumber ||
+                    "Another customer selected"}
+                </span>
+              </div>
+            );
+          }
+
+          return <StatusField value={row.status} />;
+        },
       },
 
       {
         key: "workflow",
-        label: "Next Actions",
+        label: "Compare Offers",
         sortable: false,
 
-        render: (_value, row) => {
-          const available =
-            row.status === "DRAFT"
-              ? ["issue", "cancel"]
-              : row.status === "ISSUED"
-                ? ["accept", "reject"]
-                : [];
+        render: (_value, row) => (
+          <Button
+            variant="secondary"
+            disabled={confirmLoading || !row.comparisonGroupId}
+            onClick={(event) => {
+              event?.stopPropagation();
 
-          if (!available.length) {
-            return (
-              <span className="dl-muted-value">
-                No further actions
-              </span>
-            );
-          }
-
-          return (
-            <div>
-              {available.map((action) => (
-                <Button
-                  key={action}
-                  variant="secondary"
-                  disabled={confirmLoading}
-                  onClick={(event) => {
-                    event?.stopPropagation();
-                    openAction(row, action);
-                  }}
-                >
-                  {ACTIONS[action].label}
-                </Button>
-              ))}
-            </div>
-          );
-        },
+              navigate(
+                buildRoute(routes.sales.compareQuotations, {
+                  comparisonGroupId: encodeURIComponent(
+                    String(row.comparisonGroupId),
+                  ),
+                }),
+              );
+            }}
+          >
+            Compare
+          </Button>
+        ),
       },
 
       {
@@ -765,9 +683,7 @@ function SalesQuotationsList() {
           <Button
             icon={Plus}
             disabled={confirmLoading}
-            onClick={() =>
-              navigate(routes.sales.createQuotation)
-            }
+            onClick={() => navigate(routes.sales.createQuotation)}
           >
             New Quotation
           </Button>
@@ -785,9 +701,7 @@ function SalesQuotationsList() {
               }. ${selectedAction.description}`
             : ""
         }
-        confirmText={
-          selectedAction?.confirmText || "Confirm"
-        }
+        confirmText={selectedAction?.confirmText || "Confirm"}
         cancelText="Back"
         loading={confirmLoading}
         onCancel={closeConfirm}

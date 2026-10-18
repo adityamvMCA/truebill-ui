@@ -320,3 +320,94 @@
     transition: none;
   }
 }
+
+.sales-order-confirm {
+  display: grid;
+  gap: 12px;
+
+  padding: 14px;
+
+  border: 1px solid var(
+    --border-color,
+    #e5eaf1
+  );
+  border-radius: 10px;
+
+  background: var(
+    --hover-bg,
+    #f8fafc
+  );
+}
+
+.sales-order-confirm__row,
+.sales-order-confirm__total {
+  display: grid;
+  grid-template-columns:
+    minmax(90px, 0.8fr)
+    minmax(0, 1.2fr);
+  align-items: start;
+  gap: 12px;
+
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.sales-order-confirm__row > span,
+.sales-order-confirm__total > span {
+  color: var(
+    --text-secondary,
+    #64748b
+  );
+}
+
+.sales-order-confirm__row > strong,
+.sales-order-confirm__total > strong {
+  min-width: 0;
+
+  color: var(
+    --text-primary,
+    #172033
+  );
+
+  font-weight: 600;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.sales-order-confirm__total {
+  align-items: center;
+
+  padding-top: 12px;
+  border-top: 1px solid var(
+    --border-color,
+    #e5eaf1
+  );
+}
+
+.sales-order-confirm__total > strong {
+  color: var(
+    --primary-color,
+    #0f766e
+  );
+
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 380px) {
+  .sales-order-confirm {
+    padding: 12px;
+  }
+
+  .sales-order-confirm__row,
+  .sales-order-confirm__total {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .sales-order-confirm__row > strong,
+  .sales-order-confirm__total > strong {
+    text-align: left;
+  }
+}

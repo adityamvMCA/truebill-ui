@@ -48,6 +48,7 @@ import DeliveryNotesList from "../../pages/delivery-notes/DeliveryNotesList";
 import SalesQuotationsList from "../../pages/sales/Quotations/SalesQuotationsList";
 import SalesQuotationCreate from "../../pages/sales/Quotations/SalesQuotationCreate";
 import SalesQuotationDetail from "../../pages/sales/Quotations/SalesQuotationDetail";
+import SalesQuotationComparison from "../../pages/sales/Quotations/SalesQuotationComparison";
 
 const Login = lazy(() => import("../../pages/Login"));
 const Dashboard = lazy(() => import("../../pages/Dashboard"));
@@ -143,7 +144,10 @@ const AppRouter = () => (
             path={routes.sales.viewQuotation}
             element={<SalesQuotationDetail />}
           />
-
+          <Route
+            path={routes.sales.compareQuotations}
+            element={<SalesQuotationComparison />}
+          />
           {/* <Route
             path={routes.sales.invoices}
             element={gated("sales.invoices", <SalesOrders1 />)}
