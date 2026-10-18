@@ -30,7 +30,8 @@ const routes = {
 
     quotations: "/sales/quotations",
     createQuotation: "/sales/quotations/create",
-    editQuotation: "/sales/quotations/edit/:id",
+    viewQuotation: "/sales/quotations/view/:quotationNumber/:revision",
+    editQuotation: "/sales/quotations/edit/:quotationNumber/:revision",
 
     orders: "/sales/orders",
     orders1: "/sales/orders1",
@@ -42,11 +43,12 @@ const routes = {
     createDelivery: "/sales/delivery/create",
     editDelivery: "/sales/delivery/edit/:id",
 
+    returns: "/sales/returns",
+
     invoices: "/sales/invoices",
     createInvoice: "/sales/invoices/create",
-    editInvoice: "/sales/invoices/edit/:id",
-
-    returns: "/sales/returns",
+    viewInvoice: "/sales/invoices/view/:invoiceNumber",
+    editInvoice: "/sales/invoices/edit/:invoiceNumber",
   },
 
   purchase: {

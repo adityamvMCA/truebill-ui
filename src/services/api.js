@@ -10,6 +10,10 @@ import purchaseBillApi from "./modules/purchaseBills";
 import supplierPaymentApi from "./modules/supplierPaymentApi";
 import customerReceiptApi from "./modules/customerReceiptApi";
 import bankApi from "./modules/bankApi";
+import salesInvoiceApi from "./modules/salesInvoiceApi";
+import salesOrderApi from "./modules/salesOrderApi";
+import deliveryNoteApi from "./modules/deliveryNoteApi";
+import salesQuotationApi from "./modules/salesQuotationApi";
 
 export const api = {
   auth: authApi,
@@ -24,6 +28,10 @@ export const api = {
   supplierPayments: supplierPaymentApi,
   customerReceipts: customerReceiptApi,
   banks: bankApi,
+  sales: salesInvoiceApi,
+  salesOrder: salesOrderApi,
+  deliveryNote: deliveryNoteApi,
+  salesQuotations: salesQuotationApi,
 };
 
 export default api;

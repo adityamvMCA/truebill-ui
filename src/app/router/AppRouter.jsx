@@ -11,8 +11,6 @@ import RootRedirect from "./RootRedirect";
 
 import MainLayout from "../../layouts/MainLayout";
 import GlobalSkeleton from "../../components/common/GlobalSkeleton";
-
-import SalesOrders1 from "../../pages/SalesOrders1";
 import PurchaseOrders from "../../pages/PurchaseOrders";
 import Traders from "../../pages/Traders/Traders";
 import MenuCreate from "../../pages/settings/MenuCreate";
@@ -41,6 +39,15 @@ import PurchaseBillDetail from "../../pages/purchase/PurchaseBillDetail";
 import BanksList from "../../pages/banks/BanksList";
 import OutstandingPage from "../../components/reports/OutstandingReport/OutstandingPage";
 import BankLedger from "../../pages/accounting/BankLedger";
+import SalesInvoiceCreate from "../../pages/sales/invoices/SalesInvoiceCreate";
+import SalesInvoicesList from "../../pages/sales/invoices/SalesInvoicesList";
+import SalesOrderCreation from "../../pages/sales-orders/SalesOrderCreation";
+import SalesOrdersList from "../../pages/sales-orders/SalesOrdersList";
+import DeliveryNoteCreation from "../../pages/delivery-notes/DeliveryNoteCreation";
+import DeliveryNotesList from "../../pages/delivery-notes/DeliveryNotesList";
+import SalesQuotationsList from "../../pages/sales/Quotations/SalesQuotationsList";
+import SalesQuotationCreate from "../../pages/sales/Quotations/SalesQuotationCreate";
+import SalesQuotationDetail from "../../pages/sales/Quotations/SalesQuotationDetail";
 
 const Login = lazy(() => import("../../pages/Login"));
 const Dashboard = lazy(() => import("../../pages/Dashboard"));
@@ -92,13 +99,13 @@ const AppRouter = () => (
           ====================== */}
 
           <Route
-            path={routes.sales.index}
-            element={gated("sales", <SalesOrders1 />)}
+            path={routes.sales.createOrder}
+            element={gated("sales", <SalesOrderCreation />)}
           />
 
           <Route
             path={routes.sales.orders}
-            element={gated("sales", <SalesOrders1 />)}
+            element={gated("sales", <SalesOrdersList />)}
           />
 
           <Route
@@ -106,15 +113,41 @@ const AppRouter = () => (
             element={gated("sales", <SalesOrders />)}
           />
 
-          <Route
+          {/* <Route
             path={routes.sales.quotations}
             element={gated("sales.quotations", <SalesOrders1 />)}
+          /> */}
+
+          <Route
+            path={routes.sales.createDelivery}
+            element={gated("sales", <DeliveryNoteCreation />)}
+          />
+          <Route
+            path={routes.sales.delivery}
+            element={gated("sales", <DeliveryNotesList />)}
+          />
+          <Route
+            path={routes.sales.quotations}
+            element={gated("sales", <SalesQuotationsList />)}
+          />
+          <Route
+            path={routes.sales.createQuotation}
+            element={gated("sales", <SalesQuotationCreate />)}
+          />
+          <Route
+            path={routes.sales.editQuotation}
+            element={gated("sales", <SalesQuotationDetail />)}
           />
 
           <Route
+            path={routes.sales.viewQuotation}
+            element={<SalesQuotationDetail />}
+          />
+
+          {/* <Route
             path={routes.sales.invoices}
             element={gated("sales.invoices", <SalesOrders1 />)}
-          />
+          /> */}
 
           {/* =====================
               PURCHASE
@@ -190,7 +223,31 @@ const AppRouter = () => (
             path={routes.customerReceipts.view}
             element={gated("sales.customerReceipts", <CustomerReceiptDetail />)}
           />
+          <Route
+            path={routes.sales.invoices}
+            element={gated("sales.invoices", <SalesInvoicesList />)}
+          />
 
+          <Route
+            path={routes.sales.createInvoice}
+            element={gated("sales.invoices", <SalesInvoiceCreate />)}
+          />
+
+          <Route
+            path={routes.sales.viewInvoice}
+            element={gated(
+              "sales.invoices",
+              <SalesInvoiceCreate mode="view" />,
+            )}
+          />
+
+          <Route
+            path={routes.sales.editInvoice}
+            element={gated(
+              "sales.invoices",
+              <SalesInvoiceCreate mode="edit" />,
+            )}
+          />
           {/* =====================
               INVENTORY
           ====================== */}

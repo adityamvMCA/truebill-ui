@@ -1,0 +1,1669 @@
+/* ==========================================
+   LIST BUTTON
+   ========================================== */
+
+.sow-open-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  min-height: 34px;
+  padding: 6px 11px;
+
+  border: 1px solid #c7d2fe;
+  border-radius: 6px;
+
+  background: #eef2ff;
+  color: #4338ca;
+
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 18px;
+
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sow-open-button:hover:not(:disabled) {
+  background: #e0e7ff;
+}
+
+.sow-open-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sow-open-button:focus-visible,
+.sow-close:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 3px;
+}
+
+/* ==========================================
+   SIMPLE MODAL
+   ========================================== */
+
+.sow-overlay,
+.sow-overlay *,
+.sow-overlay *::before,
+.sow-overlay *::after {
+  box-sizing: border-box;
+}
+
+.sow-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 16px;
+
+  background: rgb(15 23 42 / 45%);
+
+  animation: sow-overlay-in 160ms ease-out;
+}
+
+.sow-modal {
+  --sow-accent: #2563eb;
+  --sow-soft: #eff6ff;
+  --sow-accent-border: #bfdbfe;
+
+  display: flex;
+  flex-direction: column;
+
+  width: min(480px, 100%);
+  max-height: calc(100dvh - 32px);
+  min-width: 0;
+
+  overflow: hidden;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+
+  background: #ffffff;
+  color: #334155;
+
+  font-family: inherit;
+
+  box-shadow: 0 24px 70px rgb(15 23 42 / 22%);
+
+  animation: sow-modal-in 200ms ease-out;
+}
+
+.sow-theme-draft {
+  --sow-accent: #d97706;
+  --sow-soft: #fffbeb;
+  --sow-accent-border: #fde68a;
+}
+
+.sow-theme-completed {
+  --sow-accent: #16a34a;
+  --sow-soft: #f0fdf4;
+  --sow-accent-border: #bbf7d0;
+}
+
+.sow-theme-cancelled {
+  --sow-accent: #e11d48;
+  --sow-soft: #fff1f2;
+  --sow-accent-border: #fecdd3;
+}
+
+.sow-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  flex-shrink: 0;
+  padding: 16px 18px;
+
+  border-bottom: 1px solid #edf0f3;
+}
+
+.sow-header-copy {
+  min-width: 0;
+}
+
+.sow-header-copy h2 {
+  margin: 0;
+
+  color: #1e293b;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 22px;
+}
+
+.sow-header-copy p {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 7px;
+
+  margin: 4px 0 0;
+
+  color: #64748b;
+  font-size: 12px;
+  line-height: 18px;
+
+  overflow-wrap: anywhere;
+}
+
+.sow-header-copy p strong {
+  font-weight: 600;
+}
+
+.sow-header-copy p > span {
+  color: #cbd5e1;
+}
+
+.sow-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+
+  background: #ffffff;
+  color: #64748b;
+
+  cursor: pointer;
+}
+
+.sow-close:hover {
+  background: #f8fafc;
+}
+
+.sow-body {
+  min-height: 0;
+  padding: 18px;
+
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* ==========================================
+   ANIMATED STATUS ILLUSTRATION
+   ========================================== */
+
+.sow-hero {
+  padding: 12px 14px 16px;
+
+  border: 1px solid var(--sow-accent-border);
+  border-radius: 10px;
+
+  background: var(--sow-soft);
+
+  text-align: center;
+}
+
+.sow-scene {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 150px;
+  height: 75px;
+  margin: 0 auto 5px;
+
+  overflow: hidden;
+
+  color: var(--sow-accent);
+}
+
+.sow-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 4px 9px;
+
+  border: 1px solid var(--sow-accent-border);
+  border-radius: 99px;
+
+  background: #ffffff;
+  color: var(--sow-accent);
+
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 16px;
+}
+
+.sow-status-dot {
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.sow-hero h3 {
+  margin: 9px 0 0;
+
+  color: #1e293b;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 23px;
+}
+
+.sow-hero > p {
+  max-width: 340px;
+  margin: 6px auto 0;
+
+  color: #64748b;
+  font-size: 12px;
+  line-height: 19px;
+}
+
+/* Floating document */
+
+.sow-moving-document {
+  position: relative;
+  z-index: 1;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 58px;
+  height: 58px;
+
+  border: 1px solid var(--sow-accent-border);
+  border-radius: 12px;
+
+  background: #ffffff;
+
+  animation: sow-document-float 2.5s ease-in-out infinite;
+}
+
+.sow-document-clock {
+  position: absolute;
+  right: -5px;
+  bottom: -4px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 24px;
+  height: 24px;
+
+  border: 2px solid var(--sow-soft);
+  border-radius: 50%;
+
+  background: var(--sow-accent);
+  color: #ffffff;
+}
+
+.sow-document-shadow {
+  position: absolute;
+  bottom: 2px;
+  left: calc(50% - 23px);
+
+  width: 46px;
+  height: 6px;
+
+  border-radius: 50%;
+
+  background: rgb(15 23 42 / 9%);
+
+  animation: sow-shadow-pulse 2.5s ease-in-out infinite;
+}
+
+/* Moving truck */
+
+.sow-truck-travel {
+  position: relative;
+  z-index: 1;
+
+  margin-top: -4px;
+
+  animation: sow-truck-travel 3s ease-in-out infinite;
+}
+
+.sow-truck-bounce {
+  display: flex;
+
+  animation: sow-truck-bounce 550ms ease-in-out infinite;
+}
+
+.sow-road {
+  position: absolute;
+  right: 8px;
+  bottom: 12px;
+  left: 8px;
+
+  height: 7px;
+  overflow: hidden;
+
+  border-top: 1px solid var(--sow-accent-border);
+}
+
+.sow-road-marks {
+  width: 200%;
+  height: 2px;
+  margin-top: 3px;
+
+  background: repeating-linear-gradient(
+    to right,
+    var(--sow-accent-border) 0,
+    var(--sow-accent-border) 12px,
+    transparent 12px,
+    transparent 24px
+  );
+
+  animation: sow-road-move 850ms linear infinite;
+}
+
+.sow-theme-confirmed .sow-truck-travel {
+  animation-duration: 4s;
+}
+
+.sow-theme-confirmed .sow-road-marks {
+  animation-duration: 1.3s;
+}
+
+/* Terminal state icon */
+
+.sow-result-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  animation: sow-result-in 350ms ease-out;
+}
+
+/* ==========================================
+   COMPACT WORKFLOW STEPS
+   ========================================== */
+
+.sow-steps {
+  margin: 18px 0 0;
+  padding: 0;
+
+  list-style: none;
+}
+
+.sow-step {
+  position: relative;
+
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 11px;
+
+  min-height: 65px;
+  padding-bottom: 15px;
+}
+
+.sow-step:last-child {
+  min-height: 0;
+  padding-bottom: 0;
+}
+
+.sow-step:not(:last-child)::after {
+  content: "";
+
+  position: absolute;
+  top: 35px;
+  bottom: 3px;
+  left: 15px;
+
+  width: 2px;
+  background: #e2e8f0;
+}
+
+.sow-step.is-done:not(:last-child)::after {
+  background: #bbf7d0;
+}
+
+.sow-step-icon {
+  position: relative;
+  z-index: 1;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 32px;
+  height: 32px;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 50%;
+
+  background: #f8fafc;
+  color: #94a3b8;
+}
+
+.sow-step.is-done .sow-step-icon {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.sow-step.is-pending .sow-step-icon {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.sow-step-copy {
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.sow-step-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 5px 10px;
+}
+
+.sow-step-title > strong {
+  color: #475569;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 20px;
+}
+
+.sow-step-state {
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.sow-step.is-done .sow-step-state {
+  color: #15803d;
+}
+
+.sow-step.is-pending .sow-step-state {
+  padding: 2px 7px;
+
+  border-radius: 99px;
+
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.sow-step.is-current .sow-step-title > strong {
+  color: #15803d;
+}
+
+.sow-step-copy > small {
+  display: block;
+  margin-top: 3px;
+
+  color: #8491a3;
+  font-size: 11px;
+  line-height: 17px;
+}
+
+/* ==========================================
+   FOOTER
+   ========================================== */
+
+.sow-next {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+
+  margin-top: 18px;
+  padding: 12px;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+
+  background: #f8fafc;
+}
+
+.sow-next > span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.sow-next > strong {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.sow-footnote {
+  margin: 10px 0 0;
+
+  color: #94a3b8;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+}
+
+.sow-cancel-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+
+  margin-top: 15px;
+  padding: 11px;
+
+  border: 1px solid #fecdd3;
+  border-radius: 7px;
+
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.sow-cancel-note > svg {
+  flex-shrink: 0;
+}
+
+.sow-cancel-note strong {
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.sow-cancel-note p {
+  margin: 5px 0 0;
+
+  font-size: 12px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+
+/* ==========================================
+   ANIMATIONS
+   ========================================== */
+
+@keyframes sow-overlay-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sow-modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes sow-document-float {
+  0%,
+  100% {
+    transform: translateY(2px) rotate(-4deg);
+  }
+
+  50% {
+    transform: translateY(-5px) rotate(4deg);
+  }
+}
+
+@keyframes sow-shadow-pulse {
+  0%,
+  100% {
+    opacity: 0.8;
+    transform: scaleX(1);
+  }
+
+  50% {
+    opacity: 0.4;
+    transform: scaleX(0.8);
+  }
+}
+
+@keyframes sow-truck-travel {
+  0%,
+  100% {
+    transform: translateX(-12px);
+  }
+
+  50% {
+    transform: translateX(12px);
+  }
+}
+
+@keyframes sow-truck-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes sow-road-move {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-24px);
+  }
+}
+
+@keyframes sow-result-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ==========================================
+   MOBILE
+   ========================================== */
+/* ==========================================
+   WORKFLOW MODAL — MOBILE
+   Compatible with the existing JSX.
+   Desktop styles remain unchanged.
+   ========================================== */
+
+@media (max-width: 600px) {
+  .sow-overlay {
+    align-items: flex-end;
+    justify-content: center;
+
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .sow-modal {
+    display: flex;
+    flex-direction: column;
+
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 0;
+
+    /* Content-sized sheet with a viewport limit. */
+    height: auto;
+
+    max-height: calc(
+      100vh - max(12px, env(safe-area-inset-top, 0px))
+    );
+
+    max-height: calc(
+      100dvh - max(12px, env(safe-area-inset-top, 0px))
+    );
+
+    margin: 0;
+    overflow: hidden;
+
+    border: 0;
+    border-top: 1px solid #e2e8f0;
+    border-radius: 18px 18px 0 0;
+
+    background: #ffffff;
+
+    box-shadow: 0 -12px 40px rgb(15 23 42 / 18%);
+
+    animation: sow-mobile-sheet-in 220ms ease-out;
+  }
+
+  /* Header stays visible while the body scrolls. */
+
+  .sow-header {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+
+    flex: 0 0 auto;
+    min-width: 0;
+    min-height: 84px;
+
+    padding:
+      24px
+      max(16px, env(safe-area-inset-right, 0px))
+      12px
+      max(16px, env(safe-area-inset-left, 0px));
+
+    border-bottom: 1px solid #edf0f3;
+    background: #ffffff;
+  }
+
+  /* Bottom-sheet handle. */
+
+  .sow-header::before {
+    content: "";
+
+    position: absolute;
+    top: 9px;
+    left: 50%;
+
+    width: 36px;
+    height: 4px;
+
+    border-radius: 99px;
+    background: #cbd5e1;
+
+    transform: translateX(-50%);
+  }
+
+  .sow-header-copy {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .sow-header-copy h2 {
+    margin: 0;
+
+    color: #1e293b;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 22px;
+  }
+
+  .sow-header-copy p {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 3px 6px;
+
+    margin: 4px 0 0;
+
+    font-size: 12px;
+    line-height: 18px;
+
+    overflow-wrap: anywhere;
+  }
+
+  .sow-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+
+    background: #f8fafc;
+    color: #475569;
+  }
+
+  /* Only this region scrolls. */
+
+  .sow-body {
+    flex: 1 1 auto;
+
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+
+    padding:
+      14px
+      max(14px, env(safe-area-inset-right, 0px))
+      calc(18px + env(safe-area-inset-bottom, 0px))
+      max(14px, env(safe-area-inset-left, 0px));
+
+    overflow-x: hidden;
+    overflow-y: auto;
+
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+
+  /* Compact animated status panel. */
+
+  .sow-hero {
+    width: 100%;
+    min-width: 0;
+
+    padding: 8px 12px 13px;
+
+    border: 1px solid var(--sow-accent-border);
+    border-radius: 12px;
+
+    background: var(--sow-soft);
+    text-align: center;
+  }
+
+  .sow-scene {
+    width: 124px;
+    height: 62px;
+    margin: 0 auto 5px;
+  }
+
+  .sow-moving-document {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+  }
+
+  .sow-moving-document > svg {
+    width: 35px;
+    height: 35px;
+  }
+
+  .sow-document-clock {
+    right: -4px;
+    bottom: -3px;
+
+    width: 22px;
+    height: 22px;
+  }
+
+  .sow-document-clock svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .sow-document-shadow {
+    left: calc(50% - 19px);
+    bottom: 0;
+
+    width: 38px;
+    height: 5px;
+  }
+
+  .sow-truck-bounce > svg {
+    width: 46px;
+    height: 46px;
+  }
+
+  .sow-road {
+    right: 6px;
+    bottom: 8px;
+    left: 6px;
+  }
+
+  .sow-result-icon > svg {
+    width: 42px;
+    height: 42px;
+  }
+
+  .sow-status-pill {
+    gap: 6px;
+
+    padding: 4px 9px;
+
+    font-size: 11px;
+    line-height: 16px;
+  }
+
+  .sow-hero h3 {
+    margin: 8px 0 0;
+
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 21px;
+
+    overflow-wrap: anywhere;
+  }
+
+  .sow-hero > p {
+    max-width: 100%;
+    margin: 5px auto 0;
+
+    font-size: 12px;
+    line-height: 18px;
+
+    overflow-wrap: anywhere;
+  }
+
+  /* Simple, readable vertical timeline. */
+
+  .sow-steps {
+    width: 100%;
+    min-width: 0;
+
+    margin: 18px 0 0;
+    padding: 0;
+  }
+
+  .sow-step {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 10px;
+
+    width: 100%;
+    min-width: 0;
+    min-height: 70px;
+
+    padding: 0 0 16px;
+  }
+
+  .sow-step:last-child {
+    min-height: 0;
+    padding-bottom: 0;
+  }
+
+  .sow-step:not(:last-child)::after {
+    top: 37px;
+    bottom: 3px;
+    left: 16px;
+    width: 2px;
+  }
+
+  .sow-step-icon {
+    width: 34px;
+    height: 34px;
+  }
+
+  .sow-step-icon > svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .sow-step-copy {
+    min-width: 0;
+    padding-top: 2px;
+  }
+
+  .sow-step-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+
+    min-width: 0;
+  }
+
+  .sow-step-title > strong {
+    min-width: 0;
+
+    font-size: 13px;
+    font-weight: 650;
+    line-height: 20px;
+
+    overflow-wrap: anywhere;
+  }
+
+  .sow-step-state {
+    flex-shrink: 0;
+
+    max-width: 100%;
+    padding: 2px 6px;
+
+    border-radius: 99px;
+
+    font-size: 10px;
+    font-weight: 650;
+    line-height: 16px;
+
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .sow-step-copy > small {
+    display: block;
+    margin-top: 4px;
+
+    font-size: 11px;
+    line-height: 17px;
+
+    overflow-wrap: anywhere;
+  }
+
+  /* Footer remains in the scrollable content.
+     It does not cover the timeline. */
+
+  .sow-next {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+
+    width: 100%;
+    min-width: 0;
+
+    margin-top: 16px;
+    padding: 12px;
+
+    border-radius: 9px;
+  }
+
+  .sow-next > span {
+    font-size: 11px;
+    line-height: 17px;
+  }
+
+  .sow-next > strong {
+    font-size: 13px;
+    font-weight: 650;
+    line-height: 20px;
+
+    overflow-wrap: anywhere;
+  }
+
+  .sow-footnote {
+    margin: 10px 0 0;
+
+    font-size: 10px;
+    line-height: 16px;
+    text-align: center;
+
+    overflow-wrap: anywhere;
+  }
+
+  .sow-cancel-note {
+    min-width: 0;
+    margin-top: 14px;
+    padding: 11px;
+  }
+
+  .sow-cancel-note > div {
+    min-width: 0;
+  }
+
+  .sow-cancel-note strong,
+  .sow-cancel-note p {
+    overflow-wrap: anywhere;
+  }
+
+  .sow-open-button {
+    min-height: 40px;
+    padding: 7px 10px;
+  }
+}
+
+/* Narrow phones: keep badges below the step title. */
+
+@media (max-width: 360px) {
+  .sow-header {
+    padding-right: max(
+      12px,
+      env(safe-area-inset-right, 0px)
+    );
+
+    padding-left: max(
+      12px,
+      env(safe-area-inset-left, 0px)
+    );
+  }
+
+  .sow-body {
+    padding-right: max(
+      12px,
+      env(safe-area-inset-right, 0px)
+    );
+
+    padding-left: max(
+      12px,
+      env(safe-area-inset-left, 0px)
+    );
+  }
+
+  .sow-step-title {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .sow-step {
+    min-height: 82px;
+  }
+
+  .sow-step:last-child {
+    min-height: 0;
+  }
+
+  .sow-hero h3 {
+    font-size: 14px;
+  }
+}
+
+/* Landscape phones and short browser windows. */
+
+@media (max-width: 900px) and (max-height: 500px) {
+  .sow-overlay {
+    align-items: center;
+    padding: 8px;
+  }
+
+  .sow-modal {
+    max-height: calc(100vh - 16px);
+    max-height: calc(100dvh - 16px);
+
+    border-radius: 12px;
+  }
+
+  .sow-header {
+    min-height: 64px;
+    padding: 10px 14px;
+  }
+
+  .sow-header::before {
+    display: none;
+  }
+
+  .sow-body {
+    min-height: 0;
+    padding: 12px 14px;
+    overflow-y: auto;
+  }
+
+  .sow-hero {
+    padding: 8px 12px;
+  }
+
+  .sow-scene {
+    height: 48px;
+    margin-bottom: 2px;
+  }
+
+  .sow-moving-document {
+    width: 38px;
+    height: 38px;
+  }
+
+  .sow-moving-document > svg {
+    width: 29px;
+    height: 29px;
+  }
+
+  .sow-truck-bounce > svg,
+  .sow-result-icon > svg {
+    width: 36px;
+    height: 36px;
+  }
+
+  .sow-hero h3 {
+    margin-top: 5px;
+  }
+}
+
+@keyframes sow-mobile-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Keep this after all responsive rules. */
+
+@media (prefers-reduced-motion: reduce) {
+  .sow-overlay,
+  .sow-overlay *,
+  .sow-overlay *::before,
+  .sow-overlay *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Respect reduced-motion preferences */
+
+@media (prefers-reduced-motion: reduce) {
+  .sow-overlay,
+  .sow-overlay *,
+  .sow-overlay *::before,
+  .sow-overlay *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ==========================================
+   WORKFLOW ANIMATION ENHANCEMENTS
+   No JSX changes required.
+   ========================================== */
+
+/* Timeline steps enter one after another. */
+
+.sow-step {
+  animation: sow-step-enter 380ms ease-out both;
+}
+
+.sow-step:nth-child(1) {
+  animation-delay: 50ms;
+}
+
+.sow-step:nth-child(2) {
+  animation-delay: 120ms;
+}
+
+.sow-step:nth-child(3) {
+  animation-delay: 190ms;
+}
+
+.sow-step:nth-child(4) {
+  animation-delay: 260ms;
+}
+
+/* Pending milestone: expanding amber ring.
+   Absolute positioning preserves the layout. */
+
+.sow-step.is-pending .sow-step-icon::before {
+  content: "";
+
+  position: absolute;
+  inset: -1px;
+
+  border: 1px solid #f59e0b;
+  border-radius: 50%;
+
+  pointer-events: none;
+
+  animation: sow-pending-ring 2.4s ease-out infinite;
+}
+
+/* Small motion in the pending icon. */
+
+.sow-step.is-pending .sow-step-icon > svg {
+  animation: sow-pending-icon 2.8s ease-in-out infinite;
+}
+
+/* A short checkmark entrance for reached steps. */
+
+.sow-step.is-done .sow-step-icon > svg {
+  transform-origin: center;
+
+  animation: sow-check-enter 420ms ease-out both;
+}
+
+.sow-step:nth-child(1).is-done .sow-step-icon > svg {
+  animation-delay: 100ms;
+}
+
+.sow-step:nth-child(2).is-done .sow-step-icon > svg {
+  animation-delay: 180ms;
+}
+
+.sow-step:nth-child(3).is-done .sow-step-icon > svg {
+  animation-delay: 260ms;
+}
+
+.sow-step:nth-child(4).is-done .sow-step-icon > svg {
+  animation-delay: 340ms;
+}
+
+/* ==========================================
+   TRUCK: TRAVEL + ROAD + SPEED LINES
+   ========================================== */
+
+.sow-truck-scene {
+  isolation: isolate;
+}
+
+/* Override the older short travel animation. */
+
+.sow-truck-scene .sow-truck-travel {
+  animation: sow-truck-cruise 3s ease-in-out infinite;
+}
+
+.sow-theme-confirmed .sow-truck-travel {
+  animation-duration: 3.8s;
+}
+
+.sow-theme-processing .sow-truck-travel {
+  animation-duration: 2.6s;
+}
+
+.sow-truck-scene .sow-truck-bounce {
+  animation: sow-truck-suspension 650ms ease-in-out infinite;
+}
+
+/* Speed lines behind the truck. */
+
+.sow-truck-scene::before,
+.sow-truck-scene::after {
+  content: "";
+
+  position: absolute;
+  left: 12px;
+  z-index: 0;
+
+  height: 2px;
+
+  border-radius: 99px;
+
+  background: var(--sow-accent);
+
+  opacity: 0;
+  pointer-events: none;
+
+  animation: sow-speed-line 1.5s ease-out infinite;
+}
+
+.sow-truck-scene::before {
+  top: 30%;
+  width: 23px;
+}
+
+.sow-truck-scene::after {
+  top: 48%;
+  width: 15px;
+
+  animation-delay: 450ms;
+}
+
+.sow-truck-scene .sow-road-marks {
+  animation: sow-road-move 700ms linear infinite;
+}
+
+.sow-theme-confirmed .sow-road-marks {
+  animation-duration: 1.1s;
+}
+
+/* ==========================================
+   DOCUMENT: FLOAT + A SECOND PAPER SHEET
+   ========================================== */
+
+.sow-document-scene {
+  isolation: isolate;
+}
+
+/* A faint extra sheet behind the existing file. */
+
+.sow-document-scene::before {
+  content: "";
+
+  position: absolute;
+  top: 11px;
+  left: calc(50% - 21px);
+  z-index: 0;
+
+  width: 42px;
+  height: 48px;
+
+  border: 1px solid var(--sow-accent-border);
+  border-radius: 7px;
+
+  background: #ffffff;
+
+  opacity: 0.6;
+  pointer-events: none;
+
+  animation: sow-paper-shift 3s ease-in-out infinite;
+}
+
+.sow-document-scene .sow-moving-document {
+  animation: sow-file-drift 3s ease-in-out infinite;
+}
+
+/* ==========================================
+   STATUS INDICATOR
+   ========================================== */
+
+.sow-theme-draft .sow-status-dot,
+.sow-theme-confirmed .sow-status-dot,
+.sow-theme-processing .sow-status-dot {
+  animation: sow-status-breathe 2.6s ease-in-out infinite;
+}
+
+/* One-time completion flourish, not continuous. */
+
+.sow-theme-completed .sow-result-icon {
+  position: relative;
+
+  animation: sow-completion-pop 550ms ease-out both;
+}
+
+.sow-theme-completed .sow-result-icon::after {
+  content: "";
+
+  position: absolute;
+  inset: -7px;
+
+  border: 2px solid #86efac;
+  border-radius: 50%;
+
+  pointer-events: none;
+
+  animation: sow-completion-ring 850ms ease-out both;
+}
+
+/* ==========================================
+   KEYFRAMES
+   ========================================== */
+
+@keyframes sow-step-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes sow-pending-ring {
+  0% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+
+  75%,
+  100% {
+    opacity: 0;
+    transform: scale(1.4);
+  }
+}
+
+@keyframes sow-pending-icon {
+  0%,
+  35%,
+  100% {
+    transform: translateX(0);
+  }
+
+  50% {
+    transform: translateX(2px);
+  }
+
+  65% {
+    transform: translateX(-1px);
+  }
+}
+
+@keyframes sow-check-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+
+  70% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes sow-truck-cruise {
+  0%,
+  100% {
+    transform: translateX(-18px);
+  }
+
+  50% {
+    transform: translateX(18px);
+  }
+}
+
+@keyframes sow-truck-suspension {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  40% {
+    transform: translateY(-2px);
+  }
+
+  70% {
+    transform: translateY(-0.5px);
+  }
+}
+
+@keyframes sow-speed-line {
+  0% {
+    opacity: 0;
+    transform: translateX(14px) scaleX(0.5);
+  }
+
+  25% {
+    opacity: 0.35;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(-12px) scaleX(1);
+  }
+}
+
+@keyframes sow-paper-shift {
+  0%,
+  100% {
+    transform: translate(-7px, 1px) rotate(-10deg);
+  }
+
+  50% {
+    transform: translate(-3px, -3px) rotate(-4deg);
+  }
+}
+
+@keyframes sow-file-drift {
+  0%,
+  100% {
+    transform: translate(1px, 2px) rotate(-4deg);
+  }
+
+  50% {
+    transform: translate(-1px, -5px) rotate(4deg);
+  }
+}
+
+@keyframes sow-status-breathe {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.6;
+    transform: scale(0.8);
+  }
+}
+
+@keyframes sow-completion-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+
+  65% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes sow-completion-ring {
+  from {
+    opacity: 0.7;
+    transform: scale(0.8);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+
+/* Smaller travel distance inside narrow mobile scenes. */
+
+@media (max-width: 600px) {
+  .sow-truck-scene .sow-truck-travel {
+    animation-name: sow-truck-cruise-mobile;
+  }
+
+  .sow-document-scene::before {
+    top: 9px;
+
+    width: 35px;
+    height: 40px;
+  }
+}
+
+@keyframes sow-truck-cruise-mobile {
+  0%,
+  100% {
+    transform: translateX(-13px);
+  }
+
+  50% {
+    transform: translateX(13px);
+  }
+}
+
+/* Keep this last so all motion can be disabled. */
+
+@media (prefers-reduced-motion: reduce) {
+  .sow-overlay,
+  .sow-overlay *,
+  .sow-overlay *::before,
+  .sow-overlay *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Hide decoration that normally fades out. */
+  .sow-step.is-pending .sow-step-icon::before,
+  .sow-theme-completed .sow-result-icon::after,
+  .sow-truck-scene::before,
+  .sow-truck-scene::after {
+    display: none;
+  }
+}
