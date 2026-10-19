@@ -1,0 +1,158 @@
+.gs-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.gs-card {
+  min-width: 0;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.gs-card-icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--primary-light);
+  color: var(--primary-color);
+}
+
+.gs-card-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gs-card-label {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.gs-card-value {
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.gs-card-note {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.gs-block {
+  margin-bottom: 20px;
+}
+
+.gs-block-title {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.gs-block-title h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.gs-block-title p {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.gs-notice {
+  margin-bottom: 20px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--warning);
+  border-radius: 14px;
+}
+
+.gs-notice strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.gs-notice span {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.dl-table.gs-table {
+  min-width: 560px;
+}
+
+.dl-table th.gs-num,
+.dl-table td.gs-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.gs-credit {
+  color: var(--success);
+}
+
+.gs-total-row td {
+  background: var(--page-bg);
+  font-weight: 700;
+}
+
+.gs-legend {
+  padding: 10px 20px;
+  color: var(--text-muted);
+  font-size: 11px;
+  border-top: 1px solid var(--border-color);
+}
+
+.dl-mobile-grid .gs-credit,
+.dl-mobile-grid strong.gs-credit {
+  color: var(--success);
+}
+
+@media (max-width: 1200px) {
+  .gs-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .gs-notice {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 480px) {
+  .gs-cards {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .gs-block-title {
+    padding: 14px 12px 10px;
+  }
+
+  .gs-legend {
+    padding: 10px 12px;
+  }
+}

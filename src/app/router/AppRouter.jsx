@@ -51,6 +51,9 @@ import SalesQuotationDetail from "../../pages/sales/Quotations/SalesQuotationDet
 import SalesQuotationComparison from "../../pages/sales/Quotations/SalesQuotationComparison";
 import SalesReturnsList from "../../pages/sales/sales-returns/SalesReturnsList";
 import TaxConfiguration from "../../pages/TaxConfiguration/TaxConfiguration";
+import GstSummary from "../../pages/accounting/GstSummary/GstSummary";
+import GstrReports from "../../pages/accounting/gstreports/GstrReports";
+import BankReconciliation from "../../pages/accounting/BankReconciliation/BankReconciliation";
 
 const Login = lazy(() => import("../../pages/Login"));
 const Dashboard = lazy(() => import("../../pages/Dashboard"));
@@ -265,6 +268,20 @@ const AppRouter = () => (
               <TaxConfiguration/>,
             )}
           />
+          <Route
+            path={routes.tax.summary}
+            element={gated(
+              "gst.summary",
+              <GstSummary/>,
+            )}
+          />
+          <Route
+            path={routes.tax.gstReports}
+            element={gated(
+              "gst.gstrReports",
+              <GstrReports/>,
+            )}
+          />
           {/* =====================
               INVENTORY
           ====================== */}
@@ -355,6 +372,10 @@ const AppRouter = () => (
           <Route
             path={routes.reports.bank}
             element={gated("reports.accounting", <BankLedger />)}
+          />
+          <Route
+            path={routes.accounting.bankReconciliation}
+            element={gated(  "bankReconciliation.reconcile", <BankReconciliation />)}
           />
           {/* =====================
               PLATFORM ROUTES

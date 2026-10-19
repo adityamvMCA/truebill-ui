@@ -16,6 +16,9 @@ import deliveryNoteApi from "./modules/deliveryNoteApi";
 import salesQuotationApi from "./modules/salesQuotationApi";
 import salesReturnApi from "./modules/salesReturnApi";
 import taxConfigurationApi from "./modules/taxConfigurationApi";
+import gstSummaryApi from "./modules/gstSummaryApi";
+import gstrReportsApi from "./modules/gstrReportsApi";
+import bankReconciliationApi from "./modules/bankReconciliationApi";
 
 export const api = {
   auth: authApi,
@@ -36,6 +39,9 @@ export const api = {
   salesQuotations: salesQuotationApi,
   salesReturn: salesReturnApi,
   taxConfiguration: taxConfigurationApi,
+  gstSummary: gstSummaryApi,
+  gstrReports: gstrReportsApi,
+  bankReconciliation: bankReconciliationApi,
 };
 
 export default api;
