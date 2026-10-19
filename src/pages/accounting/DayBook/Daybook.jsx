@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Download, RefreshCw, Search } from "lucide-react";
 
 import journalApi from "../../../services/modules/journalApi";
-import "./DayBook.css";
+import "./daybook.css";
 
 // ---------- date helpers (local calendar, UTC storage) ----------
 const toLocalDate = (date) => {
