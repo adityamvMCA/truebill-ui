@@ -57,7 +57,7 @@ import BankReconciliation from "../../pages/accounting/BankReconciliation/BankRe
 
 import TrialBalance from "../../pages/accounting/TrialBalance/TrialBalance";
 import BalanceSheet from "../../pages/accounting/balancesheet/BalanceSheet";
-import DayBook from "../../pages/accounting/DayBook/DayBook";
+import Daybook from "../../pages/accounting/DayBook/DayBook";
 
 const Login = lazy(() => import("../../pages/Login"));
 const Dashboard = lazy(() => import("../../pages/Dashboard"));
@@ -383,7 +383,7 @@ const AppRouter = () => (
           />
           <Route
             path={routes.accounting.dayBook}
-            element={gated(  "ledger.view", <DayBook />)}
+            element={gated(  "ledger.view", <Daybook />)}
           />
           <Route
             path={routes.accounting.trialBalance}

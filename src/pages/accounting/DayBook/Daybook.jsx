@@ -116,7 +116,7 @@ const csvCell = (value) => {
   return `"${text.replace(/"/g, '""')}"`;
 };
 
-export default function DayBook() {
+export default function Daybook() {
   const navigate = useNavigate();
 
   const [startDate, setStartDate] = useState(getMonthStart);
