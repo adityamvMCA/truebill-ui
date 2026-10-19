@@ -54,9 +54,10 @@ import TaxConfiguration from "../../pages/TaxConfiguration/TaxConfiguration";
 import GstSummary from "../../pages/accounting/GstSummary/GstSummary";
 import GstrReports from "../../pages/accounting/gstreports/GstrReports";
 import BankReconciliation from "../../pages/accounting/BankReconciliation/BankReconciliation";
-import DayBook from "../../pages/accounting/DayBook/DayBook";
+
 import TrialBalance from "../../pages/accounting/TrialBalance/TrialBalance";
 import BalanceSheet from "../../pages/accounting/balancesheet/BalanceSheet";
+import DayBook from "../../pages/accounting/DayBook/DayBook";
 
 const Login = lazy(() => import("../../pages/Login"));
 const Dashboard = lazy(() => import("../../pages/Dashboard"));
