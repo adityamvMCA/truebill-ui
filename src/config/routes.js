@@ -142,6 +142,9 @@ const routes = {
     payables: "/accounting/payables",
 
     bankReconciliation: "/accounting/bank-reconciliation",
+    dayBook :"/accounting/daybook",
+    trialBalance :"/accounting/trial-balance",
+    balancesheet :"/accounting/balance-sheet"
   },
 
   entrySheet: {

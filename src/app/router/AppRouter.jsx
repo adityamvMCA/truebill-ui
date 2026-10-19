@@ -54,6 +54,9 @@ import TaxConfiguration from "../../pages/TaxConfiguration/TaxConfiguration";
 import GstSummary from "../../pages/accounting/GstSummary/GstSummary";
 import GstrReports from "../../pages/accounting/gstreports/GstrReports";
 import BankReconciliation from "../../pages/accounting/BankReconciliation/BankReconciliation";
+import DayBook from "../../pages/accounting/DayBook/DayBook";
+import TrialBalance from "../../pages/accounting/TrialBalance/TrialBalance";
+import BalanceSheet from "../../pages/accounting/balancesheet/BalanceSheet";
 
 const Login = lazy(() => import("../../pages/Login"));
 const Dashboard = lazy(() => import("../../pages/Dashboard"));
@@ -375,7 +378,19 @@ const AppRouter = () => (
           />
           <Route
             path={routes.accounting.bankReconciliation}
-            element={gated(  "bankReconciliation.reconcile", <BankReconciliation />)}
+            element={gated( "bankReconciliation.reconcile", <BankReconciliation />)}
+          />
+          <Route
+            path={routes.accounting.dayBook}
+            element={gated(  "ledger.view", <DayBook />)}
+          />
+          <Route
+            path={routes.accounting.trialBalance}
+            element={gated(  "ledger.view", <TrialBalance />)}
+          />
+          <Route
+            path={routes.accounting.balancesheet}
+            element={gated(  "ledger.view", <BalanceSheet />)}
           />
           {/* =====================
               PLATFORM ROUTES
