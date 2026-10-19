@@ -11,6 +11,12 @@ const journalApi = {
     apiClient("/accounting/reports/trial-balance", params),
   getBalanceSheet: (params = {}) =>
     apiClient("/accounting/reports/balance-sheet", params),
+  getCustomerOutstanding: (params = {}) =>
+    apiClient.get("/accounting/outstanding/customers", { params }),
+  getSupplierOutstanding: (params = {}) =>
+    apiClient.get("/accounting/outstanding/suppliers", { params }),
+  getAll: (params = {}) => apiClient.get("/accounting/ledgers", { params }),
+  list: (params = {}) => apiClient.get("/accounting/ledgers", { params }),
 };
 
 export default journalApi;

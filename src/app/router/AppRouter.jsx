@@ -58,6 +58,11 @@ import TrialBalance from "../../pages/accounting/TrialBalance/TrialBalance";
 import BalanceSheet from "../../pages/accounting/balancesheet/BalanceSheet";
 // import Daybook from "../../pages/accounting/Daybook/Daybook";
 import Daybook from "../../pages/accounting/DayBook/Daybook";
+import CustomerLedger from "../../pages/accounting/Ledger/CustomerLedger/CustomerLedger";
+import SupplierLedger from "../../pages/accounting/Ledger/SupplierLedger/SupplierLedger";
+import CustomerOutstanding from "../../pages/accounting/outstanding/CustomerOutstanding";
+import SupplierOutstanding from "../../pages/accounting/outstanding/SupplierOutstanding";
+import JournalVouchers from "../../pages/accounting/JournalVouchers/JournalVouchers";
 
 const Login = lazy(() => import("../../pages/Login"));
 const Dashboard = lazy(() => import("../../pages/Dashboard"));
@@ -212,6 +217,10 @@ const AppRouter = () => (
             path={routes.customers.create}
             element={gated("sales.customers", <CustomerCreate />)}
           />
+          <Route
+            path={routes.customers.outstanding}
+            element={gated("sales.customers", <CustomerOutstanding />)}
+          />
 
           <Route
             path={routes.customers.index}
@@ -267,24 +276,15 @@ const AppRouter = () => (
           />
           <Route
             path={routes.tax.configuration}
-            element={gated(
-              "gst.taxConfiguration",
-              <TaxConfiguration/>,
-            )}
+            element={gated("gst.taxConfiguration", <TaxConfiguration />)}
           />
           <Route
             path={routes.tax.summary}
-            element={gated(
-              "gst.summary",
-              <GstSummary/>,
-            )}
+            element={gated("gst.summary", <GstSummary />)}
           />
           <Route
             path={routes.tax.gstReports}
-            element={gated(
-              "gst.gstrReports",
-              <GstrReports/>,
-            )}
+            element={gated("gst.gstrReports", <GstrReports />)}
           />
           {/* =====================
               INVENTORY
@@ -374,24 +374,43 @@ const AppRouter = () => (
             element={gated("reports.accounting", <OutstandingPage />)}
           />
           <Route
+            path={routes.suppliers.outstanding}
+            element={gated("ledger.view", <SupplierOutstanding />)}
+          />
+          <Route
             path={routes.reports.bank}
             element={gated("reports.accounting", <BankLedger />)}
           />
           <Route
             path={routes.accounting.bankReconciliation}
-            element={gated( "bankReconciliation.reconcile", <BankReconciliation />)}
+            element={gated(
+              "bankReconciliation.reconcile",
+              <BankReconciliation />,
+            )}
           />
           <Route
             path={routes.accounting.daybook}
-            element={gated(  "ledger.view", <Daybook />)}
+            element={gated("ledger.view", <Daybook />)}
+          />
+          <Route
+            path={routes.accounting.journal}
+            element={gated("ledger.view", <JournalVouchers />)}
           />
           <Route
             path={routes.accounting.trialBalance}
-            element={gated(  "ledger.view", <TrialBalance />)}
+            element={gated("ledger.view", <TrialBalance />)}
           />
           <Route
             path={routes.accounting.balancesheet}
-            element={gated(  "ledger.view", <BalanceSheet />)}
+            element={gated("ledger.view", <BalanceSheet />)}
+          />
+          <Route
+            path={routes.accounting.customerledger}
+            element={gated("ledger.view", <CustomerLedger />)}
+          />
+          <Route
+            path={routes.accounting.supplierledger}
+            element={gated("ledger.view", <SupplierLedger />)}
           />
           {/* =====================
               PLATFORM ROUTES

@@ -144,7 +144,9 @@ const routes = {
     bankReconciliation: "/accounting/bank-reconciliation",
     daybook :"/accounting/daybook",
     trialBalance :"/accounting/trial-balance",
-    balancesheet :"/accounting/balance-sheet"
+    balancesheet :"/accounting/balance-sheet",
+    customerledger:"/accounting/customer-ledger",
+    supplierledger:"/accounting/supplier-ledger"
   },
 
   entrySheet: {
