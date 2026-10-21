@@ -5,10 +5,10 @@ import toast from "react-hot-toast";
 import DataList from "../../components/common/DataList/DataList";
 import StatusField from "../../components/common/StatusField/StatusField";
 import api from "../../services/api";
-
-
+import useCsvImport from "../../hooks/useCsvImport";
 import ConfirmModal from "../../components/common/ConfirmModal/ConfirmModal";
 import SupplierRegistration from "./SupplierRegistration";
+import ImportPreviewModal from "../../components/common/DataList/ImportPreviewModal";
 
 function SuppliersList() {
   const [loading, setLoading] = useState(true);
@@ -39,10 +39,7 @@ function SuppliersList() {
       return responseData.error;
     }
 
-    if (
-      Array.isArray(responseData?.errors) &&
-      responseData.errors.length > 0
-    ) {
+    if (Array.isArray(responseData?.errors) && responseData.errors.length > 0) {
       return responseData.errors
         .map((item) =>
           typeof item === "string"
@@ -52,10 +49,7 @@ function SuppliersList() {
         .join(", ");
     }
 
-    return (
-      error?.message ||
-      "Something went wrong. Please try again."
-    );
+    return error?.message || "Something went wrong. Please try again.";
   };
 
   const getSupplierList = (response) => {
@@ -104,7 +98,76 @@ function SuppliersList() {
   useEffect(() => {
     loadSuppliers();
   }, [loadSuppliers]);
+  const validateSupplierRow = (row) => {
+    const errors = [];
+    const isNum = (v) => v === "" || v == null || !Number.isNaN(Number(v));
+    const upper = (v) => String(v || "").toUpperCase();
 
+    if (!row.supplierName || row.supplierName.trim().length < 2)
+      errors.push("supplierName is required (min 2 characters)");
+
+    if (
+      row.supplierType &&
+      !["BUSINESS", "INDIVIDUAL"].includes(upper(row.supplierType))
+    )
+      errors.push("supplierType must be Business or Individual");
+
+    if (row.status && !["ACTIVE", "INACTIVE"].includes(upper(row.status)))
+      errors.push("status must be Active or Inactive");
+
+    if (
+      row.openingBalanceType &&
+      !["DEBIT", "CREDIT"].includes(upper(row.openingBalanceType))
+    )
+      errors.push("openingBalanceType must be DEBIT or CREDIT");
+
+    if (
+      row.gstNo &&
+      !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z]Z[0-9A-Z]$/.test(upper(row.gstNo))
+    )
+      errors.push("invalid gstNo");
+
+    if (row.pincode && !/^[0-9]{6}$/.test(row.pincode))
+      errors.push("pincode must be 6 digits");
+
+    ["creditLimit", "creditDays", "openingBalance"].forEach((key) => {
+      if (!isNum(row[key])) errors.push(`${key} must be a number`);
+    });
+
+    return errors;
+  };
+
+  const csvImport = useCsvImport({
+    entityName: "supplier",
+    validateRow: validateSupplierRow,
+    upload: (payload) => api.suppliers.import(payload),
+    onDone: loadSuppliers,
+  });
+
+  const supplierImportConfig = {
+    templateFileName: "suppliers-import-template.csv",
+
+    columns: [
+      { key: "supplierName", example: "Sri Lakshmi Traders" },
+      { key: "supplierType", example: "Business" },
+      { key: "contactPerson", example: "Ravi Kumar" },
+      { key: "phone", example: "9876543210" },
+      { key: "email", example: "ravi@example.com" },
+      { key: "gstNo", example: "29ABCDE1234F1Z5" },
+      { key: "city", example: "Bengaluru" },
+      { key: "state", example: "Karnataka" },
+      { key: "pincode", example: "560001" },
+      { key: "paymentTerms", example: "Net 30" },
+      { key: "creditLimit", example: "100000" },
+      { key: "creditDays", example: "30" },
+      { key: "openingBalance", example: "0" },
+      { key: "openingBalanceType", example: "CREDIT" },
+      { key: "status", example: "Active" },
+    ],
+
+    onUpload: csvImport.handleFile,
+    onError: (message) => toast.error(message),
+  };
   const columns = useMemo(
     () => [
       {
@@ -122,9 +185,7 @@ function SuppliersList() {
           <div className="dl-customer">
             <strong>{value}</strong>
 
-            <span>
-              {row.supplierType || "Business"}
-            </span>
+            <span>{row.supplierType || "Business"}</span>
           </div>
         ),
       },
@@ -134,12 +195,7 @@ function SuppliersList() {
         label: "Contact Person",
         sortable: true,
 
-        render: (value) =>
-          value || (
-            <span className="dl-muted-value">
-              N/A
-            </span>
-          ),
+        render: (value) => value || <span className="dl-muted-value">N/A</span>,
       },
 
       {
@@ -147,12 +203,7 @@ function SuppliersList() {
         label: "Phone",
         sortable: true,
 
-        render: (value) =>
-          value || (
-            <span className="dl-muted-value">
-              N/A
-            </span>
-          ),
+        render: (value) => value || <span className="dl-muted-value">N/A</span>,
       },
 
       {
@@ -160,12 +211,7 @@ function SuppliersList() {
         label: "Email",
         sortable: true,
 
-        render: (value) =>
-          value || (
-            <span className="dl-muted-value">
-              N/A
-            </span>
-          ),
+        render: (value) => value || <span className="dl-muted-value">N/A</span>,
       },
 
       {
@@ -173,12 +219,7 @@ function SuppliersList() {
         label: "GST Number",
         sortable: true,
 
-        render: (value) =>
-          value || (
-            <span className="dl-muted-value">
-              N/A
-            </span>
-          ),
+        render: (value) => value || <span className="dl-muted-value">N/A</span>,
       },
 
       {
@@ -186,12 +227,7 @@ function SuppliersList() {
         label: "City",
         sortable: true,
 
-        render: (value) =>
-          value || (
-            <span className="dl-muted-value">
-              N/A
-            </span>
-          ),
+        render: (value) => value || <span className="dl-muted-value">N/A</span>,
       },
 
       {
@@ -199,12 +235,7 @@ function SuppliersList() {
         label: "State",
         sortable: true,
 
-        render: (value) =>
-          value || (
-            <span className="dl-muted-value">
-              N/A
-            </span>
-          ),
+        render: (value) => value || <span className="dl-muted-value">N/A</span>,
       },
 
       {
@@ -239,9 +270,7 @@ function SuppliersList() {
         label: "Status",
         sortable: true,
 
-        render: (value) => (
-          <StatusField value={value} />
-        ),
+        render: (value) => <StatusField value={value} />,
       },
     ],
     [],
@@ -334,10 +363,7 @@ function SuppliersList() {
   };
 
   const handleConfirmAction = async () => {
-    if (
-      confirmLoading ||
-      typeof confirmState.onConfirm !== "function"
-    ) {
+    if (confirmLoading || typeof confirmState.onConfirm !== "function") {
       return;
     }
 
@@ -371,20 +397,12 @@ function SuppliersList() {
           await api.suppliers.delete(row.supplierCode);
 
           setSuppliers((previous) =>
-            previous.filter(
-              (supplier) =>
-                supplier._id !== row._id,
-            ),
+            previous.filter((supplier) => supplier._id !== row._id),
           );
 
-          toast.success(
-            `${row.supplierName} deleted successfully`,
-          );
+          toast.success(`${row.supplierName} deleted successfully`);
         } catch (error) {
-          console.error(
-            "Unable to delete supplier:",
-            error,
-          );
+          console.error("Unable to delete supplier:", error);
 
           toast.error(getErrorMessage(error));
 
@@ -394,10 +412,7 @@ function SuppliersList() {
     });
   };
 
-  const handleBulkStatusUpdate = async (
-    rows,
-    status,
-  ) => {
+  const handleBulkStatusUpdate = async (rows, status) => {
     if (!rows.length) {
       return;
     }
@@ -411,9 +426,7 @@ function SuppliersList() {
         ),
       );
 
-      const selectedIds = rows.map(
-        (row) => row._id,
-      );
+      const selectedIds = rows.map((row) => row._id);
 
       setSuppliers((previous) =>
         previous.map((supplier) =>
@@ -427,19 +440,12 @@ function SuppliersList() {
       );
 
       toast.success(
-        `${rows.length} supplier${
-          rows.length > 1 ? "s" : ""
-        } ${
-          status === "Active"
-            ? "activated"
-            : "deactivated"
+        `${rows.length} supplier${rows.length > 1 ? "s" : ""} ${
+          status === "Active" ? "activated" : "deactivated"
         } successfully`,
       );
     } catch (error) {
-      console.error(
-        "Unable to update suppliers:",
-        error,
-      );
+      console.error("Unable to update suppliers:", error);
 
       toast.error(getErrorMessage(error));
 
@@ -465,24 +471,13 @@ function SuppliersList() {
       onConfirm: async () => {
         try {
           await Promise.all(
-            rows.map((row) =>
-              api.suppliers.delete(
-                row.supplierCode,
-              ),
-            ),
+            rows.map((row) => api.suppliers.delete(row.supplierCode)),
           );
 
-          const selectedIds = rows.map(
-            (row) => row._id,
-          );
+          const selectedIds = rows.map((row) => row._id);
 
           setSuppliers((previous) =>
-            previous.filter(
-              (supplier) =>
-                !selectedIds.includes(
-                  supplier._id,
-                ),
-            ),
+            previous.filter((supplier) => !selectedIds.includes(supplier._id)),
           );
 
           toast.success(
@@ -491,10 +486,7 @@ function SuppliersList() {
             } deleted successfully`,
           );
         } catch (error) {
-          console.error(
-            "Unable to delete suppliers:",
-            error,
-          );
+          console.error("Unable to delete suppliers:", error);
 
           toast.error(getErrorMessage(error));
 
@@ -525,8 +517,7 @@ function SuppliersList() {
       }
 
       const alreadyExists = previous.some(
-        (supplier) =>
-          supplier._id === createdSupplier._id,
+        (supplier) => supplier._id === createdSupplier._id,
       );
 
       if (alreadyExists) {
@@ -555,6 +546,8 @@ function SuppliersList() {
         pagination
         filters={filters}
         quickFilters={quickFilters}
+        onRefresh={handleRefresh}
+        importConfig={supplierImportConfig}
         storageKey="trustiq-suppliers"
         searchPlaceholder="Search code, supplier, contact, phone, email, GST, city..."
         actions={{
@@ -585,9 +578,7 @@ function SuppliersList() {
           <button
             type="button"
             className="so-primary-button"
-            onClick={() =>
-              setShowSupplierModal(true)
-            }
+            onClick={() => setShowSupplierModal(true)}
           >
             <Plus size={16} />
 
@@ -598,9 +589,7 @@ function SuppliersList() {
 
       <SupplierRegistration
         isOpen={showSupplierModal}
-        onClose={() =>
-          setShowSupplierModal(false)
-        }
+        onClose={() => setShowSupplierModal(false)}
         onSave={handleSupplierCreated}
       />
 
@@ -614,6 +603,18 @@ function SuppliersList() {
         loading={confirmLoading}
         onCancel={closeConfirmModal}
         onConfirm={handleConfirmAction}
+      />
+      <ImportPreviewModal
+        isOpen={Boolean(csvImport.preview)}
+        entityName="supplier"
+        fileName={csvImport.preview?.file?.name}
+        columns={csvImport.preview?.columns || []}
+        rows={csvImport.preview?.rows || []}
+        rowErrors={csvImport.preview?.rowErrors || {}}
+        loading={csvImport.loading}
+        progress={csvImport.progress}
+        onCancel={csvImport.cancel}
+        onConfirm={csvImport.confirm}
       />
     </>
   );

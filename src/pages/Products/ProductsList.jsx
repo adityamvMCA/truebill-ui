@@ -9,12 +9,14 @@ import api from "../../services/api";
 import ProductModal from "./ProductModal";
 import ProductDetailsModal from "./ProductDetailsModal";
 import ConfirmModal from "../../components/common/ConfirmModal/ConfirmModal";
-
+import ImportPreviewModal from "../../components/common/DataList/ImportPreviewModal";
+import Papa from "papaparse";
 function ProductsList() {
   const [loading, setLoading] = useState(true);
 
   const [products, setProducts] = useState([]);
-
+  const [importPreview, setImportPreview] = useState(null);
+  const [importLoading, setImportLoading] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
 
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -28,7 +30,32 @@ function ProductsList() {
     confirmText: "Delete",
     onConfirm: null,
   });
+  const validateImportRow = (row) => {
+    const errors = [];
+    const isNum = (v) => v === "" || v == null || !Number.isNaN(Number(v));
 
+    if (!row.name?.trim()) errors.push("name is required");
+    if (!["GOODS", "SERVICE"].includes(String(row.type || "").toUpperCase()))
+      errors.push("type must be GOODS or SERVICE");
+    if (
+      row.status &&
+      !["ACTIVE", "INACTIVE"].includes(String(row.status).toUpperCase())
+    )
+      errors.push("status must be ACTIVE or INACTIVE");
+
+    [
+      "gstRate",
+      "salePrice",
+      "purchasePrice",
+      "openingStock",
+      "openingStockRate",
+      "reorderLevel",
+    ].forEach((key) => {
+      if (!isNum(row[key])) errors.push(`${key} must be a number`);
+    });
+
+    return errors;
+  };
   const [confirmLoading, setConfirmLoading] = useState(false);
   const getErrorMessage = (error) => {
     const responseData = error?.response?.data;
@@ -507,14 +534,96 @@ function ProductsList() {
     setSelectedProduct(updatedProduct);
   };
 
-  const handleProductCsvUpload = async (file) => {
-    try {
-      const formData = new FormData();
+  // const handleProductCsvUpload = async (file) => {
+  //   try {
+  //     const formData = new FormData();
 
-      formData.append("file", file);
+  //     formData.append("file", file);
+
+  //     const response = await api.product.import(formData);
+
+  //     const result = response?.data;
+
+  //     if (!result?.success) {
+  //       throw new Error(result?.message || "Failed to import products");
+  //     }
+
+  //     const createdCount = Number(result?.createdCount) || 0;
+
+  //     const failedCount = Number(result?.failedCount) || 0;
+
+  //     if (createdCount > 0) {
+  //       toast.success(
+  //         `${createdCount} product${
+  //           createdCount > 1 ? "s" : ""
+  //         } imported successfully`,
+  //       );
+  //     }
+
+  //     if (failedCount > 0) {
+  //       const firstError = result?.errors?.[0];
+
+  //       toast.error(
+  //         `${failedCount} row${failedCount > 1 ? "s" : ""} failed${
+  //           firstError ? `: Row ${firstError.row} — ${firstError.message}` : ""
+  //         }`,
+  //       );
+  //     }
+
+  //     if (createdCount === 0 && failedCount === 0) {
+  //       toast.error("No products were imported");
+  //     }
+
+  //     await loadProducts();
+  //   } catch (error) {
+  //     console.error("Unable to import products:", error);
+
+  //     toast.error(getErrorMessage(error));
+  //   }
+  // };
+
+  const handleProductCsvUpload = (file) => {
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (h) => h.trim(),
+      transform: (v) => (typeof v === "string" ? v.trim() : v),
+      complete: (result) => {
+        const rows = result.data;
+        const columns = result.meta.fields || [];
+
+        if (!rows.length) {
+          toast.error("The CSV file has no data rows");
+          return;
+        }
+
+        const rowErrors = {};
+        rows.forEach((row, i) => {
+          const errs = validateImportRow(row);
+          if (errs.length) rowErrors[i] = errs;
+        });
+
+        setImportPreview({ file, columns, rows, rowErrors });
+      },
+      error: (err) => toast.error(`Unable to read CSV: ${err.message}`),
+    });
+  };
+
+  const closeImportPreview = () => {
+    if (importLoading) return;
+    setImportPreview(null);
+  };
+
+  const confirmProductImport = async () => {
+    if (!importPreview?.file) return;
+
+    try {
+      setImportLoading(true);
+
+      const formData = new FormData();
+      formData.append("file", importPreview.file);
 
       const response = await api.product.import(formData);
-
       const result = response?.data;
 
       if (!result?.success) {
@@ -522,20 +631,16 @@ function ProductsList() {
       }
 
       const createdCount = Number(result?.createdCount) || 0;
-
       const failedCount = Number(result?.failedCount) || 0;
 
       if (createdCount > 0) {
         toast.success(
-          `${createdCount} product${
-            createdCount > 1 ? "s" : ""
-          } imported successfully`,
+          `${createdCount} product${createdCount > 1 ? "s" : ""} imported successfully`,
         );
       }
 
       if (failedCount > 0) {
         const firstError = result?.errors?.[0];
-
         toast.error(
           `${failedCount} row${failedCount > 1 ? "s" : ""} failed${
             firstError ? `: Row ${firstError.row} — ${firstError.message}` : ""
@@ -547,14 +652,15 @@ function ProductsList() {
         toast.error("No products were imported");
       }
 
+      setImportPreview(null);
       await loadProducts();
     } catch (error) {
       console.error("Unable to import products:", error);
-
       toast.error(getErrorMessage(error));
+    } finally {
+      setImportLoading(false);
     }
   };
-
   const productImportConfig = {
     templateFileName: "products-import-template.csv",
 
@@ -722,6 +828,16 @@ function ProductsList() {
         loading={confirmLoading}
         onCancel={closeConfirmModal}
         onConfirm={handleConfirmAction}
+      />
+      <ImportPreviewModal
+        isOpen={Boolean(importPreview)}
+        fileName={importPreview?.file?.name}
+        columns={importPreview?.columns || []}
+        rows={importPreview?.rows || []}
+        rowErrors={importPreview?.rowErrors || {}}
+        loading={importLoading}
+        onCancel={closeImportPreview}
+        onConfirm={confirmProductImport}
       />
     </>
   );

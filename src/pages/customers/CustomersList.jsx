@@ -6,9 +6,10 @@ import toast from "react-hot-toast";
 import DataList from "../../components/common/DataList/DataList";
 import StatusField from "../../components/common/StatusField/StatusField";
 import ConfirmModal from "../../components/common/ConfirmModal/ConfirmModal";
-
+import useCsvImport from "../../hooks/useCsvImport";
 import api from "../../services/api";
 import routes, { buildRoute } from "../../config/routes";
+import ImportPreviewModal from "../../components/common/DataList/ImportPreviewModal";
 const CUSTOMER_ROUTES = {
   create: routes.customers.create,
 
@@ -73,7 +74,53 @@ const getCustomerList = (response) => {
 
 const renderOptionalText = (value) =>
   value || <span className="dl-muted-value">N/A</span>;
+const validateCustomerRow = (row) => {
+  const errors = [];
+  const isNum = (v) => v === "" || v == null || !Number.isNaN(Number(v));
+  const upper = (v) => String(v || "").toUpperCase();
 
+  if (!row.customerName || row.customerName.trim().length < 2)
+    errors.push("customerName is required (min 2 characters)");
+
+  if (
+    row.customerType &&
+    !["BUSINESS", "INDIVIDUAL"].includes(upper(row.customerType))
+  )
+    errors.push("customerType must be Business or Individual");
+
+  if (row.status && !["ACTIVE", "INACTIVE"].includes(upper(row.status)))
+    errors.push("status must be Active or Inactive");
+
+  if (
+    row.openingBalanceType &&
+    !["DEBIT", "CREDIT"].includes(upper(row.openingBalanceType))
+  )
+    errors.push("openingBalanceType must be DEBIT or CREDIT");
+
+  if (row.phone && !/^[0-9+\-() ]{7,20}$/.test(row.phone))
+    errors.push("invalid phone");
+
+  if (row.email && !/^\S+@\S+\.\S+$/.test(row.email))
+    errors.push("invalid email");
+
+  if (
+    row.gstNo &&
+    !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z]Z[0-9A-Z]$/.test(upper(row.gstNo))
+  )
+    errors.push("invalid gstNo");
+
+  if (row.panNo && !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(upper(row.panNo)))
+    errors.push("invalid panNo");
+
+  if (row.pincode && !/^[0-9]{6}$/.test(row.pincode))
+    errors.push("pincode must be 6 digits");
+
+  ["creditLimit", "creditDays", "openingBalance"].forEach((key) => {
+    if (!isNum(row[key])) errors.push(`${key} must be a number`);
+  });
+
+  return errors;
+};
 function CustomersList() {
   const navigate = useNavigate();
 
@@ -83,17 +130,56 @@ function CustomersList() {
   const [confirmState, setConfirmState] = useState(INITIAL_CONFIRM_STATE);
   const [confirmLoading, setConfirmLoading] = useState(false);
 
+  // const loadCustomers = useCallback(async () => {
+  //   try {
+  //     setLoading(true);
+
+  //     // Your backend currently caps each request at 100 records.
+  //     // Fetch every page so local DataList filtering/export is not
+  //     // restricted to the first 100 customers.
+  //     const firstResponse = await api.customers.getAll({
+  //       page: 1,
+  //       limit: 100,
+  //     });
+
+  //     const customerList = [...getCustomerList(firstResponse)];
+
+  //     const totalPages = Math.max(
+  //       1,
+  //       Number(firstResponse?.data?.pagination?.totalPages) || 1,
+  //     );
+
+  //     for (let page = 2; page <= totalPages; page += 1) {
+  //       const response = await api.customers.getAll({
+  //         page,
+  //         limit: 100,
+  //       });
+
+  //       customerList.push(...getCustomerList(response));
+  //     }
+
+  //     const uniqueCustomers = Array.from(
+  //       new Map(
+  //         customerList.map((customer) => [
+  //           customer._id || customer.customerCode,
+  //           customer,
+  //         ]),
+  //       ).values(),
+  //     );
+
+  //     setCustomers(uniqueCustomers);
+  //   } catch (error) {
+  //     console.error("Unable to load customers:", error);
+  //     toast.error(getErrorMessage(error));
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }, []);
   const loadCustomers = useCallback(async () => {
     try {
       setLoading(true);
 
-      // Your backend currently caps each request at 100 records.
-      // Fetch every page so local DataList filtering/export is not
-      // restricted to the first 100 customers.
-      const firstResponse = await api.customers.getAll({
-        page: 1,
-        limit: 100,
-      });
+      const firstResponse = await api.customers.getAll({ page: 1, limit: 100 });
 
       const customerList = [...getCustomerList(firstResponse)];
 
@@ -102,13 +188,22 @@ function CustomersList() {
         Number(firstResponse?.data?.pagination?.totalPages) || 1,
       );
 
-      for (let page = 2; page <= totalPages; page += 1) {
-        const response = await api.customers.getAll({
-          page,
-          limit: 100,
-        });
+      const remainingPages = Array.from(
+        { length: totalPages - 1 },
+        (_, i) => i + 2,
+      );
 
-        customerList.push(...getCustomerList(response));
+      // 5 pages at a time to avoid flooding the server
+      for (let i = 0; i < remainingPages.length; i += 5) {
+        const responses = await Promise.all(
+          remainingPages
+            .slice(i, i + 5)
+            .map((page) => api.customers.getAll({ page, limit: 100 })),
+        );
+
+        responses.forEach((response) =>
+          customerList.push(...getCustomerList(response)),
+        );
       }
 
       const uniqueCustomers = Array.from(
@@ -128,11 +223,16 @@ function CustomersList() {
       setLoading(false);
     }
   }, []);
-
   useEffect(() => {
     loadCustomers();
   }, [loadCustomers]);
 
+  const csvImport = useCsvImport({
+    entityName: "customer",
+    validateRow: validateCustomerRow,
+    upload: (payload) => api.customers.bulkImport(payload),
+    onDone: loadCustomers,
+  });
   const columns = useMemo(
     () => [
       {
@@ -516,61 +616,6 @@ function CustomersList() {
     });
   };
 
-  const handleCustomerCsvUpload = async (file) => {
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const response = await api.customers.import(formData);
-      const result = response?.data;
-
-      if (!result?.success) {
-        throw new Error(result?.message || "Failed to import customers");
-      }
-
-      const createdCount = Number(result.createdCount) || 0;
-      const failedCount = Number(result.failedCount) || 0;
-
-      if (createdCount > 0) {
-        toast.success(
-          `${createdCount} customer${
-            createdCount > 1 ? "s" : ""
-          } imported successfully`,
-        );
-      }
-
-      if (failedCount > 0) {
-        const firstError = result?.errors?.[0];
-
-        const errorDetail =
-          typeof firstError === "string"
-            ? firstError
-            : firstError
-              ? `Row ${firstError.row} — ${firstError.message}`
-              : "";
-
-        toast.error(
-          `${failedCount} row${failedCount > 1 ? "s" : ""} failed${
-            errorDetail ? `: ${errorDetail}` : ""
-          }`,
-        );
-      }
-
-      if (createdCount === 0 && failedCount === 0) {
-        toast.error("No customers were imported");
-      }
-
-      await loadCustomers();
-    } catch (error) {
-      console.error("Unable to import customers:", error);
-
-      toast.error(getErrorMessage(error));
-
-      // Refresh in case the server imported some rows before failing.
-      await loadCustomers();
-    }
-  };
-
   const customerImportConfig = {
     templateFileName: "customers-import-template.csv",
 
@@ -599,7 +644,7 @@ function CustomersList() {
       { key: "notes", example: "" },
     ],
 
-    onUpload: handleCustomerCsvUpload,
+    onUpload: csvImport.handleFile,
 
     onError: (message) => toast.error(message),
   };
@@ -671,6 +716,18 @@ function CustomersList() {
         loading={confirmLoading}
         onCancel={closeConfirmModal}
         onConfirm={handleConfirmAction}
+      />
+      <ImportPreviewModal
+        isOpen={Boolean(csvImport.preview)}
+        entityName="customer"
+        fileName={csvImport.preview?.file?.name}
+        columns={csvImport.preview?.columns || []}
+        rows={csvImport.preview?.rows || []}
+        rowErrors={csvImport.preview?.rowErrors || {}}
+        loading={csvImport.loading}
+        progress={csvImport.progress}
+        onCancel={csvImport.cancel}
+        onConfirm={csvImport.confirm}
       />
     </>
   );

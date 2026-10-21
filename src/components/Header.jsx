@@ -14,59 +14,30 @@ import {
 
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import api from "../services/api";
 
 const themes = [
-  {
-    id: "blue",
-    name: "Ocean Blue",
-    color: "#2563eb",
-  },
-  {
-    id: "green",
-    name: "Emerald",
-    color: "#16a34a",
-  },
-  {
-    id: "purple",
-    name: "Purple",
-    color: "#7c3aed",
-  },
-  {
-    id: "orange",
-    name: "Orange",
-    color: "#ea580c",
-  },
-  {
-    id: "red",
-    name: "Ruby Red",
-    color: "#dc2626",
-  },
-  {
-    id: "teal",
-    name: "Teal",
-    color: "#0d9488",
-  },
-  {
-    id: "indigo",
-    name: "Indigo",
-    color: "#4f46e5",
-  },
-  {
-    id: "pink",
-    name: "Pink",
-    color: "#db2777",
-  },
-  {
-    id: "cyan",
-    name: "Cyan",
-    color: "#0891b2",
-  },
-  {
-    id: "slate",
-    name: "Slate",
-    color: "#475569",
-  },
+  { id: "blue", name: "Ocean Blue", color: "#2563eb" },
+  { id: "green", name: "Emerald", color: "#16a34a" },
+  { id: "purple", name: "Purple", color: "#7c3aed" },
+  { id: "orange", name: "Orange", color: "#ea580c" },
+  { id: "red", name: "Ruby Red", color: "#dc2626" },
+  { id: "teal", name: "Teal", color: "#0d9488" },
+  { id: "indigo", name: "Indigo", color: "#4f46e5" },
+  { id: "pink", name: "Pink", color: "#db2777" },
+  { id: "cyan", name: "Cyan", color: "#0891b2" },
+  { id: "slate", name: "Slate", color: "#475569" },
 ];
+
+const isTraderAccessible = (item) => {
+  if (!item?.isActive) return false;
+
+  if (item.subscriptionEnd && new Date(item.subscriptionEnd) <= new Date()) {
+    return false;
+  }
+
+  return item.status === "active" || item.status === "trial";
+};
 
 function Header({ onMenuClick }) {
   const navigate = useNavigate();
@@ -78,6 +49,11 @@ function Header({ onMenuClick }) {
   const [themeOpen, setThemeOpen] = useState(false);
 
   const [profileOpen, setProfileOpen] = useState(false);
+
+  const [tenantOpen, setTenantOpen] = useState(false);
+  const [tenantList, setTenantList] = useState([]);
+  const [tenantLoading, setTenantLoading] = useState(false);
+  const [tenantSearch, setTenantSearch] = useState("");
 
   const [selectedTheme, setSelectedTheme] = useState(
     localStorage.getItem("trustiq-theme") || "blue",
@@ -106,6 +82,47 @@ function Header({ onMenuClick }) {
   const themeRef = useRef(null);
 
   const profileRef = useRef(null);
+
+  const tenantRef = useRef(null);
+
+  /* =========================================
+     DERIVED DATA
+     (must be above the effects that use it)
+  ========================================= */
+
+  const userName = user?.name || user?.username || user?.email || "User";
+
+  const userRole = user?.role || user?.platformRole || "User";
+
+  const userEmail = user?.email || "";
+
+  const userInitials =
+    userName
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((name) => name.charAt(0).toUpperCase())
+      .join("") || "U";
+
+  /*
+   * Developer / Support:
+   * selectedTenant comes from sessionStorage.
+   *
+   * Normal trader:
+   * user.tenant comes from login.
+   */
+
+  const tenant = selectedTenant || user?.tenant || null;
+
+  const tenantName = tenant?.businessName || "TrustIQ ERP";
+
+  const tenantClientCode = tenant?.clientCode || user?.clientCode || null;
+
+  const isDeveloper = user?.platformRole === "developer";
+
+  const isSupport = user?.platformRole === "support";
+
+  const canSwitchTenant = isDeveloper || isSupport;
 
   /* =========================================
      LOAD THEME
@@ -176,6 +193,49 @@ function Header({ onMenuClick }) {
   }, []);
 
   /* =========================================
+     LOAD TRADERS FOR SWITCHER
+  ========================================= */
+
+  useEffect(() => {
+    if (!tenantOpen || !canSwitchTenant) return;
+
+    let cancelled = false;
+
+    const timer = setTimeout(async () => {
+      try {
+        setTenantLoading(true);
+
+        const response = await api.tenants.getAll({
+          params: {
+            page: 1,
+            limit: 20,
+            search: tenantSearch.trim() || undefined,
+          },
+        });
+
+        if (!cancelled) {
+          setTenantList(response?.data?.tenants || []);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Unable to load traders:", error);
+          toast.error("Unable to load traders");
+          setTenantList([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setTenantLoading(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [tenantOpen, tenantSearch, canSwitchTenant]);
+
+  /* =========================================
      CLOSE DROPDOWNS
   ========================================= */
 
@@ -188,6 +248,10 @@ function Header({ onMenuClick }) {
       if (profileRef.current && !profileRef.current.contains(event.target)) {
         setProfileOpen(false);
       }
+
+      if (tenantRef.current && !tenantRef.current.contains(event.target)) {
+        setTenantOpen(false);
+      }
     };
 
     document.addEventListener("mousedown", handleOutsideClick);
@@ -196,6 +260,35 @@ function Header({ onMenuClick }) {
       document.removeEventListener("mousedown", handleOutsideClick);
     };
   }, []);
+
+  /* =========================================
+     SWITCH TENANT
+  ========================================= */
+
+  const handleSwitchTenant = (item) => {
+    if (!isTraderAccessible(item)) {
+      toast.error("This trader subscription is not active");
+      return;
+    }
+
+    if (item._id === tenant?._id) {
+      setTenantOpen(false);
+      return;
+    }
+
+    sessionStorage.setItem("selectedTenantId", item._id);
+    sessionStorage.setItem("selectedClientCode", item.clientCode || "");
+    sessionStorage.setItem("selectedTenant", JSON.stringify(item));
+
+    window.dispatchEvent(new Event("tenantChanged"));
+
+    setTenantOpen(false);
+    setTenantSearch("");
+
+    toast.success(`${item.businessName} selected`);
+
+    navigate("/dashboard");
+  };
 
   /* =========================================
      THEME
@@ -241,52 +334,6 @@ function Header({ onMenuClick }) {
     });
   };
 
-  /* =========================================
-     USER DATA
-  ========================================= */
-
-  const userName = user?.name || user?.username || user?.email || "User";
-
-  const userRole = user?.role || user?.platformRole || "User";
-
-  const userEmail = user?.email || "";
-
-  const userInitials =
-    userName
-      .split(" ")
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((name) => name.charAt(0).toUpperCase())
-      .join("") || "U";
-
-  /* =========================================
-     TENANT / TRADER DATA
-  ========================================= */
-
-  /*
-   * Developer / Support:
-   * selectedTenant comes from sessionStorage.
-   *
-   * Normal trader:
-   * user.tenant comes from login.
-   */
-
-  const tenant = selectedTenant || user?.tenant || null;
-
-  const tenantName = tenant?.businessName || "TrustIQ ERP";
-
-  const tenantClientCode = tenant?.clientCode || user?.clientCode || null;
-
-  /* =========================================
-     PLATFORM ROLE
-  ========================================= */
-
-  const isDeveloper = user?.platformRole === "developer";
-
-  const isSupport = user?.platformRole === "support";
-
-  const canSwitchTenant = isDeveloper || isSupport;
-
   return (
     <header className="header">
       {/* =====================================
@@ -324,13 +371,107 @@ function Header({ onMenuClick }) {
             COMPANY / SELECTED TRADER
         ====================================== */}
 
-        <button type="button" className="company-selector" title={tenantName}>
-          <Building2 size={18} />
+        {canSwitchTenant ? (
+          <div className="tenant-switcher" ref={tenantRef}>
+            <button
+              type="button"
+              className={`company-selector ${
+                tenantOpen ? "company-selector-open" : ""
+              }`}
+              title={tenantName}
+              onClick={() => setTenantOpen((previous) => !previous)}
+            >
+              <Building2 size={18} />
 
-          <span>{tenantName}</span>
+              <span>{tenantName}</span>
 
-          {canSwitchTenant && <ChevronDown size={16} />}
-        </button>
+              <ChevronDown
+                size={16}
+                className={tenantOpen ? "profile-arrow-open" : ""}
+              />
+            </button>
+
+            {tenantOpen && (
+              <div className="tenant-dropdown">
+                <div className="tenant-dropdown-search">
+                  <Search size={15} />
+
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="Search traders..."
+                    value={tenantSearch}
+                    onChange={(event) => setTenantSearch(event.target.value)}
+                  />
+                </div>
+
+                <div className="tenant-dropdown-list">
+                  {tenantLoading ? (
+                    <div className="tenant-dropdown-state">Loading...</div>
+                  ) : tenantList.length === 0 ? (
+                    <div className="tenant-dropdown-state">
+                      No traders found
+                    </div>
+                  ) : (
+                    tenantList.map((item) => {
+                      const isCurrent = item._id === tenant?._id;
+                      const accessible = isTraderAccessible(item);
+
+                      return (
+                        <button
+                          key={item._id}
+                          type="button"
+                          className={`tenant-option ${
+                            isCurrent ? "tenant-option-current" : ""
+                          }`}
+                          onClick={() => handleSwitchTenant(item)}
+                          disabled={!accessible}
+                        >
+                          <span className="tenant-option-avatar">
+                            {item.businessName?.charAt(0)?.toUpperCase() ||
+                              "T"}
+                          </span>
+
+                          <span className="tenant-option-text">
+                            <strong>{item.businessName}</strong>
+
+                            <span>
+                              {item.clientCode}
+                              {!accessible ? " · inactive" : ""}
+                            </span>
+                          </span>
+
+                          {isCurrent && <Check size={15} />}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  className="tenant-dropdown-footer"
+                  onClick={() => {
+                    setTenantOpen(false);
+                    navigate("/traders");
+                  }}
+                >
+                  View all traders
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="company-selector"
+            title={tenantName}
+          >
+            <Building2 size={18} />
+
+            <span>{tenantName}</span>
+          </button>
+        )}
 
         {/* =====================================
             NOTIFICATIONS

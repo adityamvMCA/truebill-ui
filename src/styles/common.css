@@ -1198,3 +1198,144 @@ a {
     animation: none !important;
   }
 }
+
+.tenant-switcher {
+  position: relative;
+}
+
+.company-selector-open {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.tenant-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 1200;
+  width: 300px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.tenant-dropdown-search {
+  padding: 0 12px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.tenant-dropdown-search input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.tenant-dropdown-list {
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.tenant-dropdown-state {
+  padding: 22px 12px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.tenant-option {
+  width: 100%;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.tenant-option:hover:not(:disabled) {
+  background: var(--sidebar-hover);
+}
+
+.tenant-option:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tenant-option-current {
+  background: var(--primary-light);
+  color: var(--primary-color);
+}
+
+.tenant-option-avatar {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--primary-light);
+  color: var(--primary-color);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tenant-option-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tenant-option-text strong {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tenant-option-text span {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.tenant-dropdown-footer {
+  width: 100%;
+  height: 38px;
+  border: 0;
+  border-top: 1px solid var(--border-color);
+  background: var(--page-bg);
+  color: var(--primary-color);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .tenant-dropdown {
+    position: fixed;
+    top: 64px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
+}
+
+

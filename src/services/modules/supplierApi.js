@@ -14,6 +14,9 @@ const supplierApi = {
     apiClient.put(`/suppliers/code/${supplierCode}`, data),
 
   delete: (supplierCode) => apiClient.delete(`/suppliers/code/${supplierCode}`),
+
+  import: (data) =>
+    apiClient.post("/suppliers/import", data, { timeout: 120000 }),
 };
 
 export default supplierApi;
