@@ -74,6 +74,9 @@ import PurchaseRfqPage from "../../pages/purchase-rfqs/PurchaseRfqPage";
 import SupplierQuotationPage from "../../pages/supplier-quotations/SupplierQuotationPage";
 import SupplierQuotationsList from "../../pages/supplier-quotations/SupplierQuotationsList";
 import QuotationComparisonPage from "../../pages/quotation-comparison/QuotationComparisonPage";
+import SalesReport from "../../pages/Reportdashboard/Salesreport";
+import PurchaseReport from "../../pages/Reportdashboard/Purchasereport";
+// import InventoryReport from "../../pages/Reportdashboard/InventoryReport";
 
 const Login = lazy(() => import("../../pages/Login"));
 const Dashboard = lazy(() => import("../../pages/Dashboard"));
@@ -268,13 +271,10 @@ const AppRouter = () => (
             path={routes.purchase.supplierQuotations}
             element={gated("purchase.quotations", <SupplierQuotationsList />)}
           />
-<Route
-  path={routes.purchase.quotationComparison}
-  element={gated(
-    "purchase.quotations",
-    <QuotationComparisonPage />,
-  )}
-/>
+          <Route
+            path={routes.purchase.quotationComparison}
+            element={gated("purchase.quotations", <QuotationComparisonPage />)}
+          />
           <Route
             path={routes.purchase.createSupplierQuotation}
             element={gated(
@@ -495,6 +495,18 @@ const AppRouter = () => (
             path={routes.accounting.daybook}
             element={gated("ledger.view", <Daybook />)}
           />
+          <Route
+            path={routes.reports.sales}
+            element={gated("ledger.view", <SalesReport />)}
+          />
+          <Route
+            path={routes.reports.purchase}
+            element={gated("ledger.view", <PurchaseReport />)}
+          />
+          {/* <Route
+            path={routes.reports.inventory}
+            element={gated("ledger.view", <InventoryReport />)}
+          /> */}
           <Route
             path={routes.accounting.journal}
             element={gated("ledger.view", <JournalVouchers />)}
