@@ -64,6 +64,16 @@ import CustomerOutstanding from "../../pages/accounting/outstanding/CustomerOuts
 import SupplierOutstanding from "../../pages/accounting/outstanding/SupplierOutstanding";
 import JournalVouchers from "../../pages/accounting/JournalVouchers/JournalVouchers";
 import PurchaseReturnsList from "../../pages/PurchaseReturns/PurchaseReturnsList";
+import GoodsReceiptsList from "../../pages/GoodsReceiptes/GoodsReceiptsList";
+import PurchaseOrdersList from "../../pages/purchase-orders/PurchaseOrdersList";
+import PurchaseOrderPage from "../../pages/purchase-orders/PurchaseOrderPage";
+import PurchaseRequisitionsList from "../../pages/purchase-requisitions/PurchaseRequisitionsList";
+import PurchaseRequisitionPage from "../../pages/purchase-requisitions/PurchaseRequisitionPage";
+import PurchaseRfqsList from "../../pages/purchase-rfqs/PurchaseRfqsList";
+import PurchaseRfqPage from "../../pages/purchase-rfqs/PurchaseRfqPage";
+import SupplierQuotationPage from "../../pages/supplier-quotations/SupplierQuotationPage";
+import SupplierQuotationsList from "../../pages/supplier-quotations/SupplierQuotationsList";
+import QuotationComparisonPage from "../../pages/quotation-comparison/QuotationComparisonPage";
 
 const Login = lazy(() => import("../../pages/Login"));
 const Dashboard = lazy(() => import("../../pages/Dashboard"));
@@ -180,25 +190,113 @@ const AppRouter = () => (
             path={routes.purchase.returns}
             element={gated("purchaseReturn.view", <PurchaseReturnsList />)}
           />
+          <Route
+            path={routes.purchase.grn}
+            element={gated("purchaseReturn.view", <GoodsReceiptsList />)}
+          />
 
           <Route
             path={routes.purchase.orders}
-            element={gated("purchase.orders", <PurchaseOrders />)}
+            element={gated("purchase.orders", <PurchaseOrdersList />)}
+          />
+
+          <Route
+            path={routes.purchase.createOrder}
+            element={gated("purchase.orders", <PurchaseOrderPage />)}
+          />
+          <Route
+            path={routes.purchase.editOrder}
+            element={gated(
+              "purchase.orders",
+              <PurchaseOrderPage mode="edit" />,
+            )}
+          />
+          <Route
+            path={routes.purchase.viewOrder}
+            element={gated(
+              "purchase.orders",
+              <PurchaseOrderPage mode="view" />,
+            )}
           />
 
           <Route
             path={routes.purchase.requisitions}
-            element={gated("purchase.requisitions", <PurchaseOrders />)}
+            element={gated(
+              "purchase.requisitions",
+              <PurchaseRequisitionsList />,
+            )}
           />
-
+          <Route
+            path={routes.purchase.createRequisition}
+            element={gated(
+              "purchase.requisitions",
+              <PurchaseRequisitionPage mode="create" />,
+            )}
+          />
+          <Route
+            path={routes.purchase.editRequisition}
+            element={gated(
+              "purchase.requisitions",
+              <PurchaseRequisitionPage mode="edit" />,
+            )}
+          />
+          <Route
+            path={routes.purchase.viewRequisition}
+            element={gated(
+              "purchase.requisitions",
+              <PurchaseRequisitionPage mode="view" />,
+            )}
+          />
           <Route
             path={routes.purchase.rfq}
-            element={gated("purchase.rfq", <PurchaseOrders />)}
+            element={gated("purchase.rfq", <PurchaseRfqsList />)}
+          />
+          <Route
+            path={routes.purchase.createRfq}
+            element={gated("purchase.rfq", <PurchaseRfqPage mode="create" />)}
+          />
+          <Route
+            path={routes.purchase.editRfq}
+            element={gated("purchase.rfq", <PurchaseRfqPage mode="edit" />)}
+          />
+          <Route
+            path={routes.purchase.viewRfq}
+            element={gated("purchase.rfq", <PurchaseRfqPage mode="view" />)}
           />
 
           <Route
-            path={routes.purchase.quotations}
-            element={gated("purchase.quotations", <PurchaseOrders />)}
+            path={routes.purchase.supplierQuotations}
+            element={gated("purchase.quotations", <SupplierQuotationsList />)}
+          />
+<Route
+  path={routes.purchase.quotationComparison}
+  element={gated(
+    "purchase.quotations",
+    <QuotationComparisonPage />,
+  )}
+/>
+          <Route
+            path={routes.purchase.createSupplierQuotation}
+            element={gated(
+              "purchase.quotations",
+              <SupplierQuotationPage mode="create" />,
+            )}
+          />
+
+          <Route
+            path={routes.purchase.editSupplierQuotation}
+            element={gated(
+              "purchase.quotations",
+              <SupplierQuotationPage mode="edit" />,
+            )}
+          />
+
+          <Route
+            path={routes.purchase.viewSupplierQuotation}
+            element={gated(
+              "purchase.quotations",
+              <SupplierQuotationPage mode="view" />,
+            )}
           />
 
           <Route

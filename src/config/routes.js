@@ -56,16 +56,26 @@ const routes = {
 
     requisitions: "/purchase/requisitions",
     createRequisition: "/purchase/requisitions/create",
+    editRequisition: "/purchase/requisitions/:requisitionNumber/edit",
+    viewRequisition: "/purchase/requisitions/:requisitionNumber",
 
     rfq: "/purchase/rfq",
     createRfq: "/purchase/rfq/create",
-
+    editRfq: "/purchase/rfq/:rfqNumber/edit",
+    viewRfq: "/purchase/rfq/:rfqNumber",
     quotations: "/purchase/quotations",
     quotationComparison: "/purchase/quotation-comparison",
 
+    supplierQuotations: "/purchase/supplier-quotations",
+    createSupplierQuotation: "/purchase/supplier-quotations/create",
+    editSupplierQuotation:
+      "/purchase/supplier-quotations/:quotationNumber/edit",
+    viewSupplierQuotation: "/purchase/supplier-quotations/:quotationNumber",
+
     orders: "/purchase/orders",
     createOrder: "/purchase/orders/create",
-    editOrder: "/purchase/orders/edit/:id",
+    editOrder: "/purchase/orders/:orderNumber/edit",
+    viewOrder: "/purchase/orders/:orderNumber",
 
     grn: "/purchase/grn",
     createGrn: "/purchase/grn/create",
@@ -141,11 +151,11 @@ const routes = {
     payables: "/accounting/payables",
 
     bankReconciliation: "/accounting/bank-reconciliation",
-    daybook :"/accounting/daybook",
-    trialBalance :"/accounting/trial-balance",
-    balancesheet :"/accounting/balance-sheet",
-    customerledger:"/accounting/customer-ledger",
-    supplierledger:"/accounting/supplier-ledger"
+    daybook: "/accounting/daybook",
+    trialBalance: "/accounting/trial-balance",
+    balancesheet: "/accounting/balance-sheet",
+    customerledger: "/accounting/customer-ledger",
+    supplierledger: "/accounting/supplier-ledger",
   },
 
   entrySheet: {

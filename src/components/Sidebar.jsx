@@ -1,5 +1,3 @@
-
-
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -62,9 +60,19 @@ import {
   Monitor,
   Percent,
   Bell,
+  FileSearch,
+  PackageCheck,
+  Scale,
+  Undo2,
+  ListTree,
 } from "lucide-react";
 
 const iconMap = {
+  FileSearch,
+  PackageCheck,
+  Scale,
+  Undo2,
+  ListTree,
   LayoutDashboard,
   ShoppingCart,
   Package,

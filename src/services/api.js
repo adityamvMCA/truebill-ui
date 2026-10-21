@@ -20,6 +20,12 @@ import gstSummaryApi from "./modules/gstSummaryApi";
 import gstrReportsApi from "./modules/gstrReportsApi";
 import bankReconciliationApi from "./modules/bankReconciliationApi";
 import purchaseReturnApi from "./modules/purchaseReturnApi";
+import goodsReceiptApi from "./modules/goodsReceiptApi";
+import purchaseOrderApi from "./modules/purchaseOrderApi";
+import purchaseRequisitionApi from "./modules/purchaseRequisitionApi";
+import purchaseRfqApi from "./modules/purchaseRfqApi";
+import supplierQuotationApi from "./modules/supplierQuotationApi";
+import quotationComparisonApi from "./modules/quotationComparisonApi";
 
 export const api = {
   auth: authApi,
@@ -44,6 +50,12 @@ export const api = {
   gstrReports: gstrReportsApi,
   bankReconciliation: bankReconciliationApi,
   purchaseReturn: purchaseReturnApi,
+  goodsReceipt: goodsReceiptApi,
+  purchaseOrder: purchaseOrderApi,
+  purchaseRequisition: purchaseRequisitionApi,
+  purchaseRfq: purchaseRfqApi,
+  supplierQuotation: supplierQuotationApi,
+  quotationComparison: quotationComparisonApi,
 };
 
 export default api;
