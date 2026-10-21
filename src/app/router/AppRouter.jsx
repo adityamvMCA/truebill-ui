@@ -219,7 +219,7 @@ const AppRouter = () => (
           />
           <Route
             path={routes.customers.outstanding}
-            element={gated("sales.customers", <CustomerOutstanding />)}
+            element={gated("ledger.view", <CustomerOutstanding />)}
           />
 
           <Route
