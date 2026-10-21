@@ -19,6 +19,7 @@ import taxConfigurationApi from "./modules/taxConfigurationApi";
 import gstSummaryApi from "./modules/gstSummaryApi";
 import gstrReportsApi from "./modules/gstrReportsApi";
 import bankReconciliationApi from "./modules/bankReconciliationApi";
+import purchaseReturnApi from "./modules/purchaseReturnApi";
 
 export const api = {
   auth: authApi,
@@ -42,6 +43,7 @@ export const api = {
   gstSummary: gstSummaryApi,
   gstrReports: gstrReportsApi,
   bankReconciliation: bankReconciliationApi,
+  purchaseReturn: purchaseReturnApi,
 };
 
 export default api;

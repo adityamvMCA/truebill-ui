@@ -63,6 +63,7 @@ import SupplierLedger from "../../pages/accounting/Ledger/SupplierLedger/Supplie
 import CustomerOutstanding from "../../pages/accounting/outstanding/CustomerOutstanding";
 import SupplierOutstanding from "../../pages/accounting/outstanding/SupplierOutstanding";
 import JournalVouchers from "../../pages/accounting/JournalVouchers/JournalVouchers";
+import PurchaseReturnsList from "../../pages/PurchaseReturns/PurchaseReturnsList";
 
 const Login = lazy(() => import("../../pages/Login"));
 const Dashboard = lazy(() => import("../../pages/Dashboard"));
@@ -174,6 +175,10 @@ const AppRouter = () => (
           <Route
             path={routes.purchase.index}
             element={gated("purchase", <PurchaseOrders />)}
+          />
+          <Route
+            path={routes.purchase.returns}
+            element={gated("purchaseReturn.view", <PurchaseReturnsList />)}
           />
 
           <Route
