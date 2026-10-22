@@ -81,6 +81,8 @@ import UnitsList from "../../pages/units/UnitsList";
 import BrandsList from "../../pages/Brand/BrandsList";
 import HsnSacCodesList from "../../pages/Hsncode/HsnSacCodesList";
 import TaxRatesList from "../../pages/Tax/TaxRatesList";
+import WarehousesList from "../../pages/Warehouse/WarehousesList";
+import StockMovementCreate from "../../pages/stock-movements/StockMovementCreate";
 // import InventoryReport from "../../pages/Reportdashboard/InventoryReport";
 
 const Login = lazy(() => import("../../pages/Login"));
@@ -427,6 +429,10 @@ const AppRouter = () => (
             path={routes.inventory.tax}
             element={gated("inventory.products", <TaxRatesList  />)}
           />
+          <Route
+            path={routes.inventory.warehouses}
+            element={gated("inventory.products", <WarehousesList  />)}
+          />
 
           <Route
             path={routes.suppliers.list}
@@ -458,9 +464,8 @@ const AppRouter = () => (
             path={routes.inventory.stockMovements}
             element={gated("inventory.stock", <StockMovementsList />)}
           />
-
           <Route
-            path={routes.inventory.createStockMovement}
+            path={routes.inventory.adjustment}
             element={gated("inventory.stock", <StockAdjustmentCreate />)}
           />
 

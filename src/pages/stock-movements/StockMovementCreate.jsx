@@ -114,7 +114,7 @@ const getApiErrorMessage = (apiError) => {
   );
 };
 
-function StockAdjustmentCreate() {
+function StockMovementCreate() {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState(
@@ -582,4 +582,4 @@ function StockAdjustmentCreate() {
   );
 }
 
-export default StockAdjustmentCreate;
+export default StockMovementCreate;

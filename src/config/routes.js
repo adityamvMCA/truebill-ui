@@ -97,12 +97,17 @@ const routes = {
     warehouses: "/inventory/warehouses",
     brand: "/brand-list",
     hsn: "/hsn-sac-codes",
-    stockMovements: "/stock-movements",
-    createStockMovement: "/stock-movements/new",
+
     tax: "/tax-rates",
     transfer: "/inventory/stock-transfer",
-    adjustment: "/inventory/stock-adjustment",
+
     valuation: "/inventory/stock-valuation",
+
+    stockMovements: "/stock-movements",
+
+    createStockMovement: "/inventory/stock-adjustment",
+
+    adjustment: "/inventory/stock-adjustment",
   },
   customerReceipts: {
     list: "/sales/customer-receipts",

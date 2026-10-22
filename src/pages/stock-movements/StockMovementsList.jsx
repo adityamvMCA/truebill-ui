@@ -8,6 +8,7 @@ import StatusField from "../../components/common/StatusField/StatusField";
 import api from "../../services/api";
 
 import "./stock-movements.css";
+import routes from "../../config/routes";
 
 const MOVEMENT_TYPE_LABELS = {
   OPENING: "Opening Stock",
@@ -495,7 +496,7 @@ function StockMovementsList() {
         <button
           type="button"
           className="so-primary-button"
-          onClick={() => navigate("/stock-movements/new")}
+          onClick={() => navigate(routes.inventory.adjustment)}
         >
           <Plus size={16} />
 

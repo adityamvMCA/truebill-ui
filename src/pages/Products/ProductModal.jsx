@@ -20,6 +20,7 @@ import Textarea from "../../components/common/Form/Textarea";
 import SectionModal from "../../components/common/Modal/SectionModal";
 
 import api from "../../services/api";
+import productFormApi from "../../services/modules/productFormApi";
 
 import "./product-form.css";
 
@@ -206,9 +207,9 @@ const numericValue = (
   scale,
 ) => {
   if (
-    value === "" ||
     value === null ||
-    value === undefined
+    value === undefined ||
+    String(value).trim() === ""
   ) {
     throw new Error(
       `${label} is required. Enter 0 if not applicable.`,
@@ -252,14 +253,16 @@ const ProductModal = ({
   const [activeSection, setActiveSection] =
     useState("basic");
 
-  const [formData, setFormData] =
-    useState({ ...INITIAL_FORM_DATA });
+  const [formData, setFormData] = useState({
+    ...INITIAL_FORM_DATA,
+  });
 
-  const [options, setOptions] =
-    useState(EMPTY_OPTIONS);
+  const [options, setOptions] = useState({
+    ...EMPTY_OPTIONS,
+  });
 
   const [loadingOptions, setLoadingOptions] =
-    useState(false);
+    useState(true);
 
   const [optionsError, setOptionsError] =
     useState("");
@@ -283,7 +286,7 @@ const ProductModal = ({
 
   const inventoryEnabled =
     !isService &&
-    formData.trackInventory;
+    formData.trackInventory === true;
 
   const settings =
     options.inventorySettings;
@@ -298,6 +301,7 @@ const ProductModal = ({
     saving ||
     loadingOptions ||
     Boolean(optionsError) ||
+    !settings ||
     uncertain;
 
   useEffect(() => {
@@ -321,6 +325,7 @@ const ProductModal = ({
     const loadOptions = async () => {
       setLoadingOptions(true);
       setOptionsError("");
+      setOptions({ ...EMPTY_OPTIONS });
 
       try {
         const [
@@ -332,35 +337,39 @@ const ProductModal = ({
           settingsResponse,
         ] = await Promise.all([
           loadAllPages(
-            api.productForm.getCategories,
+            productFormApi.getCategories,
             { status: "ACTIVE" },
           ),
 
           loadAllPages(
-            api.productForm.getBrands,
+            productFormApi.getBrands,
             { status: "ACTIVE" },
           ),
 
           loadAllPages(
-            api.productForm.getUnits,
+            productFormApi.getUnits,
             { status: "ACTIVE" },
           ),
 
           loadAllPages(
-            api.productForm.getHsnSacCodes,
+            productFormApi.getHsnSacCodes,
             { status: "ACTIVE" },
           ),
 
           loadAllPages(
-            api.productForm.getTaxRates,
+            productFormApi.getTaxRates,
             {
               status: "ACTIVE",
               taxType: "GST",
             },
           ),
 
-          api.productForm.getInventorySettings(),
+          productFormApi.getInventorySettings(),
         ]);
+
+        if (cancelled) {
+          return;
+        }
 
         const inventorySettings =
           settingsResponse?.data?.data;
@@ -376,10 +385,7 @@ const ProductModal = ({
         }
 
         if (
-          ![
-            "NOT_INITIALIZED",
-            "READY",
-          ].includes(
+          !["NOT_INITIALIZED", "READY"].includes(
             inventorySettings.warehouseTrackingStatus,
           )
         ) {
@@ -409,25 +415,13 @@ const ProductModal = ({
             rate.taxType === "GST",
         );
 
-        if (!activeUnits.length) {
-          throw new Error(
-            "No active units are available. Seed or activate units before creating Products.",
-          );
-        }
-
-        if (!activeRates.length) {
-          throw new Error(
-            "No active GST rates are configured.",
-          );
-        }
-
         let warehouses = [];
 
         if (
           inventorySettings.multiWarehouseEnabled
         ) {
           warehouses = await loadAllPages(
-            api.productForm.getWarehouses,
+            productFormApi.getWarehouses,
             { status: "ACTIVE" },
           );
         }
@@ -464,29 +458,47 @@ const ProductModal = ({
           inventorySettings,
         });
 
-        setFormData((previous) => ({
-          ...previous,
+        setFormData((previous) => {
+          let unit =
+            previous.unit ||
+            INITIAL_FORM_DATA.unit;
 
-          unit: activeUnits.some(
-            (unit) =>
-              unit.unitCode === previous.unit,
-          )
-            ? previous.unit
-            : activeUnits.some(
-                  (unit) =>
-                    unit.unitCode === "NOS",
-                )
+          if (
+            activeUnits.length > 0 &&
+            !activeUnits.some(
+              (item) =>
+                item.unitCode === unit,
+            )
+          ) {
+            unit = activeUnits.some(
+              (item) =>
+                item.unitCode === "NOS",
+            )
               ? "NOS"
-              : activeUnits[0].unitCode,
+              : activeUnits[0].unitCode;
+          }
 
-          gstRate: activeRates.some(
-            (rate) =>
-              String(rate.rate) ===
-              String(previous.gstRate),
-          )
-            ? previous.gstRate
-            : "",
-        }));
+          let gstRate =
+            previous.gstRate === ""
+              ? INITIAL_FORM_DATA.gstRate
+              : String(previous.gstRate);
+
+          if (
+            activeRates.length > 0 &&
+            !activeRates.some(
+              (item) =>
+                String(item.rate) === gstRate,
+            )
+          ) {
+            gstRate = "";
+          }
+
+          return {
+            ...previous,
+            unit,
+            gstRate,
+          };
+        });
       } catch (requestError) {
         if (!cancelled) {
           setOptionsError(
@@ -508,6 +520,13 @@ const ProductModal = ({
   }, [isOpen, reloadKey]);
 
   const updateField = (field, value) => {
+    if (
+      blocked ||
+      submitLockRef.current
+    ) {
+      return;
+    }
+
     setFormData((previous) => {
       const next = {
         ...previous,
@@ -599,12 +618,22 @@ const ProductModal = ({
     })),
   ];
 
-  const unitOptions = options.units.map(
-    (item) => ({
-      value: item.unitCode,
-      label: `${item.unitCode} — ${item.name}`,
-    }),
-  );
+  const unitOptions = options.units.length
+    ? options.units.map((item) => ({
+        value: item.unitCode,
+        label: `${item.unitCode} — ${item.name}`,
+      }))
+    : [
+        {
+          value:
+            formData.unit ||
+            INITIAL_FORM_DATA.unit,
+
+          label:
+            formData.unit ||
+            INITIAL_FORM_DATA.unit,
+        },
+      ];
 
   const hsnOptions = [
     {
@@ -621,17 +650,32 @@ const ProductModal = ({
     })),
   ];
 
-  const rateOptions = [
-    {
-      value: "",
-      label: "Select GST rate",
-    },
+  const rateOptions = options.taxRates.length
+    ? [
+        {
+          value: "",
+          label: "Select GST rate",
+        },
 
-    ...options.taxRates.map((item) => ({
-      value: String(item.rate),
-      label: `${item.rate}% — ${item.name}`,
-    })),
-  ];
+        ...options.taxRates.map((item) => ({
+          value: String(item.rate),
+          label: `${item.rate}% — ${item.name}`,
+        })),
+      ]
+    : [
+        {
+          value:
+            formData.gstRate === ""
+              ? INITIAL_FORM_DATA.gstRate
+              : String(formData.gstRate),
+
+          label: `${
+            formData.gstRate === ""
+              ? INITIAL_FORM_DATA.gstRate
+              : formData.gstRate
+          }%`,
+        },
+      ];
 
   const warehouseOptions = [
     {
@@ -640,7 +684,7 @@ const ProductModal = ({
     },
 
     ...options.warehouses.map((item) => ({
-      value: item._id,
+      value: String(item._id),
       label:
         `${item.warehouseCode} — ${item.name}`,
     })),
@@ -652,8 +696,7 @@ const ProductModal = ({
       throw new Error(message);
     };
 
-    const name =
-      formData.name.trim();
+    const name = formData.name.trim();
 
     if (
       name.length < 2 ||
@@ -676,10 +719,21 @@ const ProductModal = ({
       );
     }
 
+    const unit =
+      String(formData.unit ?? "").trim();
+
+    if (!unit) {
+      fail(
+        "basic",
+        "Unit is required.",
+      );
+    }
+
     if (
+      options.units.length > 0 &&
       !options.units.some(
-        (unit) =>
-          unit.unitCode === formData.unit,
+        (item) =>
+          item.unitCode === unit,
       )
     ) {
       fail(
@@ -727,12 +781,27 @@ const ProductModal = ({
       );
     }
 
+    let gstRate;
+
+    try {
+      gstRate = numericValue(
+        formData.gstRate,
+        "GST rate",
+        100,
+        100,
+      );
+    } catch (validationError) {
+      fail(
+        "pricing",
+        validationError.message,
+      );
+    }
+
     if (
-      formData.gstRate === "" ||
+      options.taxRates.length > 0 &&
       !options.taxRates.some(
         (item) =>
-          String(item.rate) ===
-          String(formData.gstRate),
+          Number(item.rate) === gstRate,
       )
     ) {
       fail(
@@ -799,18 +868,18 @@ const ProductModal = ({
       }
     }
 
-    if (needsOpeningWarehouse) {
-      if (
-        !options.warehouses.some(
-          (item) =>
-            item._id === formData.warehouseId,
-        )
-      ) {
-        fail(
-          "inventory",
-          "Select an active opening-stock warehouse.",
-        );
-      }
+    if (
+      needsOpeningWarehouse &&
+      !options.warehouses.some(
+        (item) =>
+          String(item._id) ===
+          String(formData.warehouseId),
+      )
+    ) {
+      fail(
+        "inventory",
+        "Select an active opening-stock warehouse.",
+      );
     }
 
     if (
@@ -824,7 +893,9 @@ const ProductModal = ({
       );
     }
 
-    if (formData.description.trim().length > 1000) {
+    if (
+      formData.description.trim().length > 1000
+    ) {
       fail(
         "advanced",
         "Description cannot exceed 1000 characters.",
@@ -834,9 +905,14 @@ const ProductModal = ({
     return {
       name,
       type: formData.type,
-      category: formData.category || null,
-      brand: formData.brand || null,
-      unit: formData.unit,
+
+      category:
+        formData.category || null,
+
+      brand:
+        formData.brand || null,
+
+      unit,
 
       description:
         formData.description.trim() || null,
@@ -844,9 +920,7 @@ const ProductModal = ({
       hsnSacCode:
         formData.hsnSacCode || null,
 
-      gstRate:
-        Number(formData.gstRate),
-
+      gstRate,
       salePrice,
       purchasePrice,
 
@@ -870,6 +944,7 @@ const ProductModal = ({
 
   const handleSave = async () => {
     if (
+      !isOpen ||
       blocked ||
       submitLockRef.current
     ) {
@@ -961,7 +1036,7 @@ const ProductModal = ({
     <>
       <div className="section-form-title">
         <h3>Basic Details</h3>
-        <p>Choose active master records for this Product.</p>
+        <p>Enter basic Product information.</p>
       </div>
 
       <div className="section-form-grid">
@@ -1054,7 +1129,7 @@ const ProductModal = ({
     <>
       <div className="section-form-title">
         <h3>Pricing & Tax</h3>
-        <p>Set prices and explicitly select the GST rate.</p>
+        <p>Configure prices and tax details.</p>
       </div>
 
       <div className="section-form-grid">
@@ -1246,7 +1321,9 @@ const ProductModal = ({
 
           {!inventoryEnabled && (
             <div className="product-form-info">
-              <strong>Stock tracking is disabled</strong>
+              <strong>
+                Stock tracking is disabled
+              </strong>
               <p>
                 This Product will not maintain
                 quantities or create stock
@@ -1367,11 +1444,7 @@ const ProductModal = ({
       onSave={handleSave}
       saveText="Create Product"
       saveLoading={saving}
-      saveDisabled={
-        loadingOptions ||
-        Boolean(optionsError) ||
-        uncertain
-      }
+      saveDisabled={blocked}
       showSecondary={false}
       className="product-create-modal"
     >
