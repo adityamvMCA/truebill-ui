@@ -1,56 +1,100 @@
 import {
   AlertCircle,
-  AlertTriangle,
+  ArrowRight,
+  Check,
   CheckCircle2,
   HelpCircle,
   Info,
   LoaderCircle,
+  Power,
+  PowerOff,
   Trash2,
   X,
 } from "lucide-react";
-import { useEffect, useRef } from "react";
+
+import {
+  useEffect,
+  useId,
+  useRef,
+} from "react";
+
+import { createPortal } from "react-dom";
 
 import "./ConfirmModal.css";
 
 const MODAL_TYPES = {
   danger: {
-    icon: AlertTriangle,
-    iconClassName: "confirm-modal__icon--danger",
+    icon: Trash2,
+    buttonIcon: Trash2,
     confirmText: "Delete",
   },
 
   warning: {
     icon: AlertCircle,
-    iconClassName: "confirm-modal__icon--warning",
+    buttonIcon: ArrowRight,
     confirmText: "Continue",
   },
 
   success: {
     icon: CheckCircle2,
-    iconClassName: "confirm-modal__icon--success",
+    buttonIcon: Check,
     confirmText: "Confirm",
   },
 
   info: {
     icon: Info,
-    iconClassName: "confirm-modal__icon--info",
-    confirmText: "Confirm",
+    buttonIcon: ArrowRight,
+    confirmText: "Continue",
   },
 
   question: {
     icon: HelpCircle,
-    iconClassName: "confirm-modal__icon--question",
-    confirmText: "Yes, Continue",
+    buttonIcon: Check,
+    confirmText: "Confirm",
   },
 };
+
+const MODAL_ACTIONS = {
+  delete: {
+    type: "danger",
+    icon: Trash2,
+    buttonIcon: Trash2,
+    confirmText: "Delete",
+  },
+
+  deactivate: {
+    type: "warning",
+    icon: PowerOff,
+    buttonIcon: PowerOff,
+    confirmText: "Deactivate",
+  },
+
+  activate: {
+    type: "success",
+    icon: Power,
+    buttonIcon: Power,
+    confirmText: "Activate",
+  },
+};
+
+const FOCUSABLE_SELECTOR = [
+  "button:not([disabled])",
+  "a[href]",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  '[tabindex]:not([tabindex="-1"])',
+].join(",");
 
 function ConfirmModal({
   open,
   title = "Are you sure?",
   message = "",
   type = "question",
+  action,
   confirmText,
   cancelText = "Cancel",
+  loadingText = "Please wait...",
   onConfirm,
   onCancel,
   loading = false,
@@ -58,86 +102,251 @@ function ConfirmModal({
   closeOnEscape = true,
   showCloseButton = true,
   icon: CustomIcon,
+  confirmIcon: CustomConfirmIcon,
   children,
 }) {
+  const dialogRef = useRef(null);
   const cancelButtonRef = useRef(null);
 
-  const modalType = MODAL_TYPES[type] || MODAL_TYPES.question;
+  const interactionRef = useRef({
+    loading,
+    closeOnEscape,
+    onCancel,
+  });
 
-  const Icon = CustomIcon || modalType.icon;
+  const titleId = useId();
+  const descriptionId = useId();
 
-  const resolvedConfirmText = confirmText || modalType.confirmText;
+  const actionConfig =
+    MODAL_ACTIONS[action];
+
+  const resolvedType =
+    actionConfig?.type ||
+    (
+      MODAL_TYPES[type]
+        ? type
+        : "question"
+    );
+
+  const modalType =
+    MODAL_TYPES[resolvedType];
+
+  const Icon =
+    CustomIcon ||
+    actionConfig?.icon ||
+    modalType.icon;
+
+  const ConfirmIcon =
+    CustomConfirmIcon ||
+    actionConfig?.buttonIcon ||
+    modalType.buttonIcon;
+
+  const resolvedConfirmText =
+    confirmText ||
+    actionConfig?.confirmText ||
+    modalType.confirmText;
 
   useEffect(() => {
-    if (!open) {
+    interactionRef.current = {
+      loading,
+      closeOnEscape,
+      onCancel,
+    };
+  }, [
+    loading,
+    closeOnEscape,
+    onCancel,
+  ]);
+
+  useEffect(() => {
+    if (
+      !open ||
+      typeof document === "undefined"
+    ) {
       return undefined;
     }
 
-    const previousOverflow = document.body.style.overflow;
+    const previousFocus =
+      document.activeElement;
 
-    document.body.style.overflow = "hidden";
+    const previousOverflow =
+      document.body.style.overflow;
+
+    document.body.style.overflow =
+      "hidden";
+
+    const focusTimer =
+      window.setTimeout(() => {
+        const target =
+          cancelButtonRef.current?.disabled
+            ? dialogRef.current
+            : cancelButtonRef.current;
+
+        target?.focus();
+      }, 0);
 
     const handleKeyDown = (event) => {
-      if (event.key === "Escape" && closeOnEscape && !loading) {
-        onCancel?.();
+      const {
+        loading: isLoading,
+        closeOnEscape: canEscape,
+        onCancel: cancel,
+      } = interactionRef.current;
+
+      if (event.key === "Escape") {
+        if (canEscape && !isLoading) {
+          event.preventDefault();
+          event.stopPropagation();
+          cancel?.();
+        }
+
+        return;
+      }
+
+      if (event.key !== "Tab") {
+        return;
+      }
+
+      const dialog =
+        dialogRef.current;
+
+      if (!dialog) {
+        return;
+      }
+
+      const focusable = Array.from(
+        dialog.querySelectorAll(
+          FOCUSABLE_SELECTOR,
+        ),
+      ).filter(
+        (element) =>
+          element.getClientRects().length > 0 &&
+          !element.closest("[inert]"),
+      );
+
+      if (!focusable.length) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last =
+        focusable[focusable.length - 1];
+
+      const active =
+        document.activeElement;
+
+      if (
+        !dialog.contains(active) ||
+        active === dialog
+      ) {
+        event.preventDefault();
+
+        if (event.shiftKey) {
+          last.focus();
+        } else {
+          first.focus();
+        }
+
+        return;
+      }
+
+      if (
+        event.shiftKey &&
+        active === first
+      ) {
+        event.preventDefault();
+        last.focus();
+      } else if (
+        !event.shiftKey &&
+        active === last
+      ) {
+        event.preventDefault();
+        first.focus();
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-
-    const timeoutId = window.setTimeout(() => {
-      cancelButtonRef.current?.focus();
-    }, 0);
+    document.addEventListener(
+      "keydown",
+      handleKeyDown,
+      true,
+    );
 
     return () => {
-      document.body.style.overflow = previousOverflow;
+      window.clearTimeout(focusTimer);
 
-      window.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener(
+        "keydown",
+        handleKeyDown,
+        true,
+      );
 
-      window.clearTimeout(timeoutId);
+      document.body.style.overflow =
+        previousOverflow;
+
+      if (
+        previousFocus instanceof HTMLElement &&
+        previousFocus.isConnected
+      ) {
+        previousFocus.focus();
+      }
     };
-  }, [closeOnEscape, loading, onCancel, open]);
+  }, [open]);
 
-  if (!open) {
+  if (
+    !open ||
+    typeof document === "undefined"
+  ) {
     return null;
   }
 
-  const handleBackdropClick = (event) => {
-    if (event.target !== event.currentTarget || !closeOnBackdrop || loading) {
-      return;
-    }
-
-    onCancel?.();
-  };
-
   const handleCancel = () => {
-    if (loading) {
-      return;
+    if (!loading) {
+      onCancel?.();
     }
-
-    onCancel?.();
   };
 
   const handleConfirm = () => {
-    if (loading) {
-      return;
+    if (!loading) {
+      onConfirm?.();
     }
-
-    onConfirm?.();
   };
 
-  return (
+  const handleBackdropClick = (event) => {
+    if (
+      event.target === event.currentTarget &&
+      closeOnBackdrop &&
+      !loading
+    ) {
+      onCancel?.();
+    }
+  };
+
+  return createPortal(
     <div
       className="confirm-modal"
       role="presentation"
       onMouseDown={handleBackdropClick}
     >
       <div
-        className="confirm-modal__dialog"
+        ref={dialogRef}
+        className={[
+          "confirm-modal__dialog",
+          `confirm-modal__dialog--${resolvedType}`,
+          loading ? "is-loading" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="confirm-modal-title"
-        aria-describedby="confirm-modal-description"
+        aria-labelledby={titleId}
+        aria-describedby={
+          message
+            ? descriptionId
+            : undefined
+        }
+        aria-busy={loading}
+        tabIndex={-1}
       >
         {showCloseButton && (
           <button
@@ -147,32 +356,48 @@ function ConfirmModal({
             onClick={handleCancel}
             disabled={loading}
           >
-            <X size={20} />
+            <X
+              size={19}
+              aria-hidden="true"
+            />
           </button>
         )}
 
         <div
-          className={`confirm-modal__icon ${modalType.iconClassName}`}
+          className={[
+            "confirm-modal__icon",
+            `confirm-modal__icon--${resolvedType}`,
+          ].join(" ")}
           aria-hidden="true"
         >
-          <Icon size={28} strokeWidth={2} />
+          <Icon
+            size={25}
+            strokeWidth={1.9}
+          />
         </div>
 
         <div className="confirm-modal__content">
-          <h2 id="confirm-modal-title" className="confirm-modal__title">
+          <h2
+            id={titleId}
+            className="confirm-modal__title"
+          >
             {title}
           </h2>
 
           {message && (
             <p
-              id="confirm-modal-description"
+              id={descriptionId}
               className="confirm-modal__message"
             >
               {message}
             </p>
           )}
 
-          {children && <div className="confirm-modal__extra">{children}</div>}
+          {children && (
+            <div className="confirm-modal__extra">
+              {children}
+            </div>
+          )}
         </div>
 
         <div className="confirm-modal__actions">
@@ -188,81 +413,41 @@ function ConfirmModal({
 
           <button
             type="button"
-            className={`confirm-modal__button confirm-modal__button--confirm confirm-modal__button--${type}`}
+            className={[
+              "confirm-modal__button",
+              "confirm-modal__button--confirm",
+              `confirm-modal__button--${resolvedType}`,
+            ].join(" ")}
             onClick={handleConfirm}
-            disabled={loading}
+            disabled={
+              loading ||
+              typeof onConfirm !== "function"
+            }
           >
             {loading ? (
-              <>
-                <LoaderCircle size={17} className="confirm-modal__spinner" />
-
-                <span>Please wait...</span>
-              </>
+              <LoaderCircle
+                size={17}
+                className="confirm-modal__spinner"
+                aria-hidden="true"
+              />
             ) : (
-              <>
-                {type === "danger" && <Trash2 size={17} />}
-
-                <span>{resolvedConfirmText}</span>
-              </>
+              <ConfirmIcon
+                size={17}
+                aria-hidden="true"
+              />
             )}
+
+            <span>
+              {loading
+                ? loadingText
+                : resolvedConfirmText}
+            </span>
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
 export default ConfirmModal;
-
-{
-  /**
-    Delete confirmation
-
-    <ConfirmModal
-  open={showDeleteConfirm}
-  type="danger"
-  title="Delete product?"
-  message="This action permanently removes the product and cannot be undone."
-  confirmText="Delete Product"
-  onCancel={() => setShowDeleteConfirm(false)}
-  onConfirm={handleDelete}
-/>
-
-    Warning confirmation
-
-    <ConfirmModal
-  open={showDeactivateConfirm}
-  type="warning"
-  title="Deactivate product?"
-  message="The product will no longer be available for new transactions."
-  confirmText="Deactivate"
-  onCancel={() => setShowDeactivateConfirm(false)}
-  onConfirm={handleDeactivate}
-/>
-
-Status change confirmation
-
-<ConfirmModal
-  open={showStatusConfirm}
-  type="question"
-  title="Activate selected products?"
-  message="The selected products will be available for use immediately."
-  confirmText="Activate"
-  onCancel={() => setShowStatusConfirm(false)}
-  onConfirm={handleBulkActivate}
-/>
-
-Success/information acknowledgement
-
-<ConfirmModal
-  open={showInfoModal}
-  type="success"
-  title="Products imported"
-  message="Your product CSV file has been imported successfully."
-  confirmText="Done"
-  cancelText="Close"
-  onCancel={() => setShowInfoModal(false)}
-  onConfirm={() => setShowInfoModal(false)}
-/>
-    */
-}

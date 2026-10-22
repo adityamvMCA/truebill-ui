@@ -8,7 +8,7 @@ const productApi = {
 
   getByCode: (productCode) =>
     apiClient.get(
-      `/products/code/${productCode}`
+      `/products/code/${encodeURIComponent(productCode)}`,
     ),
 
   create: (data) =>
@@ -18,23 +18,17 @@ const productApi = {
     apiClient.post(
       "/products/import",
       formData,
-      {
-        headers: {
-          "Content-Type":
-            "multipart/form-data",
-        },
-      }
     ),
 
   update: (productCode, data) =>
     apiClient.put(
-      `/products/code/${productCode}`,
-      data
+      `/products/code/${encodeURIComponent(productCode)}`,
+      data,
     ),
 
   delete: (productCode) =>
     apiClient.delete(
-      `/products/code/${productCode}`
+      `/products/code/${encodeURIComponent(productCode)}`,
     ),
 };
 

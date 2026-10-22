@@ -1,51 +1,304 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
-import { FileText, IndianRupee, Package, Settings } from "lucide-react";
+import {
+  FileText,
+  IndianRupee,
+  Package,
+  Settings,
+} from "lucide-react";
+
+import toast from "react-hot-toast";
 
 import Input from "../../components/common/Form/Input";
 import Select from "../../components/common/Form/Select";
 import Textarea from "../../components/common/Form/Textarea";
 import SectionModal from "../../components/common/Modal/SectionModal";
+
 import api from "../../services/api";
-import toast from "react-hot-toast";
+
+import "./product-form.css";
 
 const INITIAL_FORM_DATA = {
   name: "",
-
   type: "GOODS",
-
   category: "",
-
   brand: "",
-
   unit: "PCS",
-
   description: "",
-
   hsnSacCode: "",
-
-  gstRate: 18,
-
-  salePrice: 0,
-
-  purchasePrice: 0,
-
+  gstRate: "18",
+  salePrice: "0",
+  purchasePrice: "0",
   trackInventory: true,
-
-  openingStock: 0,
-
-  openingStockRate: 0,
-
-  reorderLevel: 0,
-
+  openingStock: "0",
+  openingStockRate: "0",
+  reorderLevel: "0",
+  warehouseId: "",
   status: "ACTIVE",
 };
 
-const ProductModal = ({ isOpen, onClose, onSave }) => {
-  const [activeSection, setActiveSection] = useState("basic");
-  const [formData, setFormData] = useState(INITIAL_FORM_DATA);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+const EMPTY_OPTIONS = {
+  categories: [],
+  brands: [],
+  units: [],
+  hsnSacCodes: [],
+  taxRates: [],
+  warehouses: [],
+  inventorySettings: null,
+};
+
+const SECTIONS = [
+  {
+    id: "basic",
+    label: "Basic Details",
+    icon: FileText,
+  },
+  {
+    id: "pricing",
+    label: "Pricing & Tax",
+    icon: IndianRupee,
+  },
+  {
+    id: "inventory",
+    label: "Inventory",
+    icon: Package,
+  },
+  {
+    id: "advanced",
+    label: "Additional Details",
+    icon: Settings,
+  },
+];
+
+const PRODUCT_TYPES = [
+  {
+    value: "GOODS",
+    label: "Goods",
+  },
+  {
+    value: "SERVICE",
+    label: "Service",
+  },
+];
+
+const STATUS_OPTIONS = [
+  {
+    value: "ACTIVE",
+    label: "Active",
+  },
+  {
+    value: "INACTIVE",
+    label: "Inactive",
+  },
+];
+
+const TRACKING_OPTIONS = [
+  {
+    value: "true",
+    label: "Yes",
+  },
+  {
+    value: "false",
+    label: "No",
+  },
+];
+
+const currencyFormatter = new Intl.NumberFormat(
+  "en-IN",
+  {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  },
+);
+
+const getErrorMessage = (error) => {
+  const body = error?.response?.data;
+
+  if (
+    Array.isArray(body?.errors) &&
+    body.errors.length
+  ) {
+    return body.errors
+      .map((item) =>
+        typeof item === "string"
+          ? item
+          : item?.message ||
+            item?.msg ||
+            "Validation failed",
+      )
+      .join(", ");
+  }
+
+  return (
+    body?.message ||
+    error?.message ||
+    "Unable to complete the request."
+  );
+};
+
+const loadAllPages = async (
+  getter,
+  params = {},
+) => {
+  const first = await getter({
+    ...params,
+    page: 1,
+    limit: 100,
+  });
+
+  if (!Array.isArray(first?.data?.data)) {
+    throw new Error(
+      "A master-data API returned an invalid list.",
+    );
+  }
+
+  const records = [...first.data.data];
+
+  const pages = Number(
+    first.data.pagination?.totalPages ?? 1,
+  );
+
+  if (
+    !Number.isSafeInteger(pages) ||
+    pages < 0
+  ) {
+    throw new Error(
+      "A master-data API returned invalid pagination.",
+    );
+  }
+
+  for (
+    let page = 2;
+    page <= pages;
+    page += 1
+  ) {
+    const response = await getter({
+      ...params,
+      page,
+      limit: 100,
+    });
+
+    if (
+      !Array.isArray(response?.data?.data)
+    ) {
+      throw new Error(
+        "Unable to read a master-data page.",
+      );
+    }
+
+    records.push(...response.data.data);
+  }
+
+  return records;
+};
+
+const numericValue = (
+  value,
+  label,
+  maximum,
+  scale,
+) => {
+  if (
+    value === "" ||
+    value === null ||
+    value === undefined
+  ) {
+    throw new Error(
+      `${label} is required. Enter 0 if not applicable.`,
+    );
+  }
+
+  const number = Number(value);
+
+  if (
+    !Number.isFinite(number) ||
+    number < 0 ||
+    number > maximum
+  ) {
+    throw new Error(
+      `${label} must be between 0 and ${maximum}.`,
+    );
+  }
+
+  if (scale) {
+    const scaled = number * scale;
+    const integer = Math.round(scaled);
+
+    if (
+      !Number.isSafeInteger(integer) ||
+      Math.abs(scaled - integer) > 0.000001
+    ) {
+      throw new Error(
+        `${label} has too many decimal places.`,
+      );
+    }
+  }
+
+  return number;
+};
+
+const ProductModal = ({
+  isOpen,
+  onClose,
+  onSave,
+}) => {
+  const [activeSection, setActiveSection] =
+    useState("basic");
+
+  const [formData, setFormData] =
+    useState({ ...INITIAL_FORM_DATA });
+
+  const [options, setOptions] =
+    useState(EMPTY_OPTIONS);
+
+  const [loadingOptions, setLoadingOptions] =
+    useState(false);
+
+  const [optionsError, setOptionsError] =
+    useState("");
+
+  const [reloadKey, setReloadKey] =
+    useState(0);
+
+  const [saving, setSaving] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
+
+  const [uncertain, setUncertain] =
+    useState(false);
+
+  const submitLockRef = useRef(false);
+
+  const isService =
+    formData.type === "SERVICE";
+
+  const inventoryEnabled =
+    !isService &&
+    formData.trackInventory;
+
+  const settings =
+    options.inventorySettings;
+
+  const needsOpeningWarehouse =
+    inventoryEnabled &&
+    Number(formData.openingStock) > 0 &&
+    settings?.warehouseTrackingStatus === "READY" &&
+    settings?.multiWarehouseEnabled === true;
+
+  const blocked =
+    saving ||
+    loadingOptions ||
+    Boolean(optionsError) ||
+    uncertain;
 
   useEffect(() => {
     if (!isOpen) {
@@ -53,619 +306,1034 @@ const ProductModal = ({ isOpen, onClose, onSave }) => {
     }
 
     setActiveSection("basic");
-
-    setFormData(INITIAL_FORM_DATA);
-
+    setFormData({ ...INITIAL_FORM_DATA });
     setError("");
+    setUncertain(false);
   }, [isOpen]);
 
-  const updateField = (field, value) => {
-    setFormData((previous) => ({
-      ...previous,
-      [field]: value,
-    }));
-
-    if (error) {
-      setError("");
-    }
-  };
-  const isService = formData.type === "SERVICE";
-  const openingStockValue = useMemo(() => {
-    const stock = Number(formData.openingStock) || 0;
-
-    const rate = Number(formData.openingStockRate) || 0;
-
-    return stock * rate;
-  }, [formData.openingStock, formData.openingStockRate]);
-
-  const validateForm = () => {
-    if (!formData.name.trim()) {
-      setActiveSection("basic");
-
-      setError("Product name is required.");
-
-      return false;
+  useEffect(() => {
+    if (!isOpen) {
+      return undefined;
     }
 
-    if (!formData.type) {
-      setActiveSection("basic");
+    let cancelled = false;
 
-      setError("Product type is required.");
+    const loadOptions = async () => {
+      setLoadingOptions(true);
+      setOptionsError("");
 
-      return false;
-    }
+      try {
+        const [
+          categories,
+          brands,
+          units,
+          hsnSacCodes,
+          taxRates,
+          settingsResponse,
+        ] = await Promise.all([
+          loadAllPages(
+            api.productForm.getCategories,
+            { status: "ACTIVE" },
+          ),
 
-    if (!formData.unit) {
-      setActiveSection("basic");
+          loadAllPages(
+            api.productForm.getBrands,
+            { status: "ACTIVE" },
+          ),
 
-      setError("Unit is required.");
+          loadAllPages(
+            api.productForm.getUnits,
+            { status: "ACTIVE" },
+          ),
 
-      return false;
-    }
+          loadAllPages(
+            api.productForm.getHsnSacCodes,
+            { status: "ACTIVE" },
+          ),
 
-    if (!isService) {
-      const openingStock = Number(formData.openingStock) || 0;
+          loadAllPages(
+            api.productForm.getTaxRates,
+            {
+              status: "ACTIVE",
+              taxType: "GST",
+            },
+          ),
 
-      const openingStockRate = Number(formData.openingStockRate) || 0;
+          api.productForm.getInventorySettings(),
+        ]);
 
-      if (openingStock < 0) {
-        setActiveSection("inventory");
+        const inventorySettings =
+          settingsResponse?.data?.data;
 
-        setError("Opening stock cannot be negative.");
+        if (
+          !inventorySettings ||
+          typeof inventorySettings.multiWarehouseEnabled !==
+            "boolean"
+        ) {
+          throw new Error(
+            "Inventory settings were not returned correctly.",
+          );
+        }
 
-        return false;
-      }
+        if (
+          ![
+            "NOT_INITIALIZED",
+            "READY",
+          ].includes(
+            inventorySettings.warehouseTrackingStatus,
+          )
+        ) {
+          throw new Error(
+            "Inventory settings contain an invalid tracking status.",
+          );
+        }
 
-      if (openingStock > 0 && openingStockRate <= 0) {
-        setActiveSection("inventory");
+        if (
+          inventorySettings.multiWarehouseEnabled &&
+          inventorySettings.warehouseTrackingStatus !==
+            "READY"
+        ) {
+          throw new Error(
+            "Multiple warehouses cannot be used before inventory initialization.",
+          );
+        }
 
-        setError(
-          "Opening stock rate is required when opening stock is greater than zero.",
+        const activeUnits = units.filter(
+          (unit) =>
+            unit.status === "ACTIVE",
         );
 
-        return false;
+        const activeRates = taxRates.filter(
+          (rate) =>
+            rate.status === "ACTIVE" &&
+            rate.taxType === "GST",
+        );
+
+        if (!activeUnits.length) {
+          throw new Error(
+            "No active units are available. Seed or activate units before creating Products.",
+          );
+        }
+
+        if (!activeRates.length) {
+          throw new Error(
+            "No active GST rates are configured.",
+          );
+        }
+
+        let warehouses = [];
+
+        if (
+          inventorySettings.multiWarehouseEnabled
+        ) {
+          warehouses = await loadAllPages(
+            api.productForm.getWarehouses,
+            { status: "ACTIVE" },
+          );
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        setOptions({
+          categories: categories.filter(
+            (item) =>
+              item.status === "ACTIVE",
+          ),
+
+          brands: brands.filter(
+            (item) =>
+              item.status === "ACTIVE",
+          ),
+
+          units: activeUnits,
+
+          hsnSacCodes: hsnSacCodes.filter(
+            (item) =>
+              item.status === "ACTIVE",
+          ),
+
+          taxRates: activeRates,
+
+          warehouses: warehouses.filter(
+            (item) =>
+              item.status === "ACTIVE",
+          ),
+
+          inventorySettings,
+        });
+
+        setFormData((previous) => ({
+          ...previous,
+
+          unit: activeUnits.some(
+            (unit) =>
+              unit.unitCode === previous.unit,
+          )
+            ? previous.unit
+            : activeUnits.some(
+                  (unit) =>
+                    unit.unitCode === "NOS",
+                )
+              ? "NOS"
+              : activeUnits[0].unitCode,
+
+          gstRate: activeRates.some(
+            (rate) =>
+              String(rate.rate) ===
+              String(previous.gstRate),
+          )
+            ? previous.gstRate
+            : "",
+        }));
+      } catch (requestError) {
+        if (!cancelled) {
+          setOptionsError(
+            getErrorMessage(requestError),
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingOptions(false);
+        }
       }
-    }
-
-    return true;
-  };
-  const buildPayload = () => {
-    return {
-      name: formData.name.trim(),
-
-      type: formData.type,
-
-      category: formData.category.trim() || null,
-
-      brand: formData.brand.trim() || null,
-
-      unit: formData.unit,
-
-      description: formData.description.trim() || null,
-
-      hsnSacCode: formData.hsnSacCode.trim() || null,
-
-      gstRate: Number(formData.gstRate) || 0,
-
-      salePrice: Number(formData.salePrice) || 0,
-
-      purchasePrice: Number(formData.purchasePrice) || 0,
-
-      trackInventory: isService ? false : Boolean(formData.trackInventory),
-
-      openingStock:
-        isService || !formData.trackInventory
-          ? 0
-          : Number(formData.openingStock) || 0,
-
-      openingStockRate:
-        isService || !formData.trackInventory
-          ? 0
-          : Number(formData.openingStockRate) || 0,
-
-      reorderLevel:
-        isService || !formData.trackInventory
-          ? 0
-          : Number(formData.reorderLevel) || 0,
-
-      status: formData.status || "ACTIVE",
     };
-  };
 
-  const getApiErrorMessage = (apiError) => {
-    const responseData = apiError?.response?.data;
+    loadOptions();
 
-    if (typeof responseData?.message === "string") {
-      return responseData.message;
-    }
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, reloadKey]);
 
-    if (typeof responseData?.error === "string") {
-      return responseData.error;
-    }
+  const updateField = (field, value) => {
+    setFormData((previous) => {
+      const next = {
+        ...previous,
+        [field]: value,
+      };
 
-    if (Array.isArray(responseData?.errors) && responseData.errors.length > 0) {
-      return responseData.errors
-        .map((item) => item.message || item.msg || String(item))
-        .join(", ");
-    }
-
-    return apiError?.message || "Unable to create product. Please try again.";
-  };
-
-  const handleSave = async () => {
-    if (saving || !validateForm()) {
-      return;
-    }
-
-    const payload = buildPayload();
-
-    try {
-      setSaving(true);
-
-      setError("");
-
-      const response = await api.product.create(payload);
-
-      const createdProduct =
-        response?.data?.product || response?.data?.data || response?.data;
-
-      if (!createdProduct?._id) {
-        throw new Error(
-          "Product was created, but product data was not returned by the server.",
-        );
+      if (
+        field === "type" &&
+        value === "SERVICE"
+      ) {
+        next.trackInventory = false;
+        next.openingStock = "0";
+        next.openingStockRate = "0";
+        next.reorderLevel = "0";
+        next.warehouseId = "";
       }
 
-      onSave?.(createdProduct);
+      if (
+        field === "trackInventory" &&
+        value === false
+      ) {
+        next.openingStock = "0";
+        next.openingStockRate = "0";
+        next.reorderLevel = "0";
+        next.warehouseId = "";
+      }
 
-      toast.success(`${createdProduct.name} created successfully`);
+      if (
+        field === "openingStock" &&
+        !(Number(value) > 0)
+      ) {
+        next.warehouseId = "";
+      }
 
-      setFormData(INITIAL_FORM_DATA);
-
-      setActiveSection("basic");
-
-      setError("");
-
-      onClose?.();
-    } catch (apiError) {
-      const errorMessage = getApiErrorMessage(apiError);
-
-      setError(errorMessage);
-
-      toast.error(errorMessage);
-    } finally {
-      setSaving(false);
-    }
-  };
-  const handleClose = () => {
-    if (saving) {
-      return;
-    }
+      return next;
+    });
 
     setError("");
-
-    onClose?.();
   };
 
-  const sections = [
-    {
-      id: "basic",
-      label: "Basic Details",
-      icon: FileText,
-      required: true,
-    },
+  const openingStockValue = useMemo(() => {
+    if (!inventoryEnabled) {
+      return 0;
+    }
 
-    {
-      id: "pricing",
-      label: "Pricing & Tax",
-      icon: IndianRupee,
-    },
+    const quantity =
+      Number(formData.openingStock);
 
-    {
-      id: "inventory",
-      label: "Inventory",
-      icon: Package,
-    },
+    const rate =
+      Number(formData.openingStockRate);
 
-    {
-      id: "advanced",
-      label: "Advanced Details",
-      icon: Settings,
-    },
-  ];
-
-  const productTypeOptions = [
-    {
-      value: "GOODS",
-      label: "Goods",
-    },
-
-    {
-      value: "SERVICE",
-      label: "Service",
-    },
-  ];
-
-  const unitOptions = [
-    {
-      value: "PCS",
-      label: "Pieces",
-    },
-
-    {
-      value: "BAG",
-      label: "Bag",
-    },
-
-    {
-      value: "BOX",
-      label: "Box",
-    },
-
-    {
-      value: "KG",
-      label: "Kilogram",
-    },
-
-    {
-      value: "LTR",
-      label: "Litre",
-    },
-
-    {
-      value: "MTR",
-      label: "Metre",
-    },
-
-    {
-      value: "SQFT",
-      label: "Square Feet",
-    },
-
-    {
-      value: "HOUR",
-      label: "Hour",
-    },
-
-    {
-      value: "DAY",
-      label: "Day",
-    },
-  ];
-
-  const gstRateOptions = [
-    {
-      value: 0,
-      label: "0%",
-    },
-
-    {
-      value: 5,
-      label: "5%",
-    },
-
-    {
-      value: 12,
-      label: "12%",
-    },
-
-    {
-      value: 18,
-      label: "18%",
-    },
-
-    {
-      value: 28,
-      label: "28%",
-    },
-  ];
-
-  const statusOptions = [
-    {
-      value: "ACTIVE",
-      label: "Active",
-    },
-
-    {
-      value: "INACTIVE",
-      label: "Inactive",
-    },
-  ];
-
-  const inventoryTrackingOptions = [
-    {
-      value: true,
-      label: "Yes",
-    },
-
-    {
-      value: false,
-      label: "No",
-    },
-  ];
-  const renderError = () => {
-    if (!error) {
+    if (
+      !Number.isFinite(quantity) ||
+      !Number.isFinite(rate) ||
+      quantity < 0 ||
+      rate < 0
+    ) {
       return null;
     }
 
-    return (
-      <div className="section-form-api-error" role="alert">
-        {error}
-      </div>
-    );
-  };
+    return quantity * rate;
+  }, [
+    inventoryEnabled,
+    formData.openingStock,
+    formData.openingStockRate,
+  ]);
 
-  const renderBasicSection = () => {
-    return (
-      <>
-        <div className="section-form-title">
-          <h3>Basic Details</h3>
+  const categoryOptions = [
+    {
+      value: "",
+      label: "No category",
+    },
 
-          <p>Enter basic product information</p>
-        </div>
+    ...options.categories.map((item) => ({
+      value: item.name,
+      label: item.name,
+    })),
+  ];
 
-        {renderError()}
+  const brandOptions = [
+    {
+      value: "",
+      label: "No brand",
+    },
 
-        <div className="section-form-grid">
-          <Input
-            label="Product Name"
-            name="name"
-            value={formData.name}
-            onChange={(event) => updateField("name", event.target.value)}
-            placeholder="Enter product name"
-            required
-          />
+    ...options.brands.map((item) => ({
+      value: item.name,
+      label: item.name,
+    })),
+  ];
 
-          <Select
-            label="Product Type"
-            name="type"
-            value={formData.type}
-            onChange={(event) => updateField("type", event.target.value)}
-            options={productTypeOptions}
-            required
-          />
+  const unitOptions = options.units.map(
+    (item) => ({
+      value: item.unitCode,
+      label: `${item.unitCode} — ${item.name}`,
+    }),
+  );
 
-          <Input
-            label="Category"
-            name="category"
-            value={formData.category}
-            onChange={(event) => updateField("category", event.target.value)}
-            placeholder="Enter category"
-          />
+  const hsnOptions = [
+    {
+      value: "",
+      label: "Not specified",
+    },
 
-          <Input
-            label="Brand"
-            name="brand"
-            value={formData.brand}
-            onChange={(event) => updateField("brand", event.target.value)}
-            placeholder="Enter brand"
-          />
+    ...options.hsnSacCodes.map((item) => ({
+      value: item.code,
 
-          <Select
-            label="Unit"
-            name="unit"
-            value={formData.unit}
-            onChange={(event) => updateField("unit", event.target.value)}
-            options={unitOptions}
-            required
-          />
+      label: item.description
+        ? `${item.code} — ${item.description}`
+        : item.code,
+    })),
+  ];
 
-          <Select
-            label="Status"
-            name="status"
-            value={formData.status}
-            onChange={(event) => updateField("status", event.target.value)}
-            options={statusOptions}
-          />
+  const rateOptions = [
+    {
+      value: "",
+      label: "Select GST rate",
+    },
 
-          <div className="section-form-full">
-            <Textarea
-              label="Description"
-              name="description"
-              value={formData.description}
-              onChange={(event) =>
-                updateField("description", event.target.value)
-              }
-              placeholder="Enter product description..."
-              rows={4}
-            />
-          </div>
-        </div>
-      </>
-    );
-  };
+    ...options.taxRates.map((item) => ({
+      value: String(item.rate),
+      label: `${item.rate}% — ${item.name}`,
+    })),
+  ];
 
-  const renderPricingSection = () => {
-    return (
-      <>
-        <div className="section-form-title">
-          <h3>Pricing & Tax</h3>
+  const warehouseOptions = [
+    {
+      value: "",
+      label: "Select opening-stock location",
+    },
 
-          <p>Configure sale price, purchase price and tax details</p>
-        </div>
+    ...options.warehouses.map((item) => ({
+      value: item._id,
+      label:
+        `${item.warehouseCode} — ${item.name}`,
+    })),
+  ];
 
-        {renderError()}
+  const buildPayload = () => {
+    const fail = (section, message) => {
+      setActiveSection(section);
+      throw new Error(message);
+    };
 
-        <div className="section-form-grid">
-          <Input
-            label={isService ? "SAC Code" : "HSN Code"}
-            name="hsnSacCode"
-            value={formData.hsnSacCode}
-            onChange={(event) => updateField("hsnSacCode", event.target.value)}
-            placeholder={isService ? "Enter SAC code" : "Enter HSN code"}
-          />
+    const name =
+      formData.name.trim();
 
-          <Select
-            label="GST Rate"
-            name="gstRate"
-            value={formData.gstRate}
-            onChange={(event) => updateField("gstRate", event.target.value)}
-            options={gstRateOptions}
-          />
-
-          <Input
-            label="Sale Price"
-            name="salePrice"
-            type="number"
-            min="0"
-            step="0.01"
-            value={formData.salePrice}
-            onChange={(event) => updateField("salePrice", event.target.value)}
-            placeholder="Enter sale price"
-          />
-
-          <Input
-            label="Purchase Price"
-            name="purchasePrice"
-            type="number"
-            min="0"
-            step="0.01"
-            value={formData.purchasePrice}
-            onChange={(event) =>
-              updateField("purchasePrice", event.target.value)
-            }
-            placeholder="Enter purchase price"
-          />
-        </div>
-      </>
-    );
-  };
-
-  const renderInventorySection = () => {
-    if (isService) {
-      return (
-        <>
-          <div className="section-form-title">
-            <h3>Inventory</h3>
-
-            <p>Services do not use inventory tracking</p>
-          </div>
-
-          {renderError()}
-
-          <div className="section-form-grid">
-            <div className="section-form-full">
-              <div className="section-info-box">
-                <strong>Service Product</strong>
-
-                <p>
-                  Inventory tracking, opening stock and reorder level are not
-                  applicable for services.
-                </p>
-              </div>
-            </div>
-          </div>
-        </>
+    if (
+      name.length < 2 ||
+      name.length > 200
+    ) {
+      fail(
+        "basic",
+        "Product name must contain 2–200 characters.",
       );
     }
 
-    return (
-      <>
-        <div className="section-form-title">
-          <h3>Inventory</h3>
+    if (
+      !["GOODS", "SERVICE"].includes(
+        formData.type,
+      )
+    ) {
+      fail(
+        "basic",
+        "Select a valid Product type.",
+      );
+    }
 
-          <p>Configure stock tracking and opening inventory</p>
-        </div>
+    if (
+      !options.units.some(
+        (unit) =>
+          unit.unitCode === formData.unit,
+      )
+    ) {
+      fail(
+        "basic",
+        "Select an active unit.",
+      );
+    }
 
-        {renderError()}
+    if (
+      formData.category &&
+      !options.categories.some(
+        (item) =>
+          item.name === formData.category,
+      )
+    ) {
+      fail(
+        "basic",
+        "Select an active category.",
+      );
+    }
 
-        <div className="section-form-grid">
-          <Select
-            label="Track Inventory"
-            name="trackInventory"
-            value={String(formData.trackInventory)}
-            onChange={(event) =>
-              updateField("trackInventory", event.target.value === "true")
-            }
-            options={inventoryTrackingOptions.map((option) => ({
-              ...option,
-              value: String(option.value),
-            }))}
-          />
+    if (
+      formData.brand &&
+      !options.brands.some(
+        (item) =>
+          item.name === formData.brand,
+      )
+    ) {
+      fail(
+        "basic",
+        "Select an active brand.",
+      );
+    }
 
-          <Input
-            label="Opening Stock"
-            name="openingStock"
-            type="number"
-            min="0"
-            step="0.001"
-            value={formData.openingStock}
-            onChange={(event) =>
-              updateField("openingStock", event.target.value)
-            }
-            placeholder="Enter opening stock"
-            disabled={!formData.trackInventory}
-          />
+    if (
+      formData.hsnSacCode &&
+      !options.hsnSacCodes.some(
+        (item) =>
+          item.code === formData.hsnSacCode,
+      )
+    ) {
+      fail(
+        "pricing",
+        "Select an active HSN/SAC code.",
+      );
+    }
 
-          <Input
-            label="Opening Stock Rate"
-            name="openingStockRate"
-            type="number"
-            min="0"
-            step="0.01"
-            value={formData.openingStockRate}
-            onChange={(event) =>
-              updateField("openingStockRate", event.target.value)
-            }
-            placeholder="Enter cost per unit"
-            disabled={!formData.trackInventory}
-          />
+    if (
+      formData.gstRate === "" ||
+      !options.taxRates.some(
+        (item) =>
+          String(item.rate) ===
+          String(formData.gstRate),
+      )
+    ) {
+      fail(
+        "pricing",
+        "Select an active GST rate.",
+      );
+    }
 
-          <Input
-            label="Reorder Level"
-            name="reorderLevel"
-            type="number"
-            min="0"
-            step="0.001"
-            value={formData.reorderLevel}
-            onChange={(event) =>
-              updateField("reorderLevel", event.target.value)
-            }
-            placeholder="Enter reorder level"
-            disabled={!formData.trackInventory}
-          />
+    let salePrice;
+    let purchasePrice;
 
-          <div className="section-form-full">
-            <div className="section-summary">
-              <div>
-                <span>Opening Inventory Value</span>
+    try {
+      salePrice = numericValue(
+        formData.salePrice,
+        "Sale price",
+        1000000000,
+        100,
+      );
 
-                <strong>₹{openingStockValue.toFixed(2)}</strong>
-              </div>
-            </div>
-          </div>
-        </div>
-      </>
-    );
+      purchasePrice = numericValue(
+        formData.purchasePrice,
+        "Purchase price",
+        1000000000,
+        100,
+      );
+    } catch (validationError) {
+      fail(
+        "pricing",
+        validationError.message,
+      );
+    }
+
+    let openingStock = 0;
+    let openingStockRate = 0;
+    let reorderLevel = 0;
+
+    if (inventoryEnabled) {
+      try {
+        openingStock = numericValue(
+          formData.openingStock,
+          "Opening stock",
+          1000000,
+          1000,
+        );
+
+        openingStockRate = numericValue(
+          formData.openingStockRate,
+          "Opening stock rate",
+          1000000000,
+          100,
+        );
+
+        reorderLevel = numericValue(
+          formData.reorderLevel,
+          "Reorder level",
+          1000000,
+          1000,
+        );
+      } catch (validationError) {
+        fail(
+          "inventory",
+          validationError.message,
+        );
+      }
+    }
+
+    if (needsOpeningWarehouse) {
+      if (
+        !options.warehouses.some(
+          (item) =>
+            item._id === formData.warehouseId,
+        )
+      ) {
+        fail(
+          "inventory",
+          "Select an active opening-stock warehouse.",
+        );
+      }
+    }
+
+    if (
+      !["ACTIVE", "INACTIVE"].includes(
+        formData.status,
+      )
+    ) {
+      fail(
+        "basic",
+        "Select a valid status.",
+      );
+    }
+
+    if (formData.description.trim().length > 1000) {
+      fail(
+        "advanced",
+        "Description cannot exceed 1000 characters.",
+      );
+    }
+
+    return {
+      name,
+      type: formData.type,
+      category: formData.category || null,
+      brand: formData.brand || null,
+      unit: formData.unit,
+
+      description:
+        formData.description.trim() || null,
+
+      hsnSacCode:
+        formData.hsnSacCode || null,
+
+      gstRate:
+        Number(formData.gstRate),
+
+      salePrice,
+      purchasePrice,
+
+      trackInventory:
+        inventoryEnabled,
+
+      openingStock,
+      openingStockRate,
+      reorderLevel,
+
+      status: formData.status,
+
+      ...(needsOpeningWarehouse
+        ? {
+            warehouseId:
+              formData.warehouseId,
+          }
+        : {}),
+    };
   };
 
-  const renderAdvancedSection = () => {
-    return (
-      <>
-        <div className="section-form-title">
-          <h3>Advanced Details</h3>
+  const handleSave = async () => {
+    if (
+      blocked ||
+      submitLockRef.current
+    ) {
+      return;
+    }
 
-          <p>Additional product information</p>
+    let payload;
+
+    try {
+      payload = buildPayload();
+    } catch (validationError) {
+      setError(validationError.message);
+      return;
+    }
+
+    submitLockRef.current = true;
+    setSaving(true);
+    setError("");
+
+    let confirmed = false;
+
+    try {
+      const response =
+        await api.product.create(payload);
+
+      const createdProduct =
+        response?.data?.data ||
+        response?.data?.product;
+
+      if (
+        !createdProduct?._id ||
+        !createdProduct?.productCode
+      ) {
+        throw new Error(
+          "The server did not return a confirmed Product record.",
+        );
+      }
+
+      confirmed = true;
+
+      onSave?.(createdProduct);
+
+      toast.success(
+        `${createdProduct.name} created successfully`,
+      );
+
+      onClose?.();
+    } catch (requestError) {
+      const status =
+        requestError?.response?.status;
+
+      if (
+        confirmed ||
+        !status ||
+        status >= 500 ||
+        status === 408
+      ) {
+        setUncertain(true);
+
+        const message = confirmed
+          ? "The Product was created, but the screen could not finish updating. Close this form and refresh the Product list."
+          : "The save outcome is uncertain. Close this form and check the Product list before creating it again.";
+
+        setError(message);
+        toast.error(message);
+      } else {
+        const message =
+          getErrorMessage(requestError);
+
+        setError(message);
+        toast.error(message);
+      }
+    } finally {
+      submitLockRef.current = false;
+      setSaving(false);
+    }
+  };
+
+  const handleClose = () => {
+    if (
+      !saving &&
+      !submitLockRef.current
+    ) {
+      onClose?.();
+    }
+  };
+
+  const renderBasicSection = () => (
+    <>
+      <div className="section-form-title">
+        <h3>Basic Details</h3>
+        <p>Choose active master records for this Product.</p>
+      </div>
+
+      <div className="section-form-grid">
+        <Input
+          label="Product Name"
+          name="name"
+          value={formData.name}
+          onChange={(event) =>
+            updateField(
+              "name",
+              event.target.value,
+            )
+          }
+          placeholder="Enter Product name"
+          maxLength={200}
+          required
+        />
+
+        <Select
+          label="Product Type"
+          name="type"
+          value={formData.type}
+          options={PRODUCT_TYPES}
+          onChange={(event) =>
+            updateField(
+              "type",
+              event.target.value,
+            )
+          }
+          required
+        />
+
+        <Select
+          label="Category"
+          name="category"
+          value={formData.category}
+          options={categoryOptions}
+          onChange={(event) =>
+            updateField(
+              "category",
+              event.target.value,
+            )
+          }
+        />
+
+        <Select
+          label="Brand"
+          name="brand"
+          value={formData.brand}
+          options={brandOptions}
+          onChange={(event) =>
+            updateField(
+              "brand",
+              event.target.value,
+            )
+          }
+        />
+
+        <Select
+          label="Unit"
+          name="unit"
+          value={formData.unit}
+          options={unitOptions}
+          onChange={(event) =>
+            updateField(
+              "unit",
+              event.target.value,
+            )
+          }
+          required
+        />
+
+        <Select
+          label="Status"
+          name="status"
+          value={formData.status}
+          options={STATUS_OPTIONS}
+          onChange={(event) =>
+            updateField(
+              "status",
+              event.target.value,
+            )
+          }
+        />
+      </div>
+    </>
+  );
+
+  const renderPricingSection = () => (
+    <>
+      <div className="section-form-title">
+        <h3>Pricing & Tax</h3>
+        <p>Set prices and explicitly select the GST rate.</p>
+      </div>
+
+      <div className="section-form-grid">
+        <Select
+          label={
+            isService
+              ? "SAC Code"
+              : "HSN Code"
+          }
+          name="hsnSacCode"
+          value={formData.hsnSacCode}
+          options={hsnOptions}
+          onChange={(event) =>
+            updateField(
+              "hsnSacCode",
+              event.target.value,
+            )
+          }
+        />
+
+        <Select
+          label="GST Rate"
+          name="gstRate"
+          value={formData.gstRate}
+          options={rateOptions}
+          onChange={(event) =>
+            updateField(
+              "gstRate",
+              event.target.value,
+            )
+          }
+          required
+        />
+
+        <Input
+          label="Sale Price"
+          name="salePrice"
+          type="number"
+          inputMode="decimal"
+          min="0"
+          max="1000000000"
+          step="0.01"
+          value={formData.salePrice}
+          onChange={(event) =>
+            updateField(
+              "salePrice",
+              event.target.value,
+            )
+          }
+        />
+
+        <Input
+          label="Purchase Price"
+          name="purchasePrice"
+          type="number"
+          inputMode="decimal"
+          min="0"
+          max="1000000000"
+          step="0.01"
+          value={formData.purchasePrice}
+          onChange={(event) =>
+            updateField(
+              "purchasePrice",
+              event.target.value,
+            )
+          }
+        />
+      </div>
+    </>
+  );
+
+  const renderInventorySection = () => (
+    <>
+      <div className="section-form-title">
+        <h3>Inventory</h3>
+        <p>
+          {isService
+            ? "Services do not maintain stock."
+            : "Configure tracking and initial stock."}
+        </p>
+      </div>
+
+      {isService ? (
+        <div className="product-form-info">
+          <strong>Service Product</strong>
+          <p>
+            Stock tracking, opening quantity,
+            warehouses, and reorder levels do
+            not apply.
+          </p>
         </div>
-
-        {renderError()}
-
-        <div className="section-form-grid">
-          <div className="section-form-full">
-            <Textarea
-              label="Notes"
-              name="description"
-              value={formData.description}
+      ) : (
+        <>
+          <div className="section-form-grid">
+            <Select
+              label="Track Inventory"
+              name="trackInventory"
+              value={String(
+                formData.trackInventory,
+              )}
+              options={TRACKING_OPTIONS}
               onChange={(event) =>
-                updateField("description", event.target.value)
+                updateField(
+                  "trackInventory",
+                  event.target.value === "true",
+                )
               }
-              placeholder="Enter additional notes..."
-              rows={5}
             />
+
+            {inventoryEnabled && (
+              <>
+                <Input
+                  label="Opening Stock"
+                  name="openingStock"
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  max="1000000"
+                  step="0.001"
+                  value={formData.openingStock}
+                  onChange={(event) =>
+                    updateField(
+                      "openingStock",
+                      event.target.value,
+                    )
+                  }
+                />
+
+                <Input
+                  label="Opening Stock Rate"
+                  name="openingStockRate"
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  max="1000000000"
+                  step="0.01"
+                  value={
+                    formData.openingStockRate
+                  }
+                  onChange={(event) =>
+                    updateField(
+                      "openingStockRate",
+                      event.target.value,
+                    )
+                  }
+                />
+
+                <Input
+                  label="Reorder Level"
+                  name="reorderLevel"
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  max="1000000"
+                  step="0.001"
+                  value={formData.reorderLevel}
+                  onChange={(event) =>
+                    updateField(
+                      "reorderLevel",
+                      event.target.value,
+                    )
+                  }
+                />
+
+                {needsOpeningWarehouse && (
+                  <div className="section-form-full">
+                    <Select
+                      label="Opening Stock Warehouse"
+                      name="warehouseId"
+                      value={
+                        formData.warehouseId
+                      }
+                      options={
+                        warehouseOptions
+                      }
+                      onChange={(event) =>
+                        updateField(
+                          "warehouseId",
+                          event.target.value,
+                        )
+                      }
+                      required
+                    />
+                  </div>
+                )}
+              </>
+            )}
           </div>
+
+          {!inventoryEnabled && (
+            <div className="product-form-info">
+              <strong>Stock tracking is disabled</strong>
+              <p>
+                This Product will not maintain
+                quantities or create stock
+                movements.
+              </p>
+            </div>
+          )}
+
+          {inventoryEnabled && (
+            <>
+              {settings?.warehouseTrackingStatus ===
+                "READY" &&
+                !settings.multiWarehouseEnabled && (
+                  <p className="product-form-hint">
+                    Opening stock uses{" "}
+                    {settings.defaultWarehouse?.name ||
+                      "the default location"}{" "}
+                    automatically.
+                  </p>
+                )}
+
+              {settings?.warehouseTrackingStatus ===
+                "NOT_INITIALIZED" && (
+                  <p className="product-form-hint">
+                    Opening stock is recorded
+                    using the current Product
+                    stock system. Warehouse
+                    allocation is not active yet.
+                  </p>
+                )}
+
+              <div className="section-summary">
+                <div>
+                  <span>
+                    Opening Inventory Value
+                  </span>
+
+                  <strong>
+                    {openingStockValue === null
+                      ? "—"
+                      : currencyFormatter.format(
+                          openingStockValue,
+                        )}
+                  </strong>
+                </div>
+              </div>
+            </>
+          )}
+        </>
+      )}
+    </>
+  );
+
+  const renderAdvancedSection = () => (
+    <>
+      <div className="section-form-title">
+        <h3>Additional Details</h3>
+        <p>
+          Description is stored once on the
+          Product record.
+        </p>
+      </div>
+
+      <div className="section-form-grid">
+        <div className="section-form-full">
+          <Textarea
+            label="Description"
+            name="description"
+            value={formData.description}
+            onChange={(event) =>
+              updateField(
+                "description",
+                event.target.value,
+              )
+            }
+            placeholder="Enter Product description..."
+            maxLength={1000}
+            rows={5}
+          />
+
+          <p className="product-form-hint">
+            {formData.description.length}/1000 characters
+          </p>
         </div>
-      </>
-    );
-  };
+      </div>
+    </>
+  );
 
   const renderSection = () => {
     switch (activeSection) {
@@ -691,17 +1359,72 @@ const ProductModal = ({ isOpen, onClose, onSave }) => {
       show={isOpen}
       onClose={handleClose}
       title="Create Product"
-      subtitle="Enter product details"
+      subtitle="Goods, services, pricing and opening stock"
       icon={Package}
-      sections={sections}
+      sections={SECTIONS}
       activeSection={activeSection}
       onSectionChange={setActiveSection}
       onSave={handleSave}
-      saveText={saving ? "Creating Product..." : "Create Product"}
-      saving={saving}
+      saveText="Create Product"
+      saveLoading={saving}
+      saveDisabled={
+        loadingOptions ||
+        Boolean(optionsError) ||
+        uncertain
+      }
       showSecondary={false}
+      className="product-create-modal"
     >
-      {renderSection()}
+      {loadingOptions && (
+        <div
+          className="product-form-notice"
+          role="status"
+        >
+          Loading Product masters and inventory settings…
+        </div>
+      )}
+
+      {optionsError && (
+        <div
+          className="product-form-notice product-form-notice--error"
+          role="alert"
+        >
+          <strong>
+            Unable to load Product options
+          </strong>
+
+          <p>{optionsError}</p>
+
+          <button
+            type="button"
+            className="product-form-retry"
+            disabled={loadingOptions || saving}
+            onClick={() =>
+              setReloadKey(
+                (value) => value + 1,
+              )
+            }
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {error && (
+        <div
+          className="product-form-notice product-form-notice--error"
+          role="alert"
+        >
+          {error}
+        </div>
+      )}
+
+      <fieldset
+        className="product-form-fieldset"
+        disabled={blocked}
+      >
+        {renderSection()}
+      </fieldset>
     </SectionModal>
   );
 };

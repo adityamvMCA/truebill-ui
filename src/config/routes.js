@@ -95,10 +95,11 @@ const routes = {
 
     stock: "/inventory/stock",
     warehouses: "/inventory/warehouses",
-
+    brand: "/brand-list",
+    hsn: "/hsn-sac-codes",
     stockMovements: "/stock-movements",
     createStockMovement: "/stock-movements/new",
-
+    tax: "/tax-rates",
     transfer: "/inventory/stock-transfer",
     adjustment: "/inventory/stock-adjustment",
     valuation: "/inventory/stock-valuation",

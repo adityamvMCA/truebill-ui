@@ -76,6 +76,11 @@ import SupplierQuotationsList from "../../pages/supplier-quotations/SupplierQuot
 import QuotationComparisonPage from "../../pages/quotation-comparison/QuotationComparisonPage";
 import SalesReport from "../../pages/Reportdashboard/Salesreport";
 import PurchaseReport from "../../pages/Reportdashboard/Purchasereport";
+import CategoriesList from "../../pages/categories/CategoriesList";
+import UnitsList from "../../pages/units/UnitsList";
+import BrandsList from "../../pages/Brand/BrandsList";
+import HsnSacCodesList from "../../pages/Hsncode/HsnSacCodesList";
+import TaxRatesList from "../../pages/Tax/TaxRatesList";
 // import InventoryReport from "../../pages/Reportdashboard/InventoryReport";
 
 const Login = lazy(() => import("../../pages/Login"));
@@ -401,6 +406,26 @@ const AppRouter = () => (
           <Route
             path={routes.inventory.products}
             element={gated("inventory.products", <ProductsList />)}
+          />
+          <Route
+            path={routes.inventory.categories}
+            element={gated("inventory.products", <CategoriesList  />)}
+          />
+          <Route
+            path={routes.inventory.units}
+            element={gated("inventory.products", <UnitsList  />)}
+          />
+          <Route
+            path={routes.inventory.brand}
+            element={gated("inventory.products", <BrandsList  />)}
+          />
+          <Route
+            path={routes.inventory.hsn}
+            element={gated("inventory.products", <HsnSacCodesList  />)}
+          />
+          <Route
+            path={routes.inventory.tax}
+            element={gated("inventory.products", <TaxRatesList  />)}
           />
 
           <Route
