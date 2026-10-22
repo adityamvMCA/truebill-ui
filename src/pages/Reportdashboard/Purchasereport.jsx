@@ -1,6 +1,5 @@
 import { Wallet } from "lucide-react";
-import ReportDashboard from "./ReportDashboard";
-
+import ReportDashboard from "./Reportdashboard.jsx";
 
 const CONFIG = {
   title: "Purchase Report",

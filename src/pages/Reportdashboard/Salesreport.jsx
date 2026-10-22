@@ -1,6 +1,5 @@
 import { ShoppingCart } from "lucide-react";
-import ReportDashboard from "./ReportDashboard";
-
+import ReportDashboard from "./Reportdashboard.jsx";
 
 const CONFIG = {
   title: "Sales Report",
