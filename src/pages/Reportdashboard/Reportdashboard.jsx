@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import journalApi from "../../services/modules/journalApi";
 import "../Dashboard.css";
-import "./ReportDashboard.css";
+import "./Reportdashboard.css";
 
 /* ---------- date helpers ---------- */
 const toLocalDate = (d) => {
