@@ -33,13 +33,7 @@ const purchaseRfqApi = {
     apiClient.delete(`/purchase-rfqs/${encodeURIComponent(rfqNumber)}`, {
       data,
     }),
-    approve: (rfqNumber, data) =>
-  apiClient.post(
-    `/purchase-rfqs/${encodeURIComponent(rfqNumber)}/approve`,
-    data,
-  ),
 
-  // NEW: approved-requisition list for the dropdown
   getRequisitions: (params = {}) =>
     apiClient.get("/purchase-requisitions", { params }),
 
@@ -51,6 +45,18 @@ const purchaseRfqApi = {
   getSuppliers: (params = {}) => apiClient.get("/suppliers", { params }),
 
   getProducts: (params = {}) => apiClient.get("/products", { params }),
+
+  approve: (rfqNumber, data) =>
+  apiClient.post(
+    `/purchase-rfqs/${encodeURIComponent(rfqNumber)}/approve`,
+    data,
+  ),
+
+reject: (rfqNumber, data) =>
+  apiClient.post(
+    `/purchase-rfqs/${encodeURIComponent(rfqNumber)}/reject`,
+    data,
+  ),
 };
 
 export default purchaseRfqApi;

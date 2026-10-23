@@ -845,4 +845,75 @@
   .rfqu-document-page * {
     transition: none !important;
   }
+}.rfqu-decision-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.rfqu-decision-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.rfqu-decision-button--approve {
+  color: #15803d;
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.rfqu-decision-button--approve:hover:not(:disabled) {
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+.rfqu-decision-button--reject {
+  color: #b91c1c;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.rfqu-decision-button--reject:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.rfqu-decision-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.rfqu-decision-button:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.rfqu-rejection-reason {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font: inherit;
+  resize: vertical;
+}
+
+.rfqu-rejection-reason:focus {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
 }

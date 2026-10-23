@@ -44,8 +44,14 @@ function PurchaseRfqsList() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
+  const [actionTarget, setActionTarget] = useState(null);
+  const [actionType, setActionType] = useState("");
+  const [actionReason, setActionReason] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+
   const loadSequence = useRef(0);
   const deleteLock = useRef(false);
+  const actionLock = useRef(false);
   const mountedRef = useRef(false);
 
   const loadRfqs = useCallback(async () => {
@@ -168,6 +174,122 @@ function PurchaseRfqsList() {
     }
   };
 
+  const openAction = async (row, type) => {
+    if (actionLock.current) return;
+
+    if (!["approve", "reject"].includes(type)) return;
+
+    if (row.status !== "CREATED") {
+      toast.error("Only CREATED RFQs can be approved or rejected.");
+      return;
+    }
+
+    try {
+      actionLock.current = true;
+
+      const response = await api.purchaseRfq.getByNumber(row.rfqNumber);
+
+      const latest = getDocument(response);
+
+      if (
+        !latest ||
+        latest.status !== "CREATED" ||
+        !Number.isSafeInteger(latest.__v)
+      ) {
+        throw new Error("The RFQ changed. Refresh the list.");
+      }
+
+      if (!mountedRef.current) return;
+
+      setActionTarget(latest);
+      setActionType(type);
+      setActionReason("");
+    } catch (error) {
+      if (mountedRef.current) {
+        toast.error(getErrorMessage(error));
+      }
+    } finally {
+      actionLock.current = false;
+    }
+  };
+
+  const closeAction = () => {
+    if (actionLock.current || actionLoading) return;
+
+    setActionTarget(null);
+    setActionType("");
+    setActionReason("");
+  };
+
+  const confirmAction = async () => {
+    if (actionLock.current || !actionTarget || !actionType) return;
+
+    if (actionType === "reject" && !actionReason.trim()) {
+      toast.error("Rejection reason is required.");
+      return;
+    }
+
+    try {
+      actionLock.current = true;
+      setActionLoading(true);
+
+      const method =
+        actionType === "approve"
+          ? api.purchaseRfq.approve
+          : api.purchaseRfq.reject;
+
+      const response = await method(actionTarget.rfqNumber, {
+        version: actionTarget.__v,
+        ...(actionType === "reject"
+          ? { rejectionReason: actionReason.trim() }
+          : {}),
+      });
+
+      const updated = getDocument(response);
+
+      if (!mountedRef.current) return;
+
+      setRfqs((previous) =>
+        previous.map((record) => {
+          if (record._id !== actionTarget._id) return record;
+
+          if (updated?._id) {
+            return {
+              ...record,
+              ...updated,
+            };
+          }
+
+          return {
+            ...record,
+            status: actionType === "approve" ? "APPROVED" : "REJECTED",
+          };
+        }),
+      );
+
+      setActionTarget(null);
+      setActionType("");
+      setActionReason("");
+
+      toast.success(
+        actionType === "approve"
+          ? "RFQ approved successfully."
+          : "RFQ rejected successfully.",
+      );
+    } catch (error) {
+      if (mountedRef.current) {
+        toast.error(getErrorMessage(error));
+        loadRfqs();
+      }
+    } finally {
+      actionLock.current = false;
+
+      if (mountedRef.current) {
+        setActionLoading(false);
+      }
+    }
+  };
+
   const columns = useMemo(
     () => [
       {
@@ -240,6 +362,7 @@ function PurchaseRfqsList() {
 
         render: (value) => <StatusField value={value || "CREATED"} />,
       },
+      
 
       {
         key: "createdBy",
@@ -255,6 +378,22 @@ function PurchaseRfqsList() {
         sortable: false,
         visible: false,
         render: (value) => getUserName(value) || "—",
+      },
+
+      {
+        key: "rejectedBy",
+        label: "Rejected By",
+        sortable: false,
+        visible: false,
+        render: (value) => getUserName(value) || "—",
+      },
+
+      {
+        key: "rejectionReason",
+        label: "Rejection Reason",
+        sortable: false,
+        visible: false,
+        render: (value) => value || "—",
       },
 
       {
@@ -320,7 +459,14 @@ function PurchaseRfqsList() {
             key: "status",
             label: "Status",
             type: "select",
-            options: ["CREATED", "APPROVED", "ISSUED", "CLOSED", "CANCELLED"],
+            options: [
+              "CREATED",
+              "APPROVED",
+              "REJECTED",
+              "ISSUED",
+              "CLOSED",
+              "CANCELLED",
+            ],
           },
           {
             key: "creationMode",
@@ -333,6 +479,7 @@ function PurchaseRfqsList() {
           { key: "status", value: "", label: "All" },
           { key: "status", value: "CREATED", label: "Created" },
           { key: "status", value: "APPROVED", label: "Approved" },
+          { key: "status", value: "REJECTED", label: "Rejected" },
           { key: "status", value: "ISSUED", label: "Issued" },
           { key: "status", value: "CLOSED", label: "Closed" },
           { key: "status", value: "CANCELLED", label: "Cancelled" },
@@ -341,6 +488,8 @@ function PurchaseRfqsList() {
           view: handleView,
           edit: handleEdit,
           delete: handleDelete,
+          approve: (row) => openAction(row, "approve"),
+          reject: (row) => openAction(row, "reject"),
         }}
         onRefresh={loadRfqs}
         addButton={
@@ -370,6 +519,47 @@ function PurchaseRfqsList() {
         }}
         onConfirm={confirmDelete}
       />
+
+      <ConfirmModal
+        open={Boolean(actionTarget) && actionType === "approve"}
+        type="success"
+        title="Approve RFQ?"
+        message={`Approve ${
+          actionTarget?.rfqNumber || "this RFQ"
+        }? Approved RFQs can be marked as issued.`}
+        confirmText="Approve RFQ"
+        cancelText="Back"
+        loading={actionLoading}
+        loadingText="Approving..."
+        onCancel={closeAction}
+        onConfirm={confirmAction}
+      />
+
+      <ConfirmModal
+        open={Boolean(actionTarget) && actionType === "reject"}
+        type="danger"
+        title="Reject RFQ?"
+        message={`Reject ${
+          actionTarget?.rfqNumber || "this RFQ"
+        }? Please provide a rejection reason.`}
+        confirmText="Reject RFQ"
+        cancelText="Back"
+        loading={actionLoading}
+        loadingText="Rejecting..."
+        onCancel={closeAction}
+        onConfirm={confirmAction}
+      >
+        <textarea
+          className="rfqu-rejection-reason"
+          rows={4}
+          maxLength={1000}
+          placeholder="Enter rejection reason..."
+          value={actionReason}
+          disabled={actionLoading}
+          onChange={(event) => setActionReason(event.target.value)}
+          required
+        />
+      </ConfirmModal>
     </div>
   );
 }
