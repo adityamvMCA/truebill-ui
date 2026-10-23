@@ -13,6 +13,7 @@ import {
 import {
   ArrowLeft,
   Check,
+  CheckCircle2,
   ChevronDown,
   FileText,
   LockKeyhole,
@@ -33,7 +34,7 @@ import Select from "../../components/common/Form/Select";
 import Textarea from "../../components/common/Form/Textarea";
 import Button from "../../components/common/Form/Button";
 import StatusField from "../../components/common/StatusField/StatusField";
-import BoxModal from "../../components/common/Modal/BoxModal";
+import ConfirmModal from "../../components/common/ConfirmModal/ConfirmModal";
 
 import {
   RFQ_BASE,
@@ -83,31 +84,196 @@ const mapItems = (records = []) =>
     specification: item.specification || "",
   }));
 
+const ACTION_ICONS = {
+  approve: CheckCircle2,
+  issue: Send,
+  close: Check,
+};
+
+
 const ACTIONS = {
-  issue: {
-    title: "Mark RFQ as Issued",
-    button: "Mark Issued",
+  approve: {
+    type: "success",
+    title: "Approve RFQ",
+    confirmText: "Approve",
+    confirmIcon: Check,
     message:
-      "Mark this RFQ as issued? This changes its status only and does not send supplier messages.",
+      "Approve this RFQ? Once approved, it can no longer be edited and can be marked as issued.",
+    success: "RFQ approved successfully.",
+  },
+
+  issue: {
+    type: "success",
+    title: "Mark RFQ as Issued",
+    confirmText: "Mark Issued",
+    confirmIcon: Send,
+    message:
+      "Mark this approved RFQ as issued? This changes its status only and does not send supplier messages.",
     success: "RFQ marked as issued.",
   },
 
   close: {
+    type: "warning",
     title: "Close RFQ",
-    button: "Close RFQ",
+    confirmText: "Close RFQ",
+    confirmIcon: Check,
     message:
-      "Close this RFQ? The current quotation workflow does not allow new or edited supplier quotations after closure.",
+      "Close this RFQ? New or edited supplier quotations will no longer be allowed.",
     success: "RFQ closed successfully.",
   },
 
   cancel: {
+    type: "danger",
     title: "Cancel RFQ",
-    button: "Cancel RFQ",
+    confirmText: "Cancel RFQ",
+    confirmIcon: X,
+    message:
+      "This RFQ will be cancelled. Please provide a cancellation reason.",
     field: "cancellationReason",
     label: "Cancellation Reason",
     success: "RFQ cancelled successfully.",
   },
 };
+
+
+/* =====================================================
+   SEARCHABLE APPROVED-PR DROPDOWN
+===================================================== */
+
+function RequisitionSelect({
+  options,
+  value,
+  loading,
+  disabled,
+  onSelect,
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const rootRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const close = (event) => {
+      if (!rootRef.current?.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+
+    const onKey = (event) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+
+    document.addEventListener("mousedown", close);
+    document.addEventListener("touchstart", close);
+    document.addEventListener("keydown", onKey);
+
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("touchstart", close);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (disabled) setOpen(false);
+  }, [disabled]);
+
+  const filtered = useMemo(() => {
+    const search = query.trim().toLowerCase();
+
+    return options.filter(
+      (option) =>
+        !search ||
+        `${option.requisitionNumber} ${option.purpose || ""}`
+          .toLowerCase()
+          .includes(search),
+    );
+  }, [options, query]);
+
+  return (
+    <div className="rfqu-combo" ref={rootRef}>
+      <span className="rfqu-combo-label">
+        Approved Requisition (PR No.)
+      </span>
+
+      <button
+        type="button"
+        className="rfqu-combo-trigger"
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((previous) => !previous)}
+      >
+        <span className={value ? "" : "rfqu-combo-placeholder"}>
+          {loading
+            ? "Loading requisitions..."
+            : value || "Select PR number"}
+        </span>
+
+        <ChevronDown size={16} />
+      </button>
+
+      {open && (
+        <div className="rfqu-combo-menu">
+          <div className="rfqu-combo-search">
+            <Search size={15} />
+
+            <input
+              autoFocus
+              value={query}
+              placeholder="Search PR number or purpose..."
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+
+          <ul role="listbox" className="rfqu-combo-list">
+            {filtered.map((option) => {
+              const selected =
+                option.requisitionNumber === value;
+
+              return (
+                <li key={option._id}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    className={`rfqu-combo-option ${
+                      selected ? "is-selected" : ""
+                    }`}
+                    onClick={() => {
+                      setOpen(false);
+                      setQuery("");
+                      onSelect(option.requisitionNumber);
+                    }}
+                  >
+                    <strong>{option.requisitionNumber}</strong>
+
+                    {option.purpose && (
+                      <span>{option.purpose}</span>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+
+            {!filtered.length && (
+              <li className="rfqu-empty">
+                {loading
+                  ? "Loading..."
+                  : "No approved requisitions found."}
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* =====================================================
+   PAGE
+===================================================== */
 
 function PurchaseRfqPage({ mode = "create" }) {
   const navigate = useNavigate();
@@ -130,6 +296,10 @@ function PurchaseRfqPage({ mode = "create" }) {
   const [document, setDocument] = useState(null);
   const [requisition, setRequisition] = useState(null);
 
+  const [requisitionOptions, setRequisitionOptions] = useState([]);
+  const [requisitionsLoading, setRequisitionsLoading] =
+    useState(false);
+
   const [supplierSearch, setSupplierSearch] = useState("");
 
   const [loading, setLoading] = useState(true);
@@ -147,6 +317,7 @@ function PurchaseRfqPage({ mode = "create" }) {
   const [action, setAction] = useState("");
   const [actionReason, setActionReason] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
 
   const submitLock = useRef(false);
   const sourceLock = useRef(false);
@@ -175,6 +346,8 @@ function PurchaseRfqPage({ mode = "create" }) {
   const itemsLocked =
     isView || requisitionBased;
 
+  /* ---------- load page ---------- */
+
   useEffect(() => {
     const pageVersion = ++pageVersionRef.current;
 
@@ -200,7 +373,10 @@ function PurchaseRfqPage({ mode = "create" }) {
 
         if (
           !isCreate &&
-          (!rfqNumber || ["undefined", "null"].includes(rfqNumber.toLowerCase()))
+          (!rfqNumber ||
+            ["undefined", "null"].includes(
+              rfqNumber.toLowerCase(),
+            ))
         ) {
           throw new Error(
             "RFQ number is missing from the route. Open the RFQ from the list and check that the route parameter is named :rfqNumber or :id.",
@@ -254,12 +430,15 @@ function PurchaseRfqPage({ mode = "create" }) {
             requisitionNumber:
               record.sourceRequisitionNumber || "",
             rfqDate: dateValue(record.rfqDate),
-            quotationDueDate: dateValue(record.quotationDueDate),
+            quotationDueDate: dateValue(
+              record.quotationDueDate,
+            ),
             supplierIds: (record.supplierIds || []).map(getId),
             deliveryAddress: record.deliveryAddress || "",
             paymentTerms: record.paymentTerms || "",
             deliveryTerms: record.deliveryTerms || "",
-            termsAndConditions: record.termsAndConditions || "",
+            termsAndConditions:
+              record.termsAndConditions || "",
             notes: record.notes || "",
           });
 
@@ -298,6 +477,48 @@ function PurchaseRfqPage({ mode = "create" }) {
     mode,
   ]);
 
+  /* ---------- load approved PR list for dropdown ---------- */
+
+  useEffect(() => {
+    if (!isCreate || !requisitionBased) return undefined;
+
+    let active = true;
+
+    (async () => {
+      try {
+        setRequisitionsLoading(true);
+
+        const records = await fetchAllPages(
+          (queryParams) =>
+            api.purchaseRfq.getRequisitions({
+              ...queryParams,
+              status: "APPROVED",
+            }),
+          // use the key your /purchase-requisitions list returns
+          "requisitions",
+        );
+
+        if (active) {
+          setRequisitionOptions(
+            records.filter(
+              (record) => record.status === "APPROVED",
+            ),
+          );
+        }
+      } catch (requestError) {
+        if (active) toast.error(getErrorMessage(requestError));
+      } finally {
+        if (active) setRequisitionsLoading(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [isCreate, requisitionBased, reloadKey]);
+
+  /* ---------- derived data ---------- */
+
   const supplierMap = useMemo(
     () =>
       new Map(
@@ -323,10 +544,7 @@ function PurchaseRfqPage({ mode = "create" }) {
 
       const available =
         selected ||
-        (
-          supplier.status === "Active" &&
-          !supplier.isDeleted
-        );
+        (supplier.status === "Active" && !supplier.isDeleted);
 
       if (!available) return false;
       if (isView && !selected) return false;
@@ -344,12 +562,7 @@ function PurchaseRfqPage({ mode = "create" }) {
           .includes(search)
       );
     });
-  }, [
-    suppliers,
-    supplierSearch,
-    selectedSupplierSet,
-    isView,
-  ]);
+  }, [suppliers, supplierSearch, selectedSupplierSet, isView]);
 
   const missingSupplierIds = form.supplierIds.filter(
     (id) => !supplierMap.has(id),
@@ -376,6 +589,8 @@ function PurchaseRfqPage({ mode = "create" }) {
 
     return map;
   }, [products, items]);
+
+  /* ---------- handlers ---------- */
 
   const changeField = (event) => {
     if (disabled) return;
@@ -408,21 +623,7 @@ function PurchaseRfqPage({ mode = "create" }) {
     setError("");
   };
 
-  const changeRequisitionNumber = (event) => {
-    if (disabled) return;
-
-    setForm((previous) => ({
-      ...previous,
-      requisitionNumber: event.target.value,
-    }));
-
-    setRequisition(null);
-    setItems([newItem()]);
-    setDirty(true);
-    setError("");
-  };
-
-  const loadRequisition = async () => {
+  const loadRequisition = async (selectedNumber) => {
     if (
       sourceLock.current ||
       disabled ||
@@ -432,12 +633,17 @@ function PurchaseRfqPage({ mode = "create" }) {
       return;
     }
 
-    const number = form.requisitionNumber.trim();
+    const number = String(selectedNumber || "").trim();
 
-    if (!number) {
-      toast.error("Enter a Purchase Requisition number.");
-      return;
-    }
+    if (!number) return;
+
+    setForm((previous) => ({
+      ...previous,
+      requisitionNumber: number,
+    }));
+
+    setRequisition(null);
+    setItems([newItem()]);
 
     const pageVersion = pageVersionRef.current;
 
@@ -519,9 +725,7 @@ function PurchaseRfqPage({ mode = "create" }) {
         ...previous,
 
         supplierIds: selected
-          ? previous.supplierIds.filter(
-              (id) => id !== supplierId,
-            )
+          ? previous.supplierIds.filter((id) => id !== supplierId)
           : [...previous.supplierIds, supplierId],
       };
     });
@@ -592,9 +796,7 @@ function PurchaseRfqPage({ mode = "create" }) {
       !form.supplierIds.length ||
       form.supplierIds.length > 100
     ) {
-      throw new Error(
-        "Select between 1 and 100 suppliers.",
-      );
+      throw new Error("Select between 1 and 100 suppliers.");
     }
 
     for (const supplierId of form.supplierIds) {
@@ -609,14 +811,12 @@ function PurchaseRfqPage({ mode = "create" }) {
 
     if (requisitionBased && isCreate && !requisition) {
       throw new Error(
-        "Load an approved Purchase Requisition first.",
+        "Select an approved Purchase Requisition first.",
       );
     }
 
     if (!items.length || items.length > 200) {
-      throw new Error(
-        "Provide between 1 and 200 RFQ items.",
-      );
+      throw new Error("Provide between 1 and 200 RFQ items.");
     }
 
     if (!requisitionBased) {
@@ -668,9 +868,7 @@ function PurchaseRfqPage({ mode = "create" }) {
         ...common,
         version: document.__v,
 
-        ...(!requisitionBased
-          ? { items: directItems() }
-          : {}),
+        ...(!requisitionBased ? { items: directItems() } : {}),
       };
     }
 
@@ -753,64 +951,80 @@ function PurchaseRfqPage({ mode = "create" }) {
     });
   };
 
-  const confirmAction = async () => {
-    if (
-      actionLock.current ||
-      !document ||
-      !ACTIONS[action]
-    ) {
-      return;
-    }
+  const closeAction = () => {
+    if (actionLock.current) return;
 
-    const config = ACTIONS[action];
-
-    if (config.field && !actionReason.trim()) {
-      toast.error(`${config.label} is required.`);
-      return;
-    }
-
-    try {
-      actionLock.current = true;
-      setActionLoading(true);
-
-      const response =
-        await api.purchaseRfq[action](
-          document.rfqNumber,
-          {
-            version: document.__v,
-
-            ...(config.field
-              ? {
-                  [config.field]:
-                    actionReason.trim(),
-                }
-              : {}),
-          },
-        );
-
-      const updated = getDocument(response);
-
-      if (!updated?.rfqNumber) {
-        throw new Error(
-          "Reload the RFQ to verify its current status.",
-        );
-      }
-
-      setDocument(updated);
-      setAction("");
-      setActionReason("");
-      setError("");
-
-      toast.success(config.success);
-    } catch (requestError) {
-      toast.error(getErrorMessage(requestError));
-      setAction("");
-      setReloadKey((value) => value + 1);
-    } finally {
-      actionLock.current = false;
-      setActionLoading(false);
-    }
+    setAction("");
+    setActionReason("");
   };
+
+
+const confirmAction = async () => {
+  if (actionLock.current || !document || !ACTIONS[action]) {
+    return;
+  }
+
+  const config = ACTIONS[action];
+
+  if (config.field && !actionReason.trim()) {
+    toast.error(`${config.label} is required.`);
+    return;
+  }
+
+  const actionMethods = {
+    approve: api.purchaseRfq.approve,
+    issue: api.purchaseRfq.issue,
+    close: api.purchaseRfq.close,
+    cancel: api.purchaseRfq.cancel,
+  };
+
+  const actionMethod = actionMethods[action];
+
+  if (typeof actionMethod !== "function") {
+    toast.error(
+      `The "${action}" action is not available in the Purchase RFQ API.`
+    );
+    return;
+  }
+
+  try {
+    actionLock.current = true;
+    setActionLoading(true);
+
+    const response = await actionMethod(
+      document.rfqNumber,
+      {
+        version: document.__v,
+        ...(config.field
+          ? { [config.field]: actionReason.trim() }
+          : {}),
+      }
+    );
+
+    const updated = getDocument(response);
+
+    if (!updated?.rfqNumber) {
+      throw new Error(
+        "Reload the RFQ to verify its current status."
+      );
+    }
+
+    setDocument(updated);
+    setAction("");
+    setActionReason("");
+    setError("");
+
+    toast.success(config.success);
+  } catch (requestError) {
+    toast.error(getErrorMessage(requestError));
+    setAction("");
+    setReloadKey((value) => value + 1);
+  } finally {
+    actionLock.current = false;
+    setActionLoading(false);
+  }
+};
+
 
   const openAction = (name) => {
     setAction(name);
@@ -826,19 +1040,21 @@ function PurchaseRfqPage({ mode = "create" }) {
       return;
     }
 
-    if (
-      (dirty || uncertainResult) &&
-      !window.confirm(
-        uncertainResult
-          ? "Open the RFQ list to verify the save result?"
-          : "Discard unsaved changes and leave?",
-      )
-    ) {
+    if (dirty || uncertainResult) {
+      setLeaveOpen(true);
       return;
     }
 
     navigate(RFQ_BASE);
   };
+
+  const confirmLeave = () => {
+    setLeaveOpen(false);
+    setDirty(false);
+    navigate(RFQ_BASE);
+  };
+
+  /* ---------- action buttons (header on desktop, sticky bar on mobile) ---------- */
 
   const saveButton = (
     <Button
@@ -856,9 +1072,88 @@ function PurchaseRfqPage({ mode = "create" }) {
     </Button>
   );
 
+  const viewButtons = (
+    <>
+      {document?.status === "CREATED" && (
+        <>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={actionLoading}
+            onClick={() =>
+              navigate(rfqPath(document.rfqNumber, "edit"))
+            }
+          >
+            Edit
+          </Button>
+
+          <Button
+            type="button"
+            icon={CheckCircle2}
+            disabled={actionLoading}
+            onClick={() => openAction("approve")}
+          >
+            Approve
+          </Button>
+        </>
+      )}
+
+      {document?.status === "APPROVED" && (
+        <Button
+          type="button"
+          icon={Send}
+          disabled={actionLoading}
+          onClick={() => openAction("issue")}
+        >
+          Mark Issued
+        </Button>
+      )}
+
+      {document?.status === "ISSUED" && (
+        <Button
+          type="button"
+          icon={Check}
+          disabled={actionLoading}
+          onClick={() => openAction("close")}
+        >
+          Close RFQ
+        </Button>
+      )}
+
+      {["CREATED", "APPROVED", "ISSUED"].includes(document?.status) && (
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={actionLoading}
+          onClick={() => openAction("cancel")}
+        >
+          Cancel RFQ
+        </Button>
+      )}
+
+      <Button
+        type="button"
+        variant="secondary"
+        disabled={busy}
+        onClick={() => setReloadKey((value) => value + 1)}
+      >
+        Refresh
+      </Button>
+    </>
+  );
+
+  const actionButtons = isView ? viewButtons : saveButton;
+
+  const modalType =
+    action === "cancel"
+      ? "danger"
+      : action === "close"
+        ? "warning"
+        : "success";
+
   return (
     <div
-      className={`doc-page rfqu-document-page ${
+      className={`doc-page rfqu-document-page rfqu-has-bar ${
         isView ? "doc-detail-page" : ""
       }`}
     >
@@ -892,74 +1187,11 @@ function PurchaseRfqPage({ mode = "create" }) {
           </div>
 
           <div className="doc-header-actions">
-            {document && (
-              <StatusField value={document.status} />
-            )}
+            {document && <StatusField value={document.status} />}
 
-            {isView ? (
-              <>
-                {document?.status === "CREATED" && (
-                  <>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      disabled={actionLoading}
-                      onClick={() =>
-                        navigate(
-                          rfqPath(document.rfqNumber, "edit"),
-                        )
-                      }
-                    >
-                      Edit
-                    </Button>
-
-                    <Button
-                      type="button"
-                      icon={Send}
-                      disabled={actionLoading}
-                      onClick={() => openAction("issue")}
-                    >
-                      Mark Issued
-                    </Button>
-                  </>
-                )}
-
-                {document?.status === "ISSUED" && (
-                  <Button
-                    type="button"
-                    icon={Check}
-                    disabled={actionLoading}
-                    onClick={() => openAction("close")}
-                  >
-                    Close RFQ
-                  </Button>
-                )}
-
-                {["CREATED", "ISSUED"].includes(document?.status) && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={actionLoading}
-                    onClick={() => openAction("cancel")}
-                  >
-                    Cancel RFQ
-                  </Button>
-                )}
-
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={busy}
-                  onClick={() =>
-                    setReloadKey((value) => value + 1)
-                  }
-                >
-                  Refresh
-                </Button>
-              </>
-            ) : (
-              saveButton
-            )}
+            <div className="rfqu-header-buttons">
+              {actionButtons}
+            </div>
           </div>
         </header>
 
@@ -1004,10 +1236,7 @@ function PurchaseRfqPage({ mode = "create" }) {
           </div>
         )}
 
-        <fieldset
-          className="doc-fieldset"
-          disabled={disabled}
-        >
+        <fieldset className="doc-fieldset" disabled={disabled}>
           <main className="doc-main">
             {isCreate && (
               <section className="rfqu-source-section">
@@ -1015,10 +1244,7 @@ function PurchaseRfqPage({ mode = "create" }) {
                   label="Create RFQ"
                   value={form.creationMode}
                   options={[
-                    {
-                      value: "DIRECT",
-                      label: "Direct RFQ",
-                    },
+                    { value: "DIRECT", label: "Direct RFQ" },
                     {
                       value: "REQUISITION",
                       label: "From Purchase Requisition",
@@ -1028,27 +1254,13 @@ function PurchaseRfqPage({ mode = "create" }) {
                 />
 
                 {requisitionBased && (
-                  <div className="rfqu-source-search">
-                    <Input
-                      label="Approved Requisition Number"
-                      value={form.requisitionNumber}
-                      onChange={changeRequisitionNumber}
-                      placeholder="Enter requisition number"
-                    />
-
-                    <Button
-                      type="button"
-                      icon={Search}
-                      loading={sourceLoading}
-                      disabled={
-                        disabled ||
-                        !form.requisitionNumber.trim()
-                      }
-                      onClick={loadRequisition}
-                    >
-                      Load Requisition
-                    </Button>
-                  </div>
+                  <RequisitionSelect
+                    options={requisitionOptions}
+                    value={form.requisitionNumber}
+                    loading={requisitionsLoading}
+                    disabled={disabled}
+                    onSelect={loadRequisition}
+                  />
                 )}
 
                 {requisition && (
@@ -1060,9 +1272,7 @@ function PurchaseRfqPage({ mode = "create" }) {
                         {requisition.requisitionNumber}
                       </strong>
 
-                      <span>
-                        {requisition.purpose}
-                      </span>
+                      <span>{requisition.purpose}</span>
 
                       <span>
                         Items and quantities come from the
@@ -1119,14 +1329,10 @@ function PurchaseRfqPage({ mode = "create" }) {
                             checked={selected}
                             disabled={
                               disabled ||
-                              (
-                                !selected &&
-                                form.supplierIds.length >= 100
-                              )
+                              (!selected &&
+                                form.supplierIds.length >= 100)
                             }
-                            onChange={() =>
-                              toggleSupplier(id)
-                            }
+                            onChange={() => toggleSupplier(id)}
                           />
                         )}
 
@@ -1167,15 +1373,13 @@ function PurchaseRfqPage({ mode = "create" }) {
                 </div>
 
                 <p className="doc-note">
-                  Supplier offers are entered by admin.
-                  Supplier login is not required.
+                  Supplier offers are entered by admin. Supplier
+                  login is not required.
                 </p>
               </div>
 
               <div className="doc-panel">
-                <h2 className="doc-panel-title">
-                  RFQ Details
-                </h2>
+                <h2 className="doc-panel-title">RFQ Details</h2>
 
                 <div className="doc-fields-grid">
                   <Input
@@ -1266,8 +1470,7 @@ function PurchaseRfqPage({ mode = "create" }) {
 
                   <tbody>
                     {items.map((item, index) => {
-                      const product =
-                        productMap.get(item.productId);
+                      const product = productMap.get(item.productId);
 
                       const options = Array.from(
                         productMap.values(),
@@ -1275,10 +1478,8 @@ function PurchaseRfqPage({ mode = "create" }) {
                         .filter(
                           (record) =>
                             getId(record) === item.productId ||
-                            (
-                              record.status === "ACTIVE" &&
-                              !record.isDeleted
-                            ),
+                            (record.status === "ACTIVE" &&
+                              !record.isDeleted),
                         )
                         .map((record) => ({
                           value: getId(record),
@@ -1342,9 +1543,7 @@ function PurchaseRfqPage({ mode = "create" }) {
                           </td>
 
                           <td data-label="Unit">
-                            {item.unit ||
-                              product?.unit ||
-                              "—"}
+                            {item.unit || product?.unit || "—"}
                           </td>
 
                           <td data-label="Quantity">
@@ -1551,74 +1750,51 @@ function PurchaseRfqPage({ mode = "create" }) {
                   />
                 )}
 
+                {document && <WorkflowPanel document={document} />}
+
                 <p className="doc-note">
-                  RFQs do not create stock movements,
-                  supplier payables, or accounting journals.
+                  RFQs do not create stock movements, supplier
+                  payables, or accounting journals.
                 </p>
               </div>
             </section>
           </main>
         </fieldset>
 
-        {!isView && (
-          <div className="doc-mobile-bar">
+        {/* Sticky bottom bar on mobile (hidden on desktop by CSS) */}
+        <div
+          className={`doc-mobile-bar ${
+            isView ? "rfqu-mobile-bar--view" : ""
+          }`}
+        >
+          {!isView && (
             <div className="doc-mobile-total">
               <span>Selected Suppliers</span>
-              <strong>
-                {form.supplierIds.length}
-              </strong>
+              <strong>{form.supplierIds.length}</strong>
             </div>
+          )}
 
-            <div className="doc-mobile-actions">
-              {saveButton}
-            </div>
+          <div className="doc-mobile-actions">
+            {actionButtons}
           </div>
-        )}
+        </div>
       </form>
 
-      <BoxModal
-        show={Boolean(action)}
-        onClose={() => {
-          if (!actionLock.current) {
-            setAction("");
-            setActionReason("");
-          }
-        }}
+      <ConfirmModal
+        open={Boolean(action)}
+        type={modalType}
+        icon={ACTION_ICONS[action]}
+        confirmIcon={ACTION_ICONS[action]}
         title={ACTIONS[action]?.title || ""}
-        subtitle={document?.rfqNumber || ""}
-        width="min(560px, calc(100vw - 24px))"
-        footer={
-          <div className="rfqu-modal-actions">
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={actionLoading}
-              onClick={() => {
-                setAction("");
-                setActionReason("");
-              }}
-            >
-              Back
-            </Button>
-
-            <Button
-              type="button"
-              loading={actionLoading}
-              disabled={
-                actionLoading ||
-                (
-                  ACTIONS[action]?.field &&
-                  !actionReason.trim()
-                )
-              }
-              onClick={confirmAction}
-            >
-              {ACTIONS[action]?.button || "Confirm"}
-            </Button>
-          </div>
-        }
+        message={ACTIONS[action]?.message || ""}
+        confirmText={ACTIONS[action]?.button}
+        cancelText="Back"
+        loading={actionLoading}
+        loadingText="Processing..."
+        onCancel={closeAction}
+        onConfirm={confirmAction}
       >
-        {ACTIONS[action]?.field ? (
+        {ACTIONS[action]?.field && (
           <Textarea
             label={ACTIONS[action].label}
             value={actionReason}
@@ -1630,10 +1806,116 @@ function PurchaseRfqPage({ mode = "create" }) {
             disabled={actionLoading}
             required
           />
-        ) : (
-          <p>{ACTIONS[action]?.message}</p>
         )}
-      </BoxModal>
+      </ConfirmModal>
+
+      <ConfirmModal
+        open={leaveOpen}
+        type="warning"
+        title={
+          uncertainResult
+            ? "Verify save result?"
+            : "Discard unsaved changes?"
+        }
+        message={
+          uncertainResult
+            ? "The save result is uncertain. Open the RFQ list to verify whether it was saved."
+            : "You have unsaved changes. If you leave now, they will be lost."
+        }
+        confirmText={uncertainResult ? "Open List" : "Discard & Leave"}
+        cancelText="Stay Here"
+        onCancel={() => setLeaveOpen(false)}
+        onConfirm={confirmLeave}
+      />
+    </div>
+  );
+}
+
+const HEX_ID = /^[a-f\d]{24}$/i;
+
+// Accepts a populated user object ({ name }) or a plain string.
+// A raw ObjectId string is not a readable name, so it returns "".
+const getUserName = (value) => {
+  if (!value) return "";
+
+  if (typeof value === "string") {
+    return HEX_ID.test(value) ? "" : value;
+  }
+
+  return (
+    value.name ||
+    value.fullName ||
+    value.username ||
+    value.email ||
+    ""
+  );
+};
+
+function WorkflowPanel({ document }) {
+  const steps = [
+    {
+      key: "created",
+      label: "Created",
+      by: document.createdBy,
+      at: document.createdAt,
+    },
+    {
+      key: "approved",
+      label: "Approved",
+      by: document.approvedBy,
+      at: document.approvedAt,
+    },
+    {
+      key: "issued",
+      label: "Issued",
+      by: document.issuedBy,
+      at: document.issuedAt,
+    },
+    {
+      key: "closed",
+      label: "Closed",
+      by: document.closedBy,
+      at: document.closedAt,
+    },
+    {
+      key: "cancelled",
+      label: "Cancelled",
+      by: document.cancelledBy,
+      at: document.cancelledAt,
+      danger: true,
+    },
+  ].filter((step) => step.at || step.by);
+
+  if (!steps.length) return null;
+
+  return (
+    <div className="rfqu-workflow">
+      <h3 className="rfqu-workflow-title">Workflow</h3>
+
+      <ol className="rfqu-workflow-list">
+        {steps.map((step) => (
+          <li
+            key={step.key}
+            className={`rfqu-workflow-step ${
+              step.danger ? "is-danger" : ""
+            }`}
+          >
+            <span className="rfqu-workflow-dot" />
+
+            <div>
+              <strong>{step.label}</strong>
+
+              <span>
+                {getUserName(step.by)
+                  ? `by ${getUserName(step.by)}`
+                  : "by —"}
+              </span>
+
+              {step.at && <span>{formatDate(step.at)}</span>}
+            </div>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }

@@ -34,6 +34,13 @@ const supplierQuotationApi = {
   getSuppliers: (params = {}) => apiClient.get("/suppliers", { params }),
 
   getProducts: (params = {}) => apiClient.get("/products", { params }),
+  getUsers: (params = {}) => apiClient.get("/users", { params }),
+
+  approve: (quotationNumber, data) =>
+    apiClient.post(
+      `/supplier-quotations/${encodeURIComponent(quotationNumber)}/approve`,
+      data,
+    ),
 };
 
 export default supplierQuotationApi;

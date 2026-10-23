@@ -22,6 +22,19 @@ import {
 
 import "./PurchaseRfqs.css";
 
+const HEX_ID = /^[a-f\d]{24}$/i;
+
+// Populated user object ({ name }) or plain string; raw ObjectIds are not names.
+const getUserName = (value) => {
+  if (!value) return "";
+
+  if (typeof value === "string") {
+    return HEX_ID.test(value) ? "" : value;
+  }
+
+  return value.name || value.fullName || value.username || value.email || "";
+};
+
 function PurchaseRfqsList() {
   const navigate = useNavigate();
 
@@ -229,6 +242,30 @@ function PurchaseRfqsList() {
       },
 
       {
+        key: "createdBy",
+        label: "Created By",
+        sortable: false,
+        visible: false,
+        render: (value) => getUserName(value) || "—",
+      },
+
+      {
+        key: "approvedBy",
+        label: "Approved By",
+        sortable: false,
+        visible: false,
+        render: (value) => getUserName(value) || "—",
+      },
+
+      {
+        key: "cancelledBy",
+        label: "Cancelled By",
+        sortable: false,
+        visible: false,
+        render: (value) => getUserName(value) || "—",
+      },
+
+      {
         key: "sourceRequisitionNumber",
         label: "Requisition",
         sortable: true,
@@ -283,7 +320,7 @@ function PurchaseRfqsList() {
             key: "status",
             label: "Status",
             type: "select",
-            options: ["CREATED", "ISSUED", "CLOSED", "CANCELLED"],
+            options: ["CREATED", "APPROVED", "ISSUED", "CLOSED", "CANCELLED"],
           },
           {
             key: "creationMode",
@@ -295,6 +332,7 @@ function PurchaseRfqsList() {
         quickFilters={[
           { key: "status", value: "", label: "All" },
           { key: "status", value: "CREATED", label: "Created" },
+          { key: "status", value: "APPROVED", label: "Approved" },
           { key: "status", value: "ISSUED", label: "Issued" },
           { key: "status", value: "CLOSED", label: "Closed" },
           { key: "status", value: "CANCELLED", label: "Cancelled" },

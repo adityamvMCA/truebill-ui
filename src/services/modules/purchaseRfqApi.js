@@ -33,6 +33,11 @@ const purchaseRfqApi = {
     apiClient.delete(`/purchase-rfqs/${encodeURIComponent(rfqNumber)}`, {
       data,
     }),
+    approve: (rfqNumber, data) =>
+  apiClient.post(
+    `/purchase-rfqs/${encodeURIComponent(rfqNumber)}/approve`,
+    data,
+  ),
 
   // NEW: approved-requisition list for the dropdown
   getRequisitions: (params = {}) =>

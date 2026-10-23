@@ -33,6 +33,8 @@
 .squ-document-page .doc-main {
   border-radius: 14px;
   box-shadow: 0 4px 18px rgb(15 23 42 / 3%);
+  /* lets the RFQ dropdown menu overflow the card */
+  overflow: visible;
 }
 
 .squ-document-page .doc-title,
@@ -57,6 +59,11 @@
 
 .squ-document-page .doc-header-actions {
   flex-wrap: wrap;
+}
+
+/* desktop: wrapper is invisible so the header layout stays exactly as before */
+.squ-header-buttons {
+  display: contents;
 }
 
 .squ-document-page .doc-party-card {
@@ -114,6 +121,10 @@
   border-color: var(--squ-border);
 }
 
+.squ-document-page .doc-fieldset {
+  min-width: 0;
+}
+
 .squ-document-page .doc-fieldset:disabled {
   opacity: 1;
 }
@@ -127,30 +138,22 @@
   background: var(--squ-soft);
 }
 
+.squ-document-page .squ-items-table {
+  min-width: 1000px;
+}
+
 .squ-source-section {
   display: grid;
-  grid-template-columns:
-    minmax(220px, 0.7fr)
-    minmax(0, 1.3fr);
+  grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.3fr);
   align-items: end;
   gap: 16px;
   padding: 20px;
   border-bottom: 1px solid var(--squ-border);
+  border-radius: 14px 14px 0 0;
   background: var(--squ-soft);
 }
 
 .squ-source-section > * {
-  min-width: 0;
-}
-
-.squ-source-search {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: 10px;
-}
-
-.squ-source-search > * {
   min-width: 0;
 }
 
@@ -278,10 +281,21 @@
 }
 
 .squ-text-content {
+  margin: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font-size: 13px;
   line-height: 1.8;
+}
+
+.squ-empty {
+  padding: 12px;
+  margin: 0;
+  color: var(--squ-muted);
+  font-size: 12px;
+  line-height: 1.7;
+  text-align: center;
+  list-style: none;
 }
 
 .squ-document-link:focus-visible,
@@ -290,17 +304,166 @@
   outline-offset: 3px;
 }
 
+/* =====================================================
+   SEARCHABLE RFQ DROPDOWN
+===================================================== */
+
+.squ-combo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.squ-combo-label {
+  color: var(--squ-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.squ-combo-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--squ-border);
+  border-radius: 9px;
+  background: var(--squ-surface);
+  color: var(--squ-text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.squ-combo-trigger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.squ-combo-trigger > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.squ-combo-trigger > svg {
+  flex-shrink: 0;
+}
+
+.squ-combo-placeholder {
+  color: var(--squ-muted);
+}
+
+.squ-combo-trigger:focus-visible,
+.squ-combo-option:focus-visible {
+  outline: 2px solid var(--squ-primary);
+  outline-offset: 2px;
+}
+
+.squ-combo-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  border: 1px solid var(--squ-border);
+  border-radius: 10px;
+  background: var(--squ-surface);
+  box-shadow: 0 12px 32px rgb(15 23 42 / 14%);
+  overflow: hidden;
+}
+
+.squ-combo-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--squ-border);
+  color: var(--squ-muted);
+}
+
+.squ-combo-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--squ-text);
+  font: inherit;
+  font-size: 16px; /* prevents iOS zoom on focus */
+}
+
+.squ-combo-list {
+  max-height: 260px;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.squ-combo-option {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.squ-combo-option:hover,
+.squ-combo-option.is-selected {
+  background: var(--squ-light);
+}
+
+.squ-combo-option strong {
+  color: var(--squ-primary);
+  font-size: 13px;
+}
+
+.squ-combo-option span {
+  color: var(--squ-muted);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* opacity only: a leftover transform would break position: fixed children */
 @keyframes squ-enter {
   from {
     opacity: 0;
-    transform: translateY(5px);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
+
+/* =====================================================
+   DESKTOP: bottom bar is mobile-only
+===================================================== */
+
+@media (min-width: 768px) {
+  .squ-document-page .doc-mobile-bar {
+    display: none;
+  }
+}
+
+/* =====================================================
+   TABLET (<= 900px)
+===================================================== */
 
 @media (max-width: 900px) {
   .squ-source-section {
@@ -309,22 +472,115 @@
   }
 }
 
-@media (max-width: 600px) {
-  .squ-source-section {
-    padding: 14px 12px;
+/* =====================================================
+   MOBILE (<= 767px): action buttons fixed to the bottom
+===================================================== */
+
+@media (max-width: 767px) {
+  /* room so content is never hidden behind the fixed bar */
+  .squ-document-page.squ-has-bar {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   }
 
-  .squ-source-search {
+  /* header buttons move to the bottom bar */
+  .squ-document-page .squ-header-buttons {
+    display: none;
+  }
+
+  .squ-document-page .doc-header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .squ-document-page .doc-header-left {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .squ-document-page .doc-title {
+    min-width: 0;
+  }
+
+  .squ-document-page .doc-title span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .squ-document-page .doc-fields-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .squ-source-search > button {
-    width: 100%;
-    min-height: 44px;
+  /* no animation/transform on the page, so the fixed bar sticks to the screen */
+  .squ-document-page {
+    animation: none;
+    transform: none;
+    filter: none;
   }
 
-  .squ-source-confirmation {
+  .squ-document-page .doc-mobile-bar {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    top: auto !important;
+    width: 100%;
+    z-index: 1000;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+
+    background: var(--squ-surface);
+    border-top: 1px solid var(--squ-border);
+    box-shadow: 0 -6px 18px rgb(15 23 42 / 8%);
+  }
+
+  .squ-document-page .doc-mobile-total {
+    display: flex;
     flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex-shrink: 0;
+  }
+
+  .squ-document-page .doc-mobile-total span {
+    color: var(--squ-muted);
+    font-size: 11px;
+  }
+
+  .squ-document-page .doc-mobile-total strong {
+    color: var(--squ-text);
+    font-size: 15px;
+  }
+
+  .squ-document-page .doc-mobile-actions {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .squ-document-page .doc-mobile-actions > button {
+    flex: 1 1 120px;
+    min-width: 0;
+    min-height: 44px;
+    width: auto;
+  }
+
+  /* view mode: only buttons, so they fill the whole bar */
+  .squ-document-page .squ-mobile-bar--view .doc-mobile-actions {
+    justify-content: stretch;
+  }
+
+  .squ-document-page .squ-mobile-bar--view .doc-mobile-actions > button {
+    flex: 1 1 calc(50% - 8px);
   }
 
   .squ-document-page .doc-table tbody tr {
@@ -336,25 +592,30 @@
     color: var(--squ-muted);
   }
 
-  .squ-document-page .doc-mobile-actions {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .squ-document-page .doc-mobile-actions > button {
-    width: 100%;
-    min-height: 46px;
-  }
-
-  .squ-document-page.doc-detail-page .doc-header-actions {
-    display: flex;
-    width: 100%;
-    flex-wrap: wrap;
-  }
-
-  .squ-document-page.doc-detail-page .doc-header-actions > button {
-    flex: 1 1 130px;
+  .squ-document-page .squ-items-table {
     min-width: 0;
-    min-height: 44px;
+  }
+
+  .squ-document-page .squ-items-table td[data-label="Product / Service"] {
+    grid-column: 1 / -1;
+  }
+
+  .squ-combo-list {
+    max-height: 50vh;
+  }
+}
+
+/* =====================================================
+   SMALL MOBILE (<= 600px)
+===================================================== */
+
+@media (max-width: 600px) {
+  .squ-source-section {
+    padding: 14px 12px;
+  }
+
+  .squ-source-confirmation {
+    flex-direction: column;
   }
 
   .squ-primary-button {
@@ -371,6 +632,38 @@
     width: 100%;
     min-width: 0;
     white-space: normal;
+  }
+}
+
+/* very narrow: stack total above the buttons */
+@media (max-width: 400px) {
+  .squ-document-page .doc-mobile-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .squ-document-page .doc-mobile-total {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .squ-document-page .doc-mobile-actions > button {
+    flex: 1 1 100%;
+  }
+
+  .squ-document-page .squ-mobile-bar--view .doc-mobile-actions > button {
+    flex: 1 1 calc(50% - 8px);
+  }
+}
+
+@media (hover: none) {
+  .squ-primary-button:hover {
+    filter: none;
+  }
+
+  .squ-document-link:hover {
+    text-decoration: none;
   }
 }
 
