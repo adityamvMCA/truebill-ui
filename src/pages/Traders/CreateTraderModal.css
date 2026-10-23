@@ -1,0 +1,39 @@
+.create-trader-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.create-trader-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border-color, #dbe4ec);
+  border-radius: 8px;
+  background: var(--page-bg, #f8fafc);
+  color: var(--text-primary, #1e293b);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.create-trader-notice--error {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+.create-trader-notice > svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+@media (max-width: 600px) {
+  .create-trader-footer {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .create-trader-footer > button {
+    flex: 1 1 140px;
+    white-space: normal;
+  }
+}

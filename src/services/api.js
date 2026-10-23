@@ -57,7 +57,7 @@ export const api = {
   purchaseRfq: purchaseRfqApi,
   supplierQuotation: supplierQuotationApi,
   quotationComparison: quotationComparisonApi,
-   productForm: productFormApi,
+  productForm: productFormApi,
 };
 
 export default api;

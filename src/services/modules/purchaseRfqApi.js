@@ -34,6 +34,10 @@ const purchaseRfqApi = {
       data,
     }),
 
+  // NEW: approved-requisition list for the dropdown
+  getRequisitions: (params = {}) =>
+    apiClient.get("/purchase-requisitions", { params }),
+
   getRequisitionByNumber: (requisitionNumber) =>
     apiClient.get(
       `/purchase-requisitions/${encodeURIComponent(requisitionNumber)}`,

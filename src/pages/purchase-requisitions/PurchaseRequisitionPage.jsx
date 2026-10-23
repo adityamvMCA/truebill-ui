@@ -4,7 +4,9 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import {
   ArrowLeft,
+  Ban,
   Check,
+  CheckCircle2,
   ChevronDown,
   ClipboardList,
   Plus,
@@ -12,6 +14,7 @@ import {
   StickyNote,
   Trash2,
   X,
+  XCircle,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
@@ -23,7 +26,8 @@ import Select from "../../components/common/Form/Select";
 import Textarea from "../../components/common/Form/Textarea";
 import Button from "../../components/common/Form/Button";
 import StatusField from "../../components/common/StatusField/StatusField";
-import BoxModal from "../../components/common/Modal/BoxModal";
+// Adjust this path to where your ConfirmModal lives
+import ConfirmModal from "../../components/common/ConfirmModal/ConfirmModal";
 
 import {
   PRIORITIES,
@@ -70,25 +74,40 @@ const mapItems = (records = []) =>
     specification: item.specification || "",
   }));
 
+/* Each action maps straight onto ConfirmModal props */
 const ACTION_CONFIG = {
   approve: {
-    title: "Approve Purchase Requisition",
-    button: "Approve Requisition",
-    message: "Approve this purchase requirement?",
+    type: "success",
+    icon: CheckCircle2,
+    confirmIcon: Check,
+    title: "Approve requisition?",
+    message: "This purchase requirement will be approved.",
+    confirmText: "Approve",
+    cancelText: "Go Back",
     success: "Purchase Requisition approved successfully.",
   },
 
   reject: {
-    title: "Reject Purchase Requisition",
-    button: "Reject Requisition",
+    type: "danger",
+    icon: XCircle,
+    confirmIcon: X,
+    title: "Reject requisition?",
+    message: "Tell the requester why this requisition is rejected.",
+    confirmText: "Reject",
+    cancelText: "Go Back",
     field: "rejectionReason",
     label: "Rejection Reason",
     success: "Purchase Requisition rejected successfully.",
   },
 
   cancel: {
-    title: "Cancel Purchase Requisition",
-    button: "Cancel Requisition",
+    type: "warning",
+    icon: Ban,
+    confirmIcon: Ban,
+    title: "Cancel requisition?",
+    message: "Tell the team why this requisition is cancelled.",
+    confirmText: "Cancel Requisition",
+    cancelText: "Go Back",
     field: "cancellationReason",
     label: "Cancellation Reason",
     success: "Purchase Requisition cancelled successfully.",
@@ -124,9 +143,12 @@ function PurchaseRequisitionPage({ mode = "create" }) {
   const [action, setAction] = useState("");
   const [actionReason, setActionReason] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
 
   const submitLock = useRef(false);
   const actionLock = useRef(false);
+
+  const activeAction = ACTION_CONFIG[action];
 
   const editable = isCreate || (isEdit && document?.status === "CREATED");
 
@@ -150,6 +172,7 @@ function PurchaseRequisitionPage({ mode = "create" }) {
       setUncertainResult(false);
       setAction("");
       setActionReason("");
+      setLeaveOpen(false);
 
       try {
         const [productRecords, response] = await Promise.all([
@@ -405,15 +428,25 @@ function PurchaseRequisitionPage({ mode = "create" }) {
     navigate(requisitionPath(saved.requisitionNumber), { replace: true });
   };
 
+  const openAction = (name) => {
+    setAction(name);
+    setActionReason("");
+  };
+
+  const closeAction = () => {
+    if (actionLock.current) return;
+
+    setAction("");
+    setActionReason("");
+  };
+
   const confirmAction = async () => {
-    if (actionLock.current || !document || !ACTION_CONFIG[action]) {
+    if (actionLock.current || !document || !activeAction) {
       return;
     }
 
-    const config = ACTION_CONFIG[action];
-
-    if (config.field && !actionReason.trim()) {
-      toast.error(`${config.label} is required.`);
+    if (activeAction.field && !actionReason.trim()) {
+      toast.error(`${activeAction.label} is required.`);
       return;
     }
 
@@ -424,10 +457,8 @@ function PurchaseRequisitionPage({ mode = "create" }) {
       const payload = {
         version: document.__v,
 
-        ...(config.field
-          ? {
-              [config.field]: actionReason.trim(),
-            }
+        ...(activeAction.field
+          ? { [activeAction.field]: actionReason.trim() }
           : {}),
       };
 
@@ -447,7 +478,7 @@ function PurchaseRequisitionPage({ mode = "create" }) {
       setActionReason("");
       setError("");
 
-      toast.success(config.success);
+      toast.success(activeAction.success);
     } catch (requestError) {
       toast.error(getErrorMessage(requestError));
       setAction("");
@@ -458,20 +489,21 @@ function PurchaseRequisitionPage({ mode = "create" }) {
     }
   };
 
+  /* Uses ConfirmModal instead of window.confirm, which is unreliable in
+     Capacitor WebViews (especially iOS). */
   const exitPage = () => {
     if (submitLock.current || actionLock.current) return;
 
-    if (
-      (dirty || uncertainResult) &&
-      !window.confirm(
-        uncertainResult
-          ? "Open the requisition list to verify the save result?"
-          : "Discard unsaved changes and leave?",
-      )
-    ) {
+    if (dirty || uncertainResult) {
+      setLeaveOpen(true);
       return;
     }
 
+    navigate(REQUISITION_BASE);
+  };
+
+  const confirmLeave = () => {
+    setLeaveOpen(false);
     navigate(REQUISITION_BASE);
   };
 
@@ -510,10 +542,7 @@ function PurchaseRequisitionPage({ mode = "create" }) {
           variant="secondary"
           icon={X}
           disabled={actionLoading}
-          onClick={() => {
-            setAction("reject");
-            setActionReason("");
-          }}
+          onClick={() => openAction("reject")}
         >
           Reject
         </Button>
@@ -522,10 +551,7 @@ function PurchaseRequisitionPage({ mode = "create" }) {
           type="button"
           variant="secondary"
           disabled={actionLoading}
-          onClick={() => {
-            setAction("cancel");
-            setActionReason("");
-          }}
+          onClick={() => openAction("cancel")}
         >
           Cancel Requisition
         </Button>
@@ -534,10 +560,7 @@ function PurchaseRequisitionPage({ mode = "create" }) {
           type="button"
           icon={Check}
           disabled={actionLoading}
-          onClick={() => {
-            setAction("approve");
-            setActionReason("");
-          }}
+          onClick={() => openAction("approve")}
         >
           Approve
         </Button>
@@ -983,59 +1006,57 @@ function PurchaseRequisitionPage({ mode = "create" }) {
         )}
       </form>
 
-      <BoxModal
-        show={Boolean(action)}
-        onClose={() => {
-          if (!actionLock.current) {
-            setAction("");
-            setActionReason("");
-          }
-        }}
-        title={ACTION_CONFIG[action]?.title || ""}
-        subtitle={document?.requisitionNumber || ""}
-        width="min(540px, calc(100vw - 24px))"
-        footer={
-          <div className="preq-modal-actions">
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={actionLoading}
-              onClick={() => {
-                setAction("");
-                setActionReason("");
-              }}
-            >
-              Back
-            </Button>
-
-            <Button
-              type="button"
-              loading={actionLoading}
-              disabled={
-                actionLoading ||
-                (ACTION_CONFIG[action]?.field && !actionReason.trim())
-              }
-              onClick={confirmAction}
-            >
-              {ACTION_CONFIG[action]?.button || "Confirm"}
-            </Button>
-          </div>
+      {/* Approve / Reject / Cancel */}
+      <ConfirmModal
+        open={Boolean(activeAction)}
+        type={activeAction?.type}
+        icon={activeAction?.icon}
+        confirmIcon={activeAction?.confirmIcon}
+        title={activeAction?.title}
+        message={
+          activeAction
+            ? `${document?.requisitionNumber || ""}${
+                document?.requisitionNumber ? " · " : ""
+              }${activeAction.message}`
+            : ""
         }
+        confirmText={activeAction?.confirmText}
+        cancelText={activeAction?.cancelText}
+        loadingText="Please wait..."
+        loading={actionLoading}
+        onConfirm={confirmAction}
+        onCancel={closeAction}
       >
-        {ACTION_CONFIG[action]?.field ? (
-          <Textarea
-            label={ACTION_CONFIG[action].label}
-            value={actionReason}
-            onChange={(event) => setActionReason(event.target.value)}
-            maxLength={1000}
-            rows={4}
-            disabled={actionLoading}
-            required
-          />
-        ) : (
-          <p>{ACTION_CONFIG[action]?.message}</p>
+        {activeAction?.field && (
+          <div className="preq-modal-reason">
+            <Textarea
+              label={activeAction.label}
+              value={actionReason}
+              onChange={(event) => setActionReason(event.target.value)}
+              maxLength={1000}
+              rows={4}
+              disabled={actionLoading}
+              required
+            />
+          </div>
         )}
-      </BoxModal>
+      </ConfirmModal>
+
+      {/* Unsaved changes / uncertain save */}
+      <ConfirmModal
+        open={leaveOpen}
+        type="warning"
+        title={uncertainResult ? "Verify save result?" : "Discard changes?"}
+        message={
+          uncertainResult
+            ? "Open the requisition list to check whether this requisition was saved."
+            : "You have unsaved changes. If you leave now, they will be lost."
+        }
+        confirmText={uncertainResult ? "Open List" : "Discard & Leave"}
+        cancelText="Stay Here"
+        onConfirm={confirmLeave}
+        onCancel={() => setLeaveOpen(false)}
+      />
     </div>
   );
 }

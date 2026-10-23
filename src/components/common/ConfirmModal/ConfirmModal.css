@@ -519,3 +519,50 @@
     padding: 9px 10px;
   }
 }
+
+/* =====================================================================
+   APPEND to the END of ConfirmModal.css
+   Capacitor safe-area + keyboard friendliness
+   ===================================================================== */
+
+.confirm-modal {
+  padding-top: calc(14px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  padding-left: calc(14px + env(safe-area-inset-left, 0px));
+  padding-right: calc(14px + env(safe-area-inset-right, 0px));
+  overscroll-behavior: contain;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.confirm-modal__dialog {
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Reason textareas inside the modal: no iOS zoom, readable on small screens */
+.confirm-modal__extra textarea,
+.confirm-modal__extra input,
+.confirm-modal__extra select {
+  font-size: 16px;
+  max-width: 100%;
+}
+
+@media (max-width: 480px) {
+  /* Stack buttons full width on phones - easier to tap */
+  .confirm-modal__actions {
+    flex-direction: column-reverse;
+  }
+
+  .confirm-modal__button {
+    flex: 0 0 auto;
+    width: 100%;
+    min-height: 46px;
+  }
+}
+
+/* When the soft keyboard is open on a short screen, keep the dialog scrollable at the top */
+@media (max-height: 560px) {
+  .confirm-modal {
+    align-items: flex-start;
+  }
+}

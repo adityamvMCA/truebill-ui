@@ -388,3 +388,221 @@
     transition: none !important;
   }
 }
+
+/* =====================================================================
+   APPEND to the END of PurchaseRequisitions.css
+   Responsive + Capacitor (iOS / Android) hardening
+   ===================================================================== */
+
+/* ---------- Base: safe against overflow on every device ---------- */
+.preq-document-page {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+.preq-document-page form,
+.preq-document-page .doc-fieldset {
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.preq-document-page .doc-title span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.preq-document-page .doc-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+.preq-document-page .doc-alert p {
+  margin: 0 0 8px;
+  overflow-wrap: anywhere;
+}
+
+/* Reason textarea inside ConfirmModal */
+.preq-modal-reason {
+  text-align: left;
+}
+
+.preq-modal-reason textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 90px;
+}
+
+/* ---------- Large desktop ---------- */
+@media (min-width: 1440px) {
+  .preq-document-page .preq-items-table {
+    min-width: 1100px;
+  }
+}
+
+/* ---------- Tablet / small laptop ---------- */
+@media (max-width: 1024px) {
+  .preq-document-page .doc-top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .preq-document-page .doc-bottom {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .preq-document-page .doc-summary {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .preq-document-page .preq-items-table {
+    min-width: 880px;
+  }
+}
+
+/* ---------- Tablet portrait / large phones ---------- */
+@media (max-width: 768px) {
+  .preq-document-page .doc-header {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-top: calc(10px + env(safe-area-inset-top, 0px));
+    padding-left: calc(12px + env(safe-area-inset-left, 0px));
+    padding-right: calc(12px + env(safe-area-inset-right, 0px));
+  }
+
+  .preq-document-page .doc-header-left {
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+
+  .preq-document-page .doc-header-actions {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+  }
+
+  .preq-document-page .doc-fields-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .preq-document-page .doc-main {
+    border-radius: 12px;
+  }
+}
+
+/* ---------- Phones ---------- */
+@media (max-width: 600px) {
+  .preq-document-page .doc-fields-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .preq-document-page .doc-title {
+    font-size: 15px;
+  }
+
+  /* iOS zooms into any input under 16px - stop that */
+  .preq-document-page input:not([type="checkbox"]):not([type="radio"]),
+  .preq-document-page select,
+  .preq-document-page textarea,
+  .preq-modal-reason textarea {
+    font-size: 16px;
+  }
+
+  /* Comfortable touch targets */
+  .preq-document-page button,
+  .preq-document-page .doc-remove-button,
+  .preq-document-page .doc-dashed-line,
+  .preq-document-page .doc-extra-row {
+    min-height: 44px;
+  }
+
+  .preq-document-page .doc-remove-button {
+    min-width: 44px;
+  }
+
+  /* Item cards: 2-column grid, long fields span the row */
+  .preq-document-page .doc-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .preq-document-page .doc-table tbody td {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .preq-document-page .preq-items-table td[data-label="Product / Service"],
+  .preq-document-page .preq-items-table td[data-label="Specification"],
+  .preq-document-page .preq-items-table td.doc-cell-action {
+    grid-column: 1 / -1;
+  }
+
+  .preq-document-page .preq-items-table th:nth-child(n) {
+    width: auto;
+    min-width: 0;
+  }
+
+  /* Detail-view header buttons: 2 per row */
+  .preq-document-page.doc-detail-page .doc-header-actions > button {
+    flex: 1 1 calc(50% - 8px);
+  }
+
+  .preq-document-page.doc-detail-page .doc-header-actions > :first-child:not(button) {
+    flex: 1 1 100%;
+  }
+
+  /* Fixed bottom bar respects home indicator / gesture bar */
+  .preq-document-page .doc-mobile-bar {
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    padding-left: calc(12px + env(safe-area-inset-left, 0px));
+    padding-right: calc(12px + env(safe-area-inset-right, 0px));
+  }
+
+  /* Keep last fields clear of the fixed bar */
+  .preq-document-page:not(.doc-detail-page) .doc-fieldset {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .preq-document-page.doc-detail-page .doc-fieldset {
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* ---------- Very small phones (<= 360px) ---------- */
+@media (max-width: 360px) {
+  .preq-document-page .doc-table tbody tr {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .preq-document-page.doc-detail-page .doc-header-actions > button {
+    flex: 1 1 100%;
+  }
+}
+
+/* ---------- Landscape phones (short viewport) ---------- */
+@media (max-height: 480px) and (orientation: landscape) {
+  .preq-document-page .doc-mobile-bar {
+    position: static;
+  }
+
+  .preq-document-page:not(.doc-detail-page) .doc-fieldset {
+    padding-bottom: 16px;
+  }
+}
+
+/* ---------- Notch devices in landscape ---------- */
+@supports (padding: max(0px)) {
+  .preq-document-page .doc-main {
+    margin-left: max(0px, env(safe-area-inset-left));
+    margin-right: max(0px, env(safe-area-inset-right));
+  }
+}
