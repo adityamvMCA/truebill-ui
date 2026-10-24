@@ -1,14 +1,6 @@
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import {
-  useNavigate,
-  useParams,
-} from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 import {
   ArrowLeft,
@@ -16,7 +8,6 @@ import {
   FileText,
   Plus,
   Save,
-  Search,
   StickyNote,
   Trash2,
 } from "lucide-react";
@@ -111,6 +102,7 @@ function SupplierQuotationPage({ mode = "create" }) {
 
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
+  const [rfqs, setRfqs] = useState([]);
 
   const [document, setDocument] = useState(null);
   const [rfq, setRfq] = useState(null);
@@ -138,30 +130,19 @@ function SupplierQuotationPage({ mode = "create" }) {
 
   const rfqBased = form.creationMode === "RFQ";
 
-  const editable =
-    isCreate ||
-    (isEdit && document?.status === "CREATED");
+  const editable = isCreate || (isEdit && document?.status === "CREATED");
 
-  const sourceBlocked =
-    isEdit &&
-    rfqBased &&
-    rfq?.status !== "ISSUED";
+  const sourceBlocked = isEdit && rfqBased && rfq?.status !== "ISSUED";
 
-  const busy =
-    loading || sourceLoading || saving || cancelling;
+  const busy = loading || sourceLoading || saving || cancelling;
 
   const disabled =
-    busy ||
-    loadFailed ||
-    uncertainResult ||
-    !editable ||
-    sourceBlocked;
+    busy || loadFailed || uncertainResult || !editable || sourceBlocked;
 
   useEffect(() => {
     const pageVersion = ++pageVersionRef.current;
 
-    const isCurrent = () =>
-      pageVersion === pageVersionRef.current;
+    const isCurrent = () => pageVersion === pageVersionRef.current;
 
     const loadPage = async () => {
       setLoading(true);
@@ -177,38 +158,25 @@ function SupplierQuotationPage({ mode = "create" }) {
       try {
         if (
           !isCreate &&
-          (
-            !quotationNumber ||
-            ["undefined", "null"].includes(
-              quotationNumber.toLowerCase(),
-            )
-          )
+          (!quotationNumber ||
+            ["undefined", "null"].includes(quotationNumber.toLowerCase()))
         ) {
           throw new Error(
             "Supplier Quotation number is missing from the route.",
           );
         }
 
-        const [supplierRecords, productRecords, response] =
-          await Promise.all([
-            fetchAllPages(
-              api.supplierQuotation.getSuppliers,
-              "suppliers",
-            ),
+        const [supplierRecords, productRecords, response] = await Promise.all([
+          fetchAllPages(api.supplierQuotation.getSuppliers, "suppliers"),
 
-            isView
-              ? Promise.resolve([])
-              : fetchAllPages(
-                  api.supplierQuotation.getProducts,
-                  "products",
-                ),
+          isView
+            ? Promise.resolve([])
+            : fetchAllPages(api.supplierQuotation.getProducts, "products"),
 
-            isCreate
-              ? Promise.resolve(null)
-              : api.supplierQuotation.getByNumber(
-                  quotationNumber,
-                ),
-          ]);
+          isCreate
+            ? Promise.resolve(null)
+            : api.supplierQuotation.getByNumber(quotationNumber),
+        ]);
 
         if (!isCurrent()) return;
 
@@ -222,43 +190,29 @@ function SupplierQuotationPage({ mode = "create" }) {
         } else {
           const record = getDocument(response);
 
-          if (
-            !record?._id ||
-            !Number.isSafeInteger(record.__v)
-          ) {
-            throw new Error(
-              "The server did not return a valid quotation.",
-            );
+          if (!record?._id || !Number.isSafeInteger(record.__v)) {
+            throw new Error("The server did not return a valid quotation.");
           }
 
           let sourceRfq = null;
 
-          if (
-            isEdit &&
-            record.creationMode === "RFQ"
-          ) {
+          if (isEdit && record.creationMode === "RFQ") {
             if (!record.sourceRfqNumber) {
               throw new Error(
                 "The quotation is missing its source RFQ number.",
               );
             }
 
-            const rfqResponse =
-              await api.supplierQuotation.getRfqByNumber(
-                record.sourceRfqNumber,
-              );
+            const rfqResponse = await api.supplierQuotation.getRfqByNumber(
+              record.sourceRfqNumber,
+            );
 
             if (!isCurrent()) return;
 
             sourceRfq = getDocument(rfqResponse);
 
-            if (
-              getId(sourceRfq) !==
-              getId(record.sourceRfqId)
-            ) {
-              throw new Error(
-                "The source RFQ does not match this quotation.",
-              );
+            if (getId(sourceRfq) !== getId(record.sourceRfqId)) {
+              throw new Error("The source RFQ does not match this quotation.");
             }
           }
 
@@ -269,33 +223,22 @@ function SupplierQuotationPage({ mode = "create" }) {
             creationMode: record.creationMode,
             rfqNumber: record.sourceRfqNumber || "",
             supplierId: getId(record.supplierId),
-            supplierReferenceNumber:
-              record.supplierReferenceNumber || "",
+            supplierReferenceNumber: record.supplierReferenceNumber || "",
             quotationDate: dateValue(record.quotationDate),
             validUntil: dateValue(record.validUntil),
             taxMode: record.taxMode,
             paymentTerms: record.paymentTerms || "",
             deliveryTerms: record.deliveryTerms || "",
-            termsAndConditions:
-              record.termsAndConditions || "",
+            termsAndConditions: record.termsAndConditions || "",
             notes: record.notes || "",
           });
 
           setItems(mapItems(record.items));
           setShowNotes(Boolean(record.notes));
 
-          if (
-            isEdit &&
-            record.status !== "CREATED"
-          ) {
-            setError(
-              "Only CREATED quotations can be edited.",
-            );
-          } else if (
-            isEdit &&
-            sourceRfq &&
-            sourceRfq.status !== "ISSUED"
-          ) {
+          if (isEdit && record.status !== "CREATED") {
+            setError("Only CREATED quotations can be edited.");
+          } else if (isEdit && sourceRfq && sourceRfq.status !== "ISSUED") {
             setError(
               "The source RFQ is not ISSUED. This quotation cannot be edited.",
             );
@@ -318,27 +261,52 @@ function SupplierQuotationPage({ mode = "create" }) {
     return () => {
       pageVersionRef.current += 1;
     };
-  }, [
-    isCreate,
-    isEdit,
-    isView,
-    quotationNumber,
-    reloadKey,
-  ]);
+  }, [isCreate, isEdit, isView, quotationNumber, reloadKey]);
+
+  /* ---------- Load issued RFQs for the dropdown ---------- */
+
+  useEffect(() => {
+    if (!isCreate || !rfqBased) {
+      setRfqs([]);
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        setSourceLoading(true);
+
+        const records = await fetchAllPages(
+          (query) =>
+            api.supplierQuotation.getRfqs({ ...query, status: "ISSUED" }),
+          "rfqs",
+        );
+
+        if (!cancelled) {
+          setRfqs(records.filter((record) => record.status === "ISSUED"));
+        }
+      } catch (requestError) {
+        if (!cancelled) {
+          setError(getErrorMessage(requestError));
+          toast.error(getErrorMessage(requestError));
+        }
+      } finally {
+        if (!cancelled) setSourceLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isCreate, rfqBased]);
 
   const supplierMap = useMemo(
-    () =>
-      new Map(
-        suppliers.map((supplier) => [
-          getId(supplier),
-          supplier,
-        ]),
-      ),
+    () => new Map(suppliers.map((supplier) => [getId(supplier), supplier])),
     [suppliers],
   );
 
-  const selectedSupplier =
-    supplierMap.get(form.supplierId);
+  const selectedSupplier = supplierMap.get(form.supplierId);
 
   const productMap = useMemo(() => {
     const map = new Map();
@@ -364,20 +332,12 @@ function SupplierQuotationPage({ mode = "create" }) {
   }, [products, items]);
 
   const rfqLineMap = useMemo(
-    () =>
-      new Map(
-        (rfq?.items || []).map((item) => [
-          getId(item.lineId),
-          item,
-        ]),
-      ),
+    () => new Map((rfq?.items || []).map((item) => [getId(item.lineId), item])),
     [rfq],
   );
 
   const supplierOptions = useMemo(() => {
-    const invited = new Set(
-      (rfq?.supplierIds || []).map(getId),
-    );
+    const invited = new Set((rfq?.supplierIds || []).map(getId));
 
     return suppliers
       .filter((supplier) => {
@@ -385,10 +345,7 @@ function SupplierQuotationPage({ mode = "create" }) {
 
         if (id === form.supplierId) return true;
 
-        if (
-          supplier.status !== "Active" ||
-          supplier.isDeleted
-        ) {
+        if (supplier.status !== "Active" || supplier.isDeleted) {
           return false;
         }
 
@@ -397,23 +354,25 @@ function SupplierQuotationPage({ mode = "create" }) {
       .map((supplier) => ({
         value: getId(supplier),
 
-        label:
-          `${supplier.supplierName} ` +
-          `(${supplier.supplierCode})`,
+        label: `${supplier.supplierName} (${supplier.supplierCode})`,
       }));
-  }, [
-    suppliers,
-    rfq,
-    rfqBased,
-    form.supplierId,
-  ]);
+  }, [suppliers, rfq, rfqBased, form.supplierId]);
+
+  const rfqOptions = useMemo(
+    () =>
+      rfqs.map((record) => ({
+        value: record.rfqNumber,
+        label:
+          `${record.rfqNumber}` +
+          `${record.rfqDate ? ` · ${formatDate(record.rfqDate)}` : ""}`,
+      })),
+    [rfqs],
+  );
 
   const previews = useMemo(
     () =>
       items.map((item) =>
-        isView
-          ? storedPreview(item)
-          : calculatePreview(item, form.taxMode),
+        isView ? storedPreview(item) : calculatePreview(item, form.taxMode),
       ),
     [items, form.taxMode, isView],
   );
@@ -464,17 +423,13 @@ function SupplierQuotationPage({ mode = "create" }) {
   const changeSupplier = (event) => {
     if (disabled || !isCreate) return;
 
-    const supplier =
-      supplierMap.get(event.target.value);
+    const supplier = supplierMap.get(event.target.value);
 
     setForm((previous) => ({
       ...previous,
       supplierId: event.target.value,
 
-      paymentTerms:
-        previous.paymentTerms ||
-        supplier?.paymentTerms ||
-        "",
+      paymentTerms: previous.paymentTerms || supplier?.paymentTerms || "",
     }));
 
     setDirty(true);
@@ -498,9 +453,7 @@ function SupplierQuotationPage({ mode = "create" }) {
         gstRate:
           taxMode === "NONE"
             ? 0
-            : productMap.get(item.productId)?.gstRate ??
-              item.gstRate ??
-              0,
+            : (productMap.get(item.productId)?.gstRate ?? item.gstRate ?? 0),
       })),
     );
 
@@ -513,9 +466,7 @@ function SupplierQuotationPage({ mode = "create" }) {
 
     setItems((previous) =>
       previous.map((item) =>
-        item.rowId === rowId
-          ? { ...item, [field]: value }
-          : item,
+        item.rowId === rowId ? { ...item, [field]: value } : item,
       ),
     );
 
@@ -526,13 +477,9 @@ function SupplierQuotationPage({ mode = "create" }) {
   const chooseItem = (rowId, value) => {
     if (disabled) return;
 
-    const source = rfqBased
-      ? rfqLineMap.get(value)
-      : null;
+    const source = rfqBased ? rfqLineMap.get(value) : null;
 
-    const productId = rfqBased
-      ? getId(source?.productId)
-      : value;
+    const productId = rfqBased ? getId(source?.productId) : value;
 
     const product = productMap.get(productId);
 
@@ -551,40 +498,23 @@ function SupplierQuotationPage({ mode = "create" }) {
           rfqLineId: rfqBased ? value : "",
           productId,
 
-          productCode:
-            source?.productCode ||
-            product?.productCode ||
-            "",
+          productCode: source?.productCode || product?.productCode || "",
 
-          productName:
-            source?.productName ||
-            product?.name ||
-            "",
+          productName: source?.productName || product?.name || "",
 
-          productType:
-            source?.productType ||
-            product?.type ||
-            "",
+          productType: source?.productType || product?.type || "",
 
-          unit:
-            source?.unit ||
-            product?.unit ||
-            "",
+          unit: source?.unit || product?.unit || "",
 
-          hsnSacCode:
-            product?.hsnSacCode || "",
+          hsnSacCode: product?.hsnSacCode || "",
 
           quantity: String(source?.quantity ?? 1),
           unitRate: String(product?.purchasePrice ?? 0),
           discountPercent: "0",
 
-          gstRate:
-            form.taxMode === "NONE"
-              ? 0
-              : product?.gstRate ?? 0,
+          gstRate: form.taxMode === "NONE" ? 0 : (product?.gstRate ?? 0),
 
-          specification:
-            source?.specification || "",
+          specification: source?.specification || "",
         };
       }),
     );
@@ -593,20 +523,16 @@ function SupplierQuotationPage({ mode = "create" }) {
     setError("");
   };
 
-  const loadRfq = async () => {
-    if (
-      sourceLock.current ||
-      disabled ||
-      !isCreate ||
-      !rfqBased
-    ) {
+  // Accepts the number picked in the dropdown.
+  const loadRfq = async (numberOverride) => {
+    if (sourceLock.current || disabled || !isCreate || !rfqBased) {
       return;
     }
 
-    const number = form.rfqNumber.trim();
+    const number = String(numberOverride ?? form.rfqNumber).trim();
 
     if (!number) {
-      toast.error("Enter an RFQ number.");
+      toast.error("Select an RFQ.");
       return;
     }
 
@@ -617,12 +543,9 @@ function SupplierQuotationPage({ mode = "create" }) {
       setSourceLoading(true);
       setError("");
 
-      const response =
-        await api.supplierQuotation.getRfqByNumber(number);
+      const response = await api.supplierQuotation.getRfqByNumber(number);
 
-      if (
-        pageVersion !== pageVersionRef.current
-      ) {
+      if (pageVersion !== pageVersionRef.current) {
         return;
       }
 
@@ -634,9 +557,7 @@ function SupplierQuotationPage({ mode = "create" }) {
         !Number.isSafeInteger(record.__v) ||
         !record.items?.length
       ) {
-        throw new Error(
-          "Select an ISSUED RFQ containing items.",
-        );
+        throw new Error("Select an ISSUED RFQ containing items.");
       }
 
       setRfq(record);
@@ -650,22 +571,17 @@ function SupplierQuotationPage({ mode = "create" }) {
           supplierId: "",
 
           quotationDate:
-            previous.quotationDate < rfqDate
-              ? rfqDate
-              : previous.quotationDate,
+            previous.quotationDate < rfqDate ? rfqDate : previous.quotationDate,
 
           paymentTerms: record.paymentTerms || "",
           deliveryTerms: record.deliveryTerms || "",
-          termsAndConditions:
-            record.termsAndConditions || "",
+          termsAndConditions: record.termsAndConditions || "",
         };
       });
 
       setItems(
         record.items.map((item) => {
-          const product = productMap.get(
-            getId(item.productId),
-          );
+          const product = productMap.get(getId(item.productId));
 
           return {
             ...newItem(),
@@ -682,10 +598,7 @@ function SupplierQuotationPage({ mode = "create" }) {
             quantity: String(item.quantity),
             unitRate: String(product?.purchasePrice ?? 0),
 
-            gstRate:
-              form.taxMode === "NONE"
-                ? 0
-                : product?.gstRate ?? 0,
+            gstRate: form.taxMode === "NONE" ? 0 : (product?.gstRate ?? 0),
 
             specification: item.specification || "",
           };
@@ -694,25 +607,39 @@ function SupplierQuotationPage({ mode = "create" }) {
 
       setDirty(true);
     } catch (requestError) {
-      if (
-        pageVersion !== pageVersionRef.current
-      ) {
+      if (pageVersion !== pageVersionRef.current) {
         return;
       }
 
       setRfq(null);
+      setForm((previous) => ({ ...previous, rfqNumber: "" }));
       setItems([newItem()]);
       setError(getErrorMessage(requestError));
       toast.error(getErrorMessage(requestError));
     } finally {
       sourceLock.current = false;
 
-      if (
-        pageVersion === pageVersionRef.current
-      ) {
+      if (pageVersion === pageVersionRef.current) {
         setSourceLoading(false);
       }
     }
+  };
+
+  const handleRfqChange = (event) => {
+    const number = event.target.value;
+
+    setForm((previous) => ({
+      ...previous,
+      rfqNumber: number,
+      supplierId: "",
+    }));
+
+    setRfq(null);
+    setItems([newItem()]);
+    setDirty(true);
+    setError("");
+
+    if (number) loadRfq(number);
   };
 
   const validateForm = () => {
@@ -724,43 +651,26 @@ function SupplierQuotationPage({ mode = "create" }) {
       throw new Error("Quotation date is required.");
     }
 
-    if (
-      form.validUntil &&
-      form.validUntil < form.quotationDate
-    ) {
-      throw new Error(
-        "Validity date cannot precede quotation date.",
-      );
+    if (form.validUntil && form.validUntil < form.quotationDate) {
+      throw new Error("Validity date cannot precede quotation date.");
     }
 
     if (rfqBased) {
       if (!rfq || rfq.status !== "ISSUED") {
-        throw new Error("Load an ISSUED RFQ.");
+        throw new Error("Select an ISSUED RFQ.");
       }
 
-      if (
-        form.quotationDate < dateValue(rfq.rfqDate)
-      ) {
-        throw new Error(
-          "Quotation date cannot precede RFQ date.",
-        );
+      if (form.quotationDate < dateValue(rfq.rfqDate)) {
+        throw new Error("Quotation date cannot precede RFQ date.");
       }
 
-      if (
-        !rfq.supplierIds.some(
-          (id) => getId(id) === form.supplierId,
-        )
-      ) {
-        throw new Error(
-          "Select a supplier invited to this RFQ.",
-        );
+      if (!rfq.supplierIds.some((id) => getId(id) === form.supplierId)) {
+        throw new Error("Select a supplier invited to this RFQ.");
       }
     }
 
     if (!items.length || items.length > 200) {
-      throw new Error(
-        "Provide between 1 and 200 quotation items.",
-      );
+      throw new Error("Provide between 1 and 200 quotation items.");
     }
 
     const sourceIds = new Set();
@@ -780,29 +690,20 @@ function SupplierQuotationPage({ mode = "create" }) {
       }
 
       if (rfqBased) {
-        const source =
-          rfqLineMap.get(item.rfqLineId);
+        const source = rfqLineMap.get(item.rfqLineId);
 
-        if (
-          !source ||
-          getId(source.productId) !== item.productId
-        ) {
-          throw new Error(
-            `Select a valid RFQ line for item ${index + 1}.`,
-          );
+        if (!source || getId(source.productId) !== item.productId) {
+          throw new Error(`Select a valid RFQ line for item ${index + 1}.`);
         }
 
         if (sourceIds.has(item.rfqLineId)) {
-          throw new Error(
-            "An RFQ line cannot appear twice.",
-          );
+          throw new Error("An RFQ line cannot appear twice.");
         }
 
         sourceIds.add(item.rfqLineId);
 
         if (
-          scaledInteger(item.quantity, 1000) >
-          Math.round(source.quantity * 1000)
+          scaledInteger(item.quantity, 1000) > Math.round(source.quantity * 1000)
         ) {
           throw new Error(
             `Quoted quantity exceeds the RFQ quantity for ${item.productName}.`,
@@ -813,63 +714,43 @@ function SupplierQuotationPage({ mode = "create" }) {
 
     if (
       Object.values(totals).some(
-        (amount) =>
-          !Number.isSafeInteger(amount) ||
-          amount < 0,
+        (amount) => !Number.isSafeInteger(amount) || amount < 0,
       )
     ) {
-      throw new Error(
-        "Quotation amounts exceed the supported range.",
-      );
+      throw new Error("Quotation amounts exceed the supported range.");
     }
   };
 
   const buildPayload = () => {
     const payload = {
-      supplierReferenceNumber:
-        form.supplierReferenceNumber.trim() || null,
+      supplierReferenceNumber: form.supplierReferenceNumber.trim() || null,
 
       quotationDate: form.quotationDate,
       validUntil: form.validUntil || null,
       taxMode: form.taxMode,
 
       items: items.map((item) => ({
-        ...(item.lineId
-          ? { lineId: item.lineId }
-          : {}),
+        ...(item.lineId ? { lineId: item.lineId } : {}),
 
-        ...(rfqBased
-          ? { rfqLineId: item.rfqLineId }
-          : {}),
+        ...(rfqBased ? { rfqLineId: item.rfqLineId } : {}),
 
         productId: item.productId,
         quantity: Number(item.quantity),
 
-        unitRatePaise: scaledInteger(
-          item.unitRate,
-          100,
-        ),
+        unitRatePaise: scaledInteger(item.unitRate, 100),
 
-        discountPercent:
-          Number(item.discountPercent),
+        discountPercent: Number(item.discountPercent),
 
-        gstRate:
-          form.taxMode === "NONE"
-            ? 0
-            : Number(item.gstRate),
+        gstRate: form.taxMode === "NONE" ? 0 : Number(item.gstRate),
 
-        specification:
-          item.specification.trim() || null,
+        specification: item.specification.trim() || null,
       })),
 
-      paymentTerms:
-        form.paymentTerms.trim() || null,
+      paymentTerms: form.paymentTerms.trim() || null,
 
-      deliveryTerms:
-        form.deliveryTerms.trim() || null,
+      deliveryTerms: form.deliveryTerms.trim() || null,
 
-      termsAndConditions:
-        form.termsAndConditions.trim() || null,
+      termsAndConditions: form.termsAndConditions.trim() || null,
 
       notes: form.notes.trim() || null,
     };
@@ -917,10 +798,7 @@ function SupplierQuotationPage({ mode = "create" }) {
       setError("");
 
       const response = isEdit
-        ? await api.supplierQuotation.update(
-            document.quotationNumber,
-            payload,
-          )
+        ? await api.supplierQuotation.update(document.quotationNumber, payload)
         : await api.supplierQuotation.create(payload);
 
       saved = getDocument(response);
@@ -933,11 +811,7 @@ function SupplierQuotationPage({ mode = "create" }) {
     } catch (requestError) {
       const status = requestError?.response?.status;
 
-      if (
-        !status ||
-        status >= 500 ||
-        status === 408
-      ) {
+      if (!status || status >= 500 || status === 408) {
         setUncertainResult(true);
       }
 
@@ -958,10 +832,7 @@ function SupplierQuotationPage({ mode = "create" }) {
         : "Supplier Quotation created successfully.",
     );
 
-    navigate(
-      supplierQuotationPath(saved.quotationNumber),
-      { replace: true },
-    );
+    navigate(supplierQuotationPath(saved.quotationNumber), { replace: true });
   };
 
   const confirmCancel = async () => {
@@ -976,30 +847,25 @@ function SupplierQuotationPage({ mode = "create" }) {
       cancelLock.current = true;
       setCancelling(true);
 
-      const response =
-        await api.supplierQuotation.cancel(
-          document.quotationNumber,
-          {
-            version: document.__v,
-            cancellationReason: cancelReason.trim(),
-          },
-        );
+      const response = await api.supplierQuotation.cancel(
+        document.quotationNumber,
+        {
+          version: document.__v,
+          cancellationReason: cancelReason.trim(),
+        },
+      );
 
       const updated = getDocument(response);
 
       if (!updated?.quotationNumber) {
-        throw new Error(
-          "Reload the quotation to verify its status.",
-        );
+        throw new Error("Reload the quotation to verify its status.");
       }
 
       setDocument(updated);
       setCancelOpen(false);
       setCancelReason("");
 
-      toast.success(
-        "Supplier Quotation cancelled successfully.",
-      );
+      toast.success("Supplier Quotation cancelled successfully.");
     } catch (requestError) {
       toast.error(getErrorMessage(requestError));
       setCancelOpen(false);
@@ -1011,11 +877,7 @@ function SupplierQuotationPage({ mode = "create" }) {
   };
 
   const exitPage = () => {
-    if (
-      submitLock.current ||
-      sourceLock.current ||
-      cancelLock.current
-    ) {
+    if (submitLock.current || sourceLock.current || cancelLock.current) {
       return;
     }
 
@@ -1041,11 +903,7 @@ function SupplierQuotationPage({ mode = "create" }) {
       loading={saving}
       onClick={saveQuotation}
     >
-      {saving
-        ? "Saving..."
-        : isEdit
-          ? "Update Quotation"
-          : "Create Quotation"}
+      {saving ? "Saving..." : isEdit ? "Update Quotation" : "Create Quotation"}
     </Button>
   );
 
@@ -1055,10 +913,7 @@ function SupplierQuotationPage({ mode = "create" }) {
         isView ? "doc-detail-page" : ""
       }`}
     >
-      <form
-        noValidate
-        onSubmit={(event) => event.preventDefault()}
-      >
+      <form noValidate onSubmit={(event) => event.preventDefault()}>
         <header className="doc-header">
           <div className="doc-header-left">
             <Button
@@ -1076,8 +931,7 @@ function SupplierQuotationPage({ mode = "create" }) {
 
               <span>
                 {isView
-                  ? document?.quotationNumber ||
-                    "Supplier Quotation"
+                  ? document?.quotationNumber || "Supplier Quotation"
                   : isEdit
                     ? "Edit Supplier Quotation"
                     : "Create Supplier Quotation"}
@@ -1086,9 +940,7 @@ function SupplierQuotationPage({ mode = "create" }) {
           </div>
 
           <div className="doc-header-actions">
-            {document && (
-              <StatusField value={document.status} />
-            )}
+            {document && <StatusField value={document.status} />}
 
             {isView ? (
               <>
@@ -1128,9 +980,7 @@ function SupplierQuotationPage({ mode = "create" }) {
                   type="button"
                   variant="secondary"
                   disabled={busy}
-                  onClick={() =>
-                    setReloadKey((value) => value + 1)
-                  }
+                  onClick={() => setReloadKey((value) => value + 1)}
                 >
                   Refresh
                 </Button>
@@ -1150,30 +1000,21 @@ function SupplierQuotationPage({ mode = "create" }) {
             )}
 
             {error && (
-              <div
-                className="doc-alert doc-alert-error"
-                role="alert"
-              >
+              <div className="doc-alert doc-alert-error" role="alert">
                 <p>{error}</p>
 
                 {loadFailed && (
                   <Button
                     type="button"
                     variant="secondary"
-                    onClick={() =>
-                      setReloadKey((value) => value + 1)
-                    }
+                    onClick={() => setReloadKey((value) => value + 1)}
                   >
                     Retry Loading
                   </Button>
                 )}
 
                 {uncertainResult && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={exitPage}
-                  >
+                  <Button type="button" variant="secondary" onClick={exitPage}>
                     Check Quotations
                   </Button>
                 )}
@@ -1182,10 +1023,7 @@ function SupplierQuotationPage({ mode = "create" }) {
           </div>
         )}
 
-        <fieldset
-          className="doc-fieldset"
-          disabled={disabled}
-        >
+        <fieldset className="doc-fieldset" disabled={disabled}>
           <main className="doc-main">
             {isCreate && (
               <section className="squ-source-section">
@@ -1206,37 +1044,17 @@ function SupplierQuotationPage({ mode = "create" }) {
                 />
 
                 {rfqBased && (
-                  <div className="squ-source-search">
-                    <Input
-                      label="RFQ Number"
-                      value={form.rfqNumber}
-                      placeholder="Enter issued RFQ number"
-                      onChange={(event) => {
-                        setForm((previous) => ({
-                          ...previous,
-                          rfqNumber: event.target.value,
-                          supplierId: "",
-                        }));
-
-                        setRfq(null);
-                        setItems([newItem()]);
-                        setDirty(true);
-                      }}
-                    />
-
-                    <Button
-                      type="button"
-                      icon={Search}
-                      onClick={loadRfq}
-                      loading={sourceLoading}
-                      disabled={
-                        disabled ||
-                        !form.rfqNumber.trim()
-                      }
-                    >
-                      Load RFQ
-                    </Button>
-                  </div>
+                  <Select
+                    label="RFQ"
+                    value={form.rfqNumber}
+                    placeholder={
+                      sourceLoading && !rfqs.length
+                        ? "Loading RFQs..."
+                        : "Select issued RFQ"
+                    }
+                    options={rfqOptions}
+                    onChange={handleRfqChange}
+                  />
                 )}
 
                 {rfq && (
@@ -1254,23 +1072,16 @@ function SupplierQuotationPage({ mode = "create" }) {
 
             <section className="doc-top">
               <div className="doc-panel doc-party-panel">
-                <h2 className="doc-panel-title">
-                  Quotation From
-                </h2>
+                <h2 className="doc-panel-title">Quotation From</h2>
 
                 <Select
                   label="Supplier"
                   value={form.supplierId}
                   options={supplierOptions}
                   placeholder={
-                    rfqBased
-                      ? "Select invited supplier"
-                      : "Select supplier"
+                    rfqBased ? "Select invited supplier" : "Select supplier"
                   }
-                  disabled={
-                    !isCreate ||
-                    (rfqBased && !rfq)
-                  }
+                  disabled={!isCreate || (rfqBased && !rfq)}
                   onChange={changeSupplier}
                   required
                 />
@@ -1284,9 +1095,7 @@ function SupplierQuotationPage({ mode = "create" }) {
                     </div>
 
                     <div className="doc-party-copy">
-                      <h3>
-                        {selectedSupplier.supplierName}
-                      </h3>
+                      <h3>{selectedSupplier.supplierName}</h3>
 
                       <p>{selectedSupplier.supplierCode}</p>
 
@@ -1304,29 +1113,22 @@ function SupplierQuotationPage({ mode = "create" }) {
                 )}
 
                 {form.rfqNumber && (
-                  <p className="doc-note">
-                    Source RFQ: {form.rfqNumber}
-                  </p>
+                  <p className="doc-note">Source RFQ: {form.rfqNumber}</p>
                 )}
 
                 <div className="squ-information">
-                  Offers are entered by admin. Saving a quotation
-                  does not update stock or create a journal.
+                  Offers are entered by admin. Saving a quotation does not
+                  update stock or create a journal.
                 </div>
               </div>
 
               <div className="doc-panel">
-                <h2 className="doc-panel-title">
-                  Quotation Details
-                </h2>
+                <h2 className="doc-panel-title">Quotation Details</h2>
 
                 <div className="doc-fields-grid">
                   <Input
                     label="Quotation Number"
-                    value={
-                      document?.quotationNumber ||
-                      "Generated after creation"
-                    }
+                    value={document?.quotationNumber || "Generated after creation"}
                     readOnly
                   />
 
@@ -1344,9 +1146,7 @@ function SupplierQuotationPage({ mode = "create" }) {
                     name="quotationDate"
                     type="date"
                     value={form.quotationDate}
-                    min={
-                      rfq ? dateValue(rfq.rfqDate) : undefined
-                    }
+                    min={rfq ? dateValue(rfq.rfqDate) : undefined}
                     onChange={changeField}
                     required
                   />
@@ -1408,11 +1208,9 @@ function SupplierQuotationPage({ mode = "create" }) {
 
                   <tbody>
                     {items.map((item, index) => {
-                      const product =
-                        productMap.get(item.productId);
+                      const product = productMap.get(item.productId);
 
-                      const source =
-                        rfqLineMap.get(item.rfqLineId);
+                      const source = rfqLineMap.get(item.rfqLineId);
 
                       const options = rfqBased
                         ? (rfq?.items || []).map((line, sourceIndex) => ({
@@ -1427,10 +1225,8 @@ function SupplierQuotationPage({ mode = "create" }) {
                             .filter(
                               (record) =>
                                 getId(record) === item.productId ||
-                                (
-                                  record.status === "ACTIVE" &&
-                                  !record.isDeleted
-                                ),
+                                (record.status === "ACTIVE" &&
+                                  !record.isDeleted),
                             )
                             .map((record) => ({
                               value: getId(record),
@@ -1446,10 +1242,7 @@ function SupplierQuotationPage({ mode = "create" }) {
 
                       return (
                         <tr key={item.rowId}>
-                          <td
-                            className="doc-cell-no"
-                            data-label="No."
-                          >
+                          <td className="doc-cell-no" data-label="No.">
                             {index + 1}
                           </td>
 
@@ -1459,9 +1252,7 @@ function SupplierQuotationPage({ mode = "create" }) {
                           >
                             {isView ? (
                               <div className="squ-document-cell">
-                                <strong>
-                                  {item.productName}
-                                </strong>
+                                <strong>{item.productName}</strong>
 
                                 <span>
                                   {item.productCode} · {item.unit}
@@ -1471,9 +1262,7 @@ function SupplierQuotationPage({ mode = "create" }) {
                               <>
                                 <Select
                                   value={
-                                    rfqBased
-                                      ? item.rfqLineId
-                                      : item.productId
+                                    rfqBased ? item.rfqLineId : item.productId
                                   }
                                   options={options}
                                   placeholder={
@@ -1482,18 +1271,13 @@ function SupplierQuotationPage({ mode = "create" }) {
                                       : "Select product"
                                   }
                                   onChange={(event) =>
-                                    chooseItem(
-                                      item.rowId,
-                                      event.target.value,
-                                    )
+                                    chooseItem(item.rowId, event.target.value)
                                   }
                                   aria-label={`Product ${index + 1}`}
                                 />
 
                                 <small className="doc-item-meta">
-                                  {item.unit ||
-                                    product?.unit ||
-                                    "—"}
+                                  {item.unit || product?.unit || "—"}
                                   {source
                                     ? ` · Requested ${source.quantity}`
                                     : ""}
@@ -1522,13 +1306,8 @@ function SupplierQuotationPage({ mode = "create" }) {
                             )}
                           </td>
 
-                          <td
-                            className="doc-cell-hsn"
-                            data-label="HSN / SAC"
-                          >
-                            {item.hsnSacCode ||
-                              product?.hsnSacCode ||
-                              "—"}
+                          <td className="doc-cell-hsn" data-label="HSN / SAC">
+                            {item.hsnSacCode || product?.hsnSacCode || "—"}
                           </td>
 
                           {[
@@ -1539,53 +1318,38 @@ function SupplierQuotationPage({ mode = "create" }) {
                               source?.quantity || "1000000",
                               "0.001",
                             ],
-                            [
-                              "unitRate",
-                              "Unit Rate",
-                              "0",
-                              "1000000000",
-                              "0.01",
-                            ],
-                            [
-                              "discountPercent",
-                              "Discount %",
-                              "0",
-                              "100",
-                              "0.01",
-                            ],
-                          ].map(
-                            ([field, label, min, max, step]) => (
-                              <td
-                                key={field}
-                                data-label={label}
-                              >
-                                {isView ? (
-                                  field === "unitRate"
-                                    ? formatPaise(item.unitRatePaise)
-                                    : field === "discountPercent"
-                                      ? `${item[field]}%`
-                                      : item[field]
+                            ["unitRate", "Unit Rate", "0", "1000000000", "0.01"],
+                            ["discountPercent", "Discount %", "0", "100", "0.01"],
+                          ].map(([field, label, min, max, step]) => (
+                            <td key={field} data-label={label}>
+                              {isView ? (
+                                field === "unitRate" ? (
+                                  formatPaise(item.unitRatePaise)
+                                ) : field === "discountPercent" ? (
+                                  `${item[field]}%`
                                 ) : (
-                                  <Input
-                                    type="number"
-                                    inputMode="decimal"
-                                    min={min}
-                                    max={max}
-                                    step={step}
-                                    value={item[field]}
-                                    onChange={(event) =>
-                                      updateItem(
-                                        item.rowId,
-                                        field,
-                                        event.target.value,
-                                      )
-                                    }
-                                    aria-label={`${label} ${index + 1}`}
-                                  />
-                                )}
-                              </td>
-                            ),
-                          )}
+                                  item[field]
+                                )
+                              ) : (
+                                <Input
+                                  type="number"
+                                  inputMode="decimal"
+                                  min={min}
+                                  max={max}
+                                  step={step}
+                                  value={item[field]}
+                                  onChange={(event) =>
+                                    updateItem(
+                                      item.rowId,
+                                      field,
+                                      event.target.value,
+                                    )
+                                  }
+                                  aria-label={`${label} ${index + 1}`}
+                                />
+                              )}
+                            </td>
+                          ))}
 
                           <td data-label="GST">
                             {isView ? (
@@ -1610,10 +1374,7 @@ function SupplierQuotationPage({ mode = "create" }) {
                             )}
                           </td>
 
-                          <td
-                            className="doc-cell-amount"
-                            data-label="Amount"
-                          >
+                          <td className="doc-cell-amount" data-label="Amount">
                             {formatPaise(previews[index].total)}
                           </td>
 
@@ -1630,8 +1391,7 @@ function SupplierQuotationPage({ mode = "create" }) {
                                 onClick={() => {
                                   setItems((previous) =>
                                     previous.filter(
-                                      (record) =>
-                                        record.rowId !== item.rowId,
+                                      (record) => record.rowId !== item.rowId,
                                     ),
                                   );
 
@@ -1654,15 +1414,9 @@ function SupplierQuotationPage({ mode = "create" }) {
                   <button
                     type="button"
                     className="doc-dashed-line"
-                    disabled={
-                      items.length >= 200 ||
-                      (rfqBased && !rfq)
-                    }
+                    disabled={items.length >= 200 || (rfqBased && !rfq)}
                     onClick={() => {
-                      setItems((previous) => [
-                        ...previous,
-                        newItem(),
-                      ]);
+                      setItems((previous) => [...previous, newItem()]);
 
                       setDirty(true);
                     }}
@@ -1690,13 +1444,9 @@ function SupplierQuotationPage({ mode = "create" }) {
                 {!isView && (
                   <button
                     type="button"
-                    className={`doc-extra-row ${
-                      showNotes ? "is-open" : ""
-                    }`}
+                    className={`doc-extra-row ${showNotes ? "is-open" : ""}`}
                     aria-expanded={showNotes}
-                    onClick={() =>
-                      setShowNotes((previous) => !previous)
-                    }
+                    onClick={() => setShowNotes((previous) => !previous)}
                   >
                     <StickyNote size={16} />
                     <span>Additional Notes</span>
@@ -1719,9 +1469,7 @@ function SupplierQuotationPage({ mode = "create" }) {
 
                 {document?.cancellationReason && (
                   <div className="doc-panel">
-                    <h2 className="doc-panel-title">
-                      Cancellation Reason
-                    </h2>
+                    <h2 className="doc-panel-title">Cancellation Reason</h2>
 
                     <p className="squ-text-content">
                       {document.cancellationReason}
@@ -1747,10 +1495,7 @@ function SupplierQuotationPage({ mode = "create" }) {
                     ? [["IGST", totals.igst]]
                     : []),
                 ].map(([label, amount]) => (
-                  <div
-                    className="doc-summary-row"
-                    key={label}
-                  >
+                  <div className="doc-summary-row" key={label}>
                     <span>{label}</span>
                     <strong>{formatPaise(amount)}</strong>
                   </div>
@@ -1778,9 +1523,7 @@ function SupplierQuotationPage({ mode = "create" }) {
               <strong>{formatPaise(totals.total)}</strong>
             </div>
 
-            <div className="doc-mobile-actions">
-              {saveButton}
-            </div>
+            <div className="doc-mobile-actions">{saveButton}</div>
           </div>
         )}
       </form>
@@ -1809,10 +1552,7 @@ function SupplierQuotationPage({ mode = "create" }) {
             <Button
               type="button"
               loading={cancelling}
-              disabled={
-                cancelling ||
-                !cancelReason.trim()
-              }
+              disabled={cancelling || !cancelReason.trim()}
               onClick={confirmCancel}
             >
               Cancel Quotation
@@ -1823,9 +1563,7 @@ function SupplierQuotationPage({ mode = "create" }) {
         <Textarea
           label="Cancellation Reason"
           value={cancelReason}
-          onChange={(event) =>
-            setCancelReason(event.target.value)
-          }
+          onChange={(event) => setCancelReason(event.target.value)}
           maxLength={1000}
           rows={4}
           disabled={cancelling}

@@ -50,7 +50,9 @@ export const formatDate = (value) => {
 };
 
 export const normalizeTaxMode = (value) => {
-  const normalized = String(value || "").replace(/_/g, "").toUpperCase();
+  const normalized = String(value || "")
+    .replace(/_/g, "")
+    .toUpperCase();
 
   if (normalized === "INTRASTATE") return "INTRA_STATE";
   if (normalized === "INTERSTATE") return "INTER_STATE";
@@ -72,11 +74,7 @@ export const addDays = (value, days) => {
   const date = new Date(`${value}T00:00:00Z`);
   const count = Number(days);
 
-  if (
-    Number.isNaN(date.getTime()) ||
-    !Number.isInteger(count) ||
-    count < 0
-  ) {
+  if (Number.isNaN(date.getTime()) || !Number.isInteger(count) || count < 0) {
     return value;
   }
 
@@ -116,7 +114,9 @@ export const extractList = (response, key) => {
   throw new Error(`Invalid ${key} response.`);
 };
 
-export const loadAllPages = async (service, key) => {
+// extraParams lets callers add filters such as
+// { supplierId, status: "CREATED" } to every page request.
+export const loadAllPages = async (service, key, extraParams = {}) => {
   if (typeof service?.getAll !== "function") {
     throw new Error(`The ${key} API is not configured.`);
   }
@@ -126,6 +126,7 @@ export const loadAllPages = async (service, key) => {
 
   while (true) {
     const response = await service.getAll({
+      ...extraParams,
       page,
       limit: 100,
     });
@@ -155,11 +156,15 @@ export const loadAllPages = async (service, key) => {
 
   return Array.from(
     new Map(
-      records.map((record) => [
+      records.map((record, index) => [
         record._id ||
           record.billNumber ||
+          record.quotationNumber ||
+          record.receiptNumber ||
+          record.grnNumber ||
           record.productCode ||
-          record.supplierCode,
+          record.supplierCode ||
+          `row-${index}`,
         record,
       ]),
     ).values(),
@@ -210,8 +215,7 @@ export const calculatePreview = (item, taxMode) => {
 
   const normalizedTaxMode = normalizeTaxMode(taxMode);
 
-  const gstRate =
-    normalizedTaxMode === "NONE" ? 0 : Number(item.gstRate);
+  const gstRate = normalizedTaxMode === "NONE" ? 0 : Number(item.gstRate);
 
   if (
     !item.productId ||
@@ -233,14 +237,11 @@ export const calculatePreview = (item, taxMode) => {
     const taxable = gross - discountAmount;
     const tax = multiplyDivide(taxable, gstRate, 100);
 
-    const cgst =
-      normalizedTaxMode === "INTRA_STATE" ? Math.floor(tax / 2) : 0;
+    const cgst = normalizedTaxMode === "INTRA_STATE" ? Math.floor(tax / 2) : 0;
 
-    const sgst =
-      normalizedTaxMode === "INTRA_STATE" ? tax - cgst : 0;
+    const sgst = normalizedTaxMode === "INTRA_STATE" ? tax - cgst : 0;
 
-    const igst =
-      normalizedTaxMode === "INTER_STATE" ? tax : 0;
+    const igst = normalizedTaxMode === "INTER_STATE" ? tax : 0;
 
     const total = taxable + cgst + sgst + igst;
 
@@ -261,5 +262,4 @@ export const calculatePreview = (item, taxMode) => {
   }
 };
 
-export const isUnposted = (bill) =>
-  ["CREATED", "DRAFT"].includes(bill?.status);
+export const isUnposted = (bill) => ["CREATED", "DRAFT"].includes(bill?.status);

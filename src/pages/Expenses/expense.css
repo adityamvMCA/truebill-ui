@@ -1,0 +1,185 @@
+/* =========================================================
+   EXPENSE PAGES
+   Loaded AFTER invoice-common1.css. Uses the same theme
+   variables (--primary-color / --primary-light), so a theme
+   change recolors these pages automatically.
+   ========================================================= */
+
+/* ---------- Column widths for the 7-column expense table ---------- */
+
+.doc-table.exp-table {
+  min-width: 900px;
+}
+
+.doc-table.exp-table th:nth-child(1) {
+  width: 50px;
+}
+
+.doc-table.exp-table th:nth-child(2) {
+  width: auto;
+  min-width: 230px;
+}
+
+.doc-table.exp-table th:nth-child(3) {
+  width: auto;
+  min-width: 220px;
+}
+
+.doc-table.exp-table th:nth-child(4) {
+  width: 140px;
+}
+
+.doc-table.exp-table th:nth-child(5) {
+  width: 120px;
+}
+
+.doc-table.exp-table th:nth-child(6) {
+  width: 140px;
+}
+
+.doc-table.exp-table th:nth-child(7) {
+  width: 52px;
+}
+
+/* Read-only detail table has no remove column. */
+.doc-table.exp-table-detail th:nth-child(7) {
+  width: auto;
+}
+
+/* ---------- Status badges ---------- */
+
+.exp-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 4px 12px;
+
+  border: 1px solid transparent;
+  border-radius: 999px;
+
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.exp-status::before {
+  width: 7px;
+  height: 7px;
+
+  content: "";
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* NEW follows the active color theme. */
+.exp-status-new {
+  background: var(--primary-light, #eff6ff);
+  color: var(--primary-color, #2563eb);
+  border-color: var(--primary-color, #2563eb);
+}
+
+.exp-status-approved {
+  background: #ecfdf3;
+  color: #027a48;
+  border-color: #a6f4c5;
+}
+
+.exp-status-rejected {
+  background: #fff1f2;
+  color: #b42318;
+  border-color: #fecaca;
+}
+
+.exp-status-cancelled {
+  background: #f1f5f9;
+  color: #64748b;
+  border-color: #e2e8f0;
+}
+
+/* ---------- Info and reason boxes ---------- */
+
+.exp-info {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+
+  border: 1px solid var(--primary-color, #2563eb);
+  border-left-width: 4px;
+  border-radius: 6px;
+
+  background: var(--primary-light, #eff6ff);
+  color: #334155;
+
+  font-size: 13px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+.exp-reason {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+
+  border: 1px solid #fecaca;
+  border-left-width: 4px;
+  border-radius: 6px;
+
+  background: #fff7f7;
+  color: #b42318;
+
+  font-size: 13px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+.exp-balance-hint {
+  margin: 6px 0 0;
+
+  color: #8491a3;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+/* ---------- Reject dialog (rendered inside ConfirmModal) ---------- */
+
+.exp-reject-reason {
+  width: 100%;
+  margin-top: 12px;
+
+  text-align: left;
+}
+
+.exp-reason-error {
+  margin: 6px 0 0;
+
+  color: #b42318;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+/* ---------- Detail header actions ---------- */
+
+.exp-header-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* ---------- Mobile ---------- */
+
+@media (max-width: 600px) {
+  .doc-table.exp-table {
+    min-width: 0;
+  }
+
+  /* Description and account use the full card width. */
+  .doc-page .exp-table tbody td.doc-cell-item {
+    grid-column: 1 / -1;
+  }
+
+  .exp-info,
+  .exp-reason {
+    margin-bottom: 12px;
+  }
+}

@@ -1,4 +1,3 @@
-
 import apiClient from "../apiClient";
 
 const supplierQuotationApi = {
@@ -37,6 +36,8 @@ const supplierQuotationApi = {
   getProducts: (params = {}) => apiClient.get("/products", { params }),
 
   getUsers: (params = {}) => apiClient.get("/users", { params }),
+
+  getRfqs: (params = {}) => apiClient.get("/purchase-rfqs", { params }),
 };
 
 export default supplierQuotationApi;

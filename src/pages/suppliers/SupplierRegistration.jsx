@@ -1,11 +1,6 @@
 import { useEffect, useState } from "react";
 
-import {
-  Building2,
-  CreditCard,
-  FileText,
-  MapPin,
-} from "lucide-react";
+import { Building2, CreditCard, FileText, MapPin } from "lucide-react";
 
 import toast from "react-hot-toast";
 
@@ -15,7 +10,6 @@ import Select from "../../components/common/Form/Select";
 import Textarea from "../../components/common/Form/Textarea";
 import BoxModal from "../../components/common/Modal/BoxModal";
 import supplierApi from "../../services/modules/supplierApi";
-
 
 const initialFormData = {
   supplierName: "",
@@ -152,15 +146,8 @@ const statusOptions = [
   },
 ];
 
-function SupplierRegistration({
-  isOpen,
-  onClose,
-  onSave,
-  editData = null,
-}) {
-  const [formData, setFormData] = useState(
-    initialFormData,
-  );
+function SupplierRegistration({ isOpen, onClose, onSave, editData = null }) {
+  const [formData, setFormData] = useState(initialFormData);
 
   const [saving, setSaving] = useState(false);
 
@@ -174,16 +161,13 @@ function SupplierRegistration({
         ...initialFormData,
 
         supplierName: editData.supplierName || "",
-        supplierType:
-          editData.supplierType || "Business",
+        supplierType: editData.supplierType || "Business",
 
-        contactPerson:
-          editData.contactPerson || "",
+        contactPerson: editData.contactPerson || "",
 
         phone: editData.phone || "",
 
-        alternatePhone:
-          editData.alternatePhone || "",
+        alternatePhone: editData.alternatePhone || "",
 
         email: editData.email || "",
 
@@ -191,11 +175,9 @@ function SupplierRegistration({
 
         panNo: editData.panNo || "",
 
-        billingAddress:
-          editData.billingAddress || "",
+        billingAddress: editData.billingAddress || "",
 
-        shippingAddress:
-          editData.shippingAddress || "",
+        shippingAddress: editData.shippingAddress || "",
 
         city: editData.city || "",
 
@@ -205,21 +187,15 @@ function SupplierRegistration({
 
         country: editData.country || "India",
 
-        paymentTerms:
-          editData.paymentTerms ||
-          "Due on Receipt",
+        paymentTerms: editData.paymentTerms || "Due on Receipt",
 
-        creditLimit:
-          editData.creditLimit?.toString() || "",
+        creditLimit: editData.creditLimit?.toString() || "",
 
-        creditDays:
-          editData.creditDays?.toString() || "",
+        creditDays: editData.creditDays?.toString() || "",
 
-        openingBalance:
-          editData.openingBalance?.toString() || "",
+        openingBalance: editData.openingBalance?.toString() || "",
 
-        openingBalanceType:
-          editData.openingBalanceType || "CREDIT",
+        openingBalanceType: editData.openingBalanceType || "CREDIT",
 
         status: editData.status || "Active",
 
@@ -250,33 +226,77 @@ function SupplierRegistration({
   const getErrorMessage = (error) => {
     const responseData = error?.response?.data;
 
-    if (typeof responseData?.message === "string") {
-      return responseData.message;
+    const nestedError =
+      responseData?.error && typeof responseData.error === "object"
+        ? responseData.error
+        : null;
+
+    const rawMessage =
+      (typeof responseData?.message === "string" && responseData.message) ||
+      (typeof responseData?.error === "string" && responseData.error) ||
+      nestedError?.message ||
+      error?.message ||
+      "";
+
+    const code = responseData?.code ?? nestedError?.code ?? error?.code;
+
+    const isDuplicate =
+      Number(code) === 11000 || /E11000|duplicate key/i.test(rawMessage);
+
+    if (isDuplicate) {
+      const keyValue =
+        responseData?.keyValue ??
+        nestedError?.keyValue ??
+        error?.keyValue ??
+        {};
+
+      const keyPattern =
+        responseData?.keyPattern ??
+        nestedError?.keyPattern ??
+        error?.keyPattern ??
+        {};
+
+      const field =
+        Object.keys(keyValue)[0] ||
+        Object.keys(keyPattern)[0] ||
+        responseData?.field ||
+        "";
+
+      const fieldLabels = {
+        supplierName: "Supplier name",
+        supplierCode: "Supplier code",
+        phone: "Phone number",
+        alternatePhone: "Alternate phone number",
+        email: "Email address",
+        gstNo: "GST number",
+        panNo: "PAN number",
+      };
+
+      if (field) {
+        const label = fieldLabels[field] || field;
+        const value = keyValue[field];
+
+        if (value === null || value === "") {
+          return `${label} is blank, but the database is treating it as unique. Please check the supplier database index.`;
+        }
+
+        return `${label} already exists. Please use a different value or edit the existing supplier.`;
+      }
+
+      return "A supplier with the same unique details already exists. Check supplier code, phone, email, GST, or PAN.";
     }
 
-    if (typeof responseData?.error === "string") {
-      return responseData.error;
-    }
-
-    if (
-      Array.isArray(responseData?.errors) &&
-      responseData.errors.length > 0
-    ) {
+    if (Array.isArray(responseData?.errors) && responseData.errors.length > 0) {
       return responseData.errors
         .map((item) =>
           typeof item === "string"
             ? item
-            : item?.message ||
-              item?.msg ||
-              String(item),
+            : item?.message || item?.msg || "Invalid supplier information",
         )
         .join(", ");
     }
 
-    return (
-      error?.message ||
-      "Unable to save supplier. Please try again."
-    );
+    return rawMessage || "Unable to save supplier. Please try again.";
   };
 
   const validateForm = () => {
@@ -287,41 +307,24 @@ function SupplierRegistration({
 
     if (
       formData.email.trim() &&
-      !/^\S+@\S+\.\S+$/.test(
-        formData.email.trim(),
-      )
+      !/^\S+@\S+\.\S+$/.test(formData.email.trim())
     ) {
       toast.error("Enter a valid email address");
       return false;
     }
 
-    if (
-      formData.gstNo.trim() &&
-      formData.gstNo.trim().length !== 15
-    ) {
-      toast.error(
-        "GST number must contain 15 characters",
-      );
+    if (formData.gstNo.trim() && formData.gstNo.trim().length !== 15) {
+      toast.error("GST number must contain 15 characters");
       return false;
     }
 
-    if (
-      formData.panNo.trim() &&
-      formData.panNo.trim().length !== 10
-    ) {
-      toast.error(
-        "PAN number must contain 10 characters",
-      );
+    if (formData.panNo.trim() && formData.panNo.trim().length !== 10) {
+      toast.error("PAN number must contain 10 characters");
       return false;
     }
 
-    if (
-      formData.pincode.trim() &&
-      !/^\d{6}$/.test(formData.pincode.trim())
-    ) {
-      toast.error(
-        "Pincode must contain 6 digits",
-      );
+    if (formData.pincode.trim() && !/^\d{6}$/.test(formData.pincode.trim())) {
+      toast.error("Pincode must contain 6 digits");
       return false;
     }
 
@@ -335,12 +338,8 @@ function SupplierRegistration({
       return false;
     }
 
-    if (
-      Number(formData.openingBalance || 0) < 0
-    ) {
-      toast.error(
-        "Opening balance cannot be negative",
-      );
+    if (Number(formData.openingBalance || 0) < 0) {
+      toast.error("Opening balance cannot be negative");
       return false;
     }
 
@@ -348,40 +347,40 @@ function SupplierRegistration({
   };
 
   const handleSave = async () => {
-    if (saving || !validateForm()) {
+    if (saveLockRef.current || saving) {
       return;
     }
 
-    try {
-      setSaving(true);
+    if (!validateForm()) {
+      return;
+    }
 
+    saveLockRef.current = true;
+    setSaving(true);
+
+    let savedSupplier;
+
+    try {
       const payload = {
         supplierName: formData.supplierName.trim(),
 
         supplierType: formData.supplierType,
 
-        contactPerson:
-          formData.contactPerson.trim() || null,
+        contactPerson: formData.contactPerson.trim() || null,
 
         phone: formData.phone.trim() || null,
 
-        alternatePhone:
-          formData.alternatePhone.trim() || null,
+        alternatePhone: formData.alternatePhone.trim() || null,
 
-        email:
-          formData.email.trim().toLowerCase() || null,
+        email: formData.email.trim().toLowerCase() || null,
 
-        gstNo:
-          formData.gstNo.trim().toUpperCase() || null,
+        gstNo: formData.gstNo.trim().toUpperCase() || null,
 
-        panNo:
-          formData.panNo.trim().toUpperCase() || null,
+        panNo: formData.panNo.trim().toUpperCase() || null,
 
-        billingAddress:
-          formData.billingAddress.trim() || null,
+        billingAddress: formData.billingAddress.trim() || null,
 
-        shippingAddress:
-          formData.shippingAddress.trim() || null,
+        shippingAddress: formData.shippingAddress.trim() || null,
 
         city: formData.city.trim() || null,
 
@@ -389,27 +388,17 @@ function SupplierRegistration({
 
         pincode: formData.pincode.trim() || null,
 
-        country:
-          formData.country.trim() || "India",
+        country: formData.country.trim() || "India",
 
-        paymentTerms:
-          formData.paymentTerms.trim() ||
-          "Due on Receipt",
+        paymentTerms: formData.paymentTerms.trim() || "Due on Receipt",
 
-        creditLimit: Number(
-          formData.creditLimit || 0,
-        ),
+        creditLimit: Number(formData.creditLimit || 0),
 
-        creditDays: Number(
-          formData.creditDays || 0,
-        ),
+        creditDays: Number(formData.creditDays || 0),
 
-        openingBalance: Number(
-          formData.openingBalance || 0,
-        ),
+        openingBalance: Number(formData.openingBalance || 0),
 
-        openingBalanceType:
-          formData.openingBalanceType,
+        openingBalanceType: formData.openingBalanceType,
 
         status: formData.status,
 
@@ -417,40 +406,64 @@ function SupplierRegistration({
       };
 
       const response = editData?.supplierCode
-        ? await supplierApi.update(
-            editData.supplierCode,
-            payload,
-          )
+        ? await supplierApi.update(editData.supplierCode, payload)
         : await supplierApi.create(payload);
 
-      const supplier =
-        response?.data?.supplier ||
-        response?.data?.data ||
-        response?.data;
+      savedSupplier =
+        response?.data?.supplier || response?.data?.data || response?.data;
 
-      if (!supplier?._id) {
+      if (!savedSupplier?._id) {
         throw new Error(
-          "Supplier was not returned by the server",
+          "The server did not return the saved supplier. Check the supplier list before trying again.",
         );
       }
-
-      toast.success(
-        editData
-          ? "Supplier updated successfully"
-          : "Supplier registered successfully",
-      );
-
-      onSave?.(supplier);
-      onClose?.();
     } catch (error) {
-      console.error(
-        "Unable to save supplier:",
-        error,
-      );
+      console.error("Unable to save supplier:", {
+        status: error?.response?.status,
+        response: error?.response?.data,
+        message: error?.message,
+      });
 
-      toast.error(getErrorMessage(error));
+      toast.error(getErrorMessage(error), {
+        id: "supplier-save-result",
+      });
+
+      return;
     } finally {
+      saveLockRef.current = false;
       setSaving(false);
+    }
+
+    toast.success(
+      editData
+        ? "Supplier updated successfully"
+        : "Supplier registered successfully",
+      {
+        id: "supplier-save-result",
+      },
+    );
+
+    // A parent callback failure must not be reported as an API save failure.
+    try {
+      await onSave?.(savedSupplier);
+    } catch (callbackError) {
+      console.error("Supplier saved, but onSave failed:", callbackError);
+
+      toast.error(
+        "Supplier was saved, but the page could not refresh. Reload the supplier list; do not save again.",
+        {
+          id: "supplier-refresh-error",
+        },
+      );
+    }
+
+    try {
+      onClose?.();
+    } catch (closeError) {
+      console.error(
+        "Supplier saved, but closing the modal failed:",
+        closeError,
+      );
     }
   };
 
@@ -487,11 +500,7 @@ function SupplierRegistration({
     <BoxModal
       show={isOpen}
       onClose={onClose}
-      title={
-        editData
-          ? "Edit Supplier"
-          : "Supplier Registration"
-      }
+      title={editData ? "Edit Supplier" : "Supplier Registration"}
       subtitle={
         editData
           ? "Update supplier information"
@@ -511,9 +520,7 @@ function SupplierRegistration({
           <div className="box-modal-section-header-content">
             <h3>Supplier Information</h3>
 
-            <p>
-              Basic supplier and contact details
-            </p>
+            <p>Basic supplier and contact details</p>
           </div>
         </div>
 
@@ -598,9 +605,7 @@ function SupplierRegistration({
           <div className="box-modal-section-header-content">
             <h3>Tax Information</h3>
 
-            <p>
-              GST and PAN registration information
-            </p>
+            <p>GST and PAN registration information</p>
           </div>
         </div>
 
@@ -638,9 +643,7 @@ function SupplierRegistration({
           <div className="box-modal-section-header-content">
             <h3>Address Details</h3>
 
-            <p>
-              Billing and shipping information
-            </p>
+            <p>Billing and shipping information</p>
           </div>
         </div>
 
@@ -719,9 +722,7 @@ function SupplierRegistration({
           <div className="box-modal-section-header-content">
             <h3>Financial Information</h3>
 
-            <p>
-              Credit terms and opening payable balance
-            </p>
+            <p>Credit terms and opening payable balance</p>
           </div>
         </div>
 
@@ -793,9 +794,7 @@ function SupplierRegistration({
           <div className="box-modal-section-header-content">
             <h3>Additional Information</h3>
 
-            <p>
-              Notes and special instructions
-            </p>
+            <p>Notes and special instructions</p>
           </div>
         </div>
 

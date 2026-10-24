@@ -83,6 +83,14 @@ import HsnSacCodesList from "../../pages/Hsncode/HsnSacCodesList";
 import TaxRatesList from "../../pages/Tax/TaxRatesList";
 import WarehousesList from "../../pages/Warehouse/WarehousesList";
 import StockMovementCreate from "../../pages/stock-movements/StockMovementCreate";
+import StockValuation from "../../pages/stock-valuation/StockValuation";
+import StockTransfersList from "../../pages/Stock-Transfer/StockTransfersList";
+import StockTransferCreate from "../../pages/Stock-Transfer/StockTransferCreate";
+import OutstandingAgeing from "../../pages/accounting/OutstandingAgeing/OutstandingAgeing";
+import ExpenseCreate from "../../pages/Expenses/ExpenseCreate";
+import ExpenseList from "../../pages/Expenses/Expenselist";
+import ExpenseDetail from "../../pages/Expenses/ExpenseDetail";
+
 // import InventoryReport from "../../pages/Reportdashboard/InventoryReport";
 
 const Login = lazy(() => import("../../pages/Login"));
@@ -411,32 +419,45 @@ const AppRouter = () => (
           />
           <Route
             path={routes.inventory.categories}
-            element={gated("inventory.products", <CategoriesList  />)}
+            element={gated("inventory.products", <CategoriesList />)}
           />
           <Route
             path={routes.inventory.units}
-            element={gated("inventory.products", <UnitsList  />)}
+            element={gated("inventory.products", <UnitsList />)}
           />
           <Route
             path={routes.inventory.brand}
-            element={gated("inventory.products", <BrandsList  />)}
+            element={gated("inventory.products", <BrandsList />)}
           />
           <Route
             path={routes.inventory.hsn}
-            element={gated("inventory.products", <HsnSacCodesList  />)}
+            element={gated("inventory.products", <HsnSacCodesList />)}
           />
           <Route
             path={routes.inventory.tax}
-            element={gated("inventory.products", <TaxRatesList  />)}
+            element={gated("inventory.products", <TaxRatesList />)}
           />
           <Route
             path={routes.inventory.warehouses}
-            element={gated("inventory.products", <WarehousesList  />)}
+            element={gated("inventory.products", <WarehousesList />)}
           />
 
           <Route
             path={routes.suppliers.list}
             element={gated("inventory.products", <SuppliersList />)}
+          />
+          <Route
+            path={routes.inventory.valuation}
+            element={gated("inventory.products", <StockValuation />)}
+          />
+          <Route
+            path={routes.inventory.transfer}
+            element={gated("inventory.transfers", <StockTransfersList />)}
+          />
+
+          <Route
+            path={`${routes.inventory.transfer}/new`}
+            element={gated("inventory.transfers", <StockTransferCreate />)}
           />
 
           <Route
@@ -507,6 +528,20 @@ const AppRouter = () => (
             element={gated("reports.accounting", <OutstandingPage />)}
           />
           <Route
+            path={routes.accounting.payables}
+            element={gated(
+              "reports.accounting",
+              <OutstandingAgeing kind="PAYABLE" />,
+            )}
+          />
+          <Route
+            path={routes.accounting.receivables}
+            element={gated(
+              "reports.accounting",
+              <OutstandingAgeing kind="RECEIVABLE" />,
+            )}
+          />
+          <Route
             path={routes.suppliers.outstanding}
             element={gated("supplierOutstanding.view", <SupplierOutstanding />)}
           />
@@ -526,8 +561,28 @@ const AppRouter = () => (
             element={gated("ledger.view", <Daybook />)}
           />
           <Route
+            path={routes.accounting.ledger}
+            element={gated("ledger.view", <TallyGateway />)}
+          />
+          <Route
             path={routes.reports.sales}
             element={gated("ledger.view", <SalesReport />)}
+          />
+          <Route
+            path={routes.expenses.list}
+            element={gated("ledger.view", <ExpenseList />)}
+          />
+          {/* <Route
+            path={routes.expenses.details}
+            element={gated("ledger.view", <ExpenseDetail />)}
+          /> */}
+          <Route
+            path={`${routes.expenses.details}/:expenseNumber`}
+            element={gated("ledger.view", <ExpenseDetail />)}
+          />
+          <Route
+            path={routes.expenses.create}
+            element={gated("ledger.view", <ExpenseCreate />)}
           />
           <Route
             path={routes.reports.purchase}

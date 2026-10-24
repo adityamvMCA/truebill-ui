@@ -184,6 +184,7 @@ const routes = {
     index: "/expenses",
     list: "/expenses/list",
     create: "/expenses/create",
+    details: "/expenses/details",
     categories: "/expenses/categories",
     approval: "/expenses/approval",
   },
