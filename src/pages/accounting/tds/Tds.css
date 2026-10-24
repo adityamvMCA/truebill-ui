@@ -1,0 +1,32 @@
+/* TDS pages. Builds on Notes.css (cn-*) and the shared dl-* / gs-* classes. */
+
+.td-head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.td-filters { flex-wrap: wrap; }
+.td-filters input.cn-inline-select { width: 120px; }
+
+.td-rate { display: block; font-size: 12px; line-height: 1.5; white-space: nowrap; }
+
+.td-cert { margin-top: 12px; }
+
+.td-result { width: min(100%, 380px); margin-left: 0; }
+
+.td-deposit {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  background: color-mix(in srgb, var(--primary-color, #2563eb) 4%, var(--card-bg, #fff));
+}
+.td-deposit h3 { margin: 0 0 12px; font-size: 14px; }
+
+.td-deposit .dl-field input,
+.td-deposit .dl-field select {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  background: var(--card-bg, #fff);
+  color: inherit;
+  font: inherit;
+}
+.td-deposit .cn-actions { margin-top: 12px; }

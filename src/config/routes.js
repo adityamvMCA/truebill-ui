@@ -146,6 +146,12 @@ const routes = {
     view: "/accounting/banks/:bankCode",
     edit: "/accounting/banks/:bankCode/edit",
   },
+  tds: {
+    tdsReg: "/accounting/tds",
+    tdsDeduct: "/accounting/tds/deduct",
+    tdsNatures: "/accounting/tds/natures",
+  },
+
   accounting: {
     index: "/accounting",
 
@@ -198,6 +204,11 @@ const routes = {
     inventory: "/reports/inventory",
     accounting: "/reports/accounting",
     bank: "/accounting/bank-ledger",
+  },
+
+  note: {
+    notes: "/accounting/notes",
+    noteForm: "accounting/notes/new",
   },
 
   tax: {

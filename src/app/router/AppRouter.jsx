@@ -90,6 +90,11 @@ import OutstandingAgeing from "../../pages/accounting/OutstandingAgeing/Outstand
 import ExpenseCreate from "../../pages/Expenses/ExpenseCreate";
 import ExpenseList from "../../pages/Expenses/Expenselist";
 import ExpenseDetail from "../../pages/Expenses/ExpenseDetail";
+import Notes from "../../pages/accounting/Note/Notes";
+import NoteForm from "../../pages/accounting/Note/NoteForm";
+import TdsRegister from "../../pages/accounting/tds/TdsRegister";
+import TdsDeduct from "../../pages/accounting/tds/TdsDeduct";
+import TdsNatures from "../../pages/accounting/tds/TdsNatures";
 
 // import InventoryReport from "../../pages/Reportdashboard/InventoryReport";
 
@@ -579,6 +584,26 @@ const AppRouter = () => (
           <Route
             path={`${routes.expenses.details}/:expenseNumber`}
             element={gated("ledger.view", <ExpenseDetail />)}
+          />
+          <Route
+            path={routes.note.notes}
+            element={gated("ledger.view", <Notes />)}
+          />
+          <Route
+            path={routes.note.noteForm}
+            element={gated("ledger.view", <NoteForm />)}
+          />
+          <Route
+            path={routes.tds.tdsReg}
+            element={gated("ledger.view", <TdsRegister  />)}
+          />
+          <Route
+            path={routes.tds.tdsDeduct}
+            element={gated("ledger.view", <TdsDeduct  />)}
+          />
+          <Route
+            path={routes.tds.tdsNatures}
+            element={gated("ledger.view", <TdsNatures  />)}
           />
           <Route
             path={routes.expenses.create}

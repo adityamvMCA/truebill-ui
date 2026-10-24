@@ -37,6 +37,9 @@ const SOURCE_LABELS = {
   MANUAL_JOURNAL: "Manual Journal",
   SUPPLIER_PAYMENT: "Supplier Payment",
   CUSTOMER_RECEIPT: "Customer Receipt",
+  PURCHASE_RETURN: "Purchase Return",
+  CREDIT_NOTE: "Credit Note",
+  DEBIT_NOTE: "Debit Note",
 };
 
 const SOURCE_OPTIONS = [
@@ -44,6 +47,9 @@ const SOURCE_OPTIONS = [
   "SALES_RETURN",
   "PURCHASE_BILL",
   "MANUAL_JOURNAL",
+  "PURCHASE_RETURN",
+  "CREDIT_NOTE",
+  "DEBIT_NOTE",
 ];
 
 const SIDE_STYLES = {

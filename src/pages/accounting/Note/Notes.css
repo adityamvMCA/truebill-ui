@@ -1,0 +1,108 @@
+/* Credit / Debit notes. Reuses the dl-* and gs-* classes from the list pages. */
+
+.cn-pill {
+  display: inline-block;
+  width: fit-content;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.cn-credit { background: color-mix(in srgb, var(--success, #16a34a) 12%, transparent); color: var(--success, #16a34a); }
+.cn-debit  { background: color-mix(in srgb, var(--danger, #dc2626) 12%, transparent);  color: var(--danger, #dc2626); }
+
+.cn-sub { display: block; font-size: 11px; color: var(--text-muted, #8792a2); }
+
+.cn-inline-select {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  background: var(--card-bg, #fff);
+  color: inherit;
+  font: inherit;
+}
+
+.cn-form { display: flex; flex-direction: column; gap: 14px; }
+
+.cn-section { padding: 16px; }
+.cn-section h3 { margin: 0 0 12px; font-size: 14px; }
+
+.cn-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+.cn-form .dl-field input,
+.cn-form .dl-field select,
+.cn-lines input,
+.cn-lines select {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  background: var(--card-bg, #fff);
+  color: inherit;
+  font: inherit;
+}
+
+.cn-lines input.gs-num { text-align: right; font-variant-numeric: tabular-nums; }
+.cn-lines td { vertical-align: middle; }
+.cn-lines th:nth-child(1) { min-width: 240px; }
+
+.cn-hint { font-size: 11px; color: var(--text-muted, #8792a2); }
+
+.cn-segment {
+  display: inline-flex;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.cn-segment button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  background: var(--card-bg, #fff);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.cn-segment button.active { background: var(--primary-color, #2563eb); color: #fff; }
+
+.cn-check { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; }
+
+.cn-icon {
+  display: inline-flex;
+  padding: 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--danger, #dc2626);
+  cursor: pointer;
+}
+.cn-icon:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.cn-add { margin-top: 10px; }
+
+.cn-totals {
+  width: min(100%, 320px);
+  margin: 14px 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+.cn-totals div { display: flex; justify-content: space-between; padding: 4px 0; }
+.cn-totals dt { color: var(--text-secondary, #64748b); }
+.cn-totals dd { margin: 0; }
+.cn-grand { margin-top: 4px; padding-top: 8px !important; border-top: 1px solid var(--border-color, #e5e7eb); font-weight: 700; }
+.cn-grand dt { color: inherit !important; }
+
+.cn-error {
+  padding: 10px 12px;
+  border: 1px solid var(--danger, #dc2626);
+  border-radius: 8px;
+  color: var(--danger, #dc2626);
+  font-size: 13px;
+}
+
+.cn-actions { display: flex; justify-content: flex-end; gap: 8px; }
