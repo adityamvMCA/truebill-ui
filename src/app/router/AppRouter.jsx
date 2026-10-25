@@ -95,6 +95,9 @@ import NoteForm from "../../pages/accounting/Note/NoteForm";
 import TdsRegister from "../../pages/accounting/tds/TdsRegister";
 import TdsDeduct from "../../pages/accounting/tds/TdsDeduct";
 import TdsNatures from "../../pages/accounting/tds/TdsNatures";
+import LedgersList from "../../pages/accounting/Ledger/LedgersList";
+import CashBook from "../../pages/accounting/report/CashBook";
+import PettyCash from "../../pages/accounting/report/PettyCash";
 
 // import InventoryReport from "../../pages/Reportdashboard/InventoryReport";
 
@@ -620,6 +623,18 @@ const AppRouter = () => (
           <Route
             path={routes.accounting.journal}
             element={gated("ledger.view", <JournalVouchers />)}
+          />
+          <Route
+            path={routes.accounting.createLedger}
+            element={gated("ledger.view", <LedgersList />)}
+          />
+          <Route
+            path={routes.accounting.cashBook}
+            element={gated("ledger.view", <CashBook  />)}
+          />
+          <Route
+            path={routes.accounting.pettyCash}
+            element={gated("ledger.view", <PettyCash   />)}
           />
           <Route
             path={routes.accounting.trialBalance}

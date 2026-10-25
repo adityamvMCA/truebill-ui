@@ -1,0 +1,15 @@
+/* Extra styles for Cash Book / Petty Cash. Everything else reuses BankLedger.css */
+
+.bl-page .bl-warning {
+  padding: 10px 12px;
+  margin-bottom: 12px;
+
+  border: 1px solid #d97706;
+  border-radius: 8px;
+
+  background: var(--bl-card);
+  color: #b45309;
+
+  font-size: 12px;
+  line-height: 1.6;
+}

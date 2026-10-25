@@ -1,21 +1,43 @@
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 import tdsApi from "../../../services/modules/tdsApi";
+import ledgerApi from "../../../services/modules/ledgerApi";
 import { formatDate, money, rupeesToPaise } from "../Note/noteUtils";
-import { RATE_TYPES, errMsg, loadLedgers, todayInput } from "./tdsUtils";
+import { RATE_TYPES, errMsg, todayInput } from "./tdsUtils";
+
 import "../Note/Notes.css";
 import "./Tds.css";
 
-const emptyRate = () => ({ deducteeType: "ALL", withPan: "", withoutPan: "" });
+const emptyRate = () => ({
+  deducteeType: "ALL",
+  withPan: "",
+  withoutPan: "",
+});
 
-// Empty box means "no limit"; anything else must be a valid rupee amount.
-const optionalPaise = (v) => {
-  if (String(v).trim() === "") return 0;
-  return rupeesToPaise(v);
+const optionalPaise = (value) => {
+  if (String(value).trim() === "") return 0;
+  return rupeesToPaise(value);
 };
+
+const extractArray = (response, key) => {
+  const body = response?.data;
+
+  const candidates = [
+    body?.data,
+    body?.[key],
+    body?.data?.[key],
+    body,
+  ];
+
+  return candidates.find(Array.isArray) || [];
+};
+
+const normalize = (value) =>
+  String(value ?? "").trim().toUpperCase();
 
 export default function TdsNatures() {
   const navigate = useNavigate();
@@ -23,6 +45,7 @@ export default function TdsNatures() {
   const [natures, setNatures] = useState([]);
   const [ledgers, setLedgers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [ledgerLoading, setLedgerLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -36,48 +59,160 @@ export default function TdsNatures() {
   const [annualLimit, setAnnualLimit] = useState("");
   const [effectiveFrom, setEffectiveFrom] = useState(todayInput);
 
+  // Load TDS natures and ledgers directly from their respective APIs.
   const load = useCallback(async () => {
+    setLoading(true);
+    setLedgerLoading(true);
+
     try {
-      setLoading(true);
-      const [n, l] = await Promise.all([tdsApi.getNatures(), loadLedgers()]);
-      setNatures(n?.data?.data || []);
-      setLedgers(l);
-    } catch (e) {
-      toast.error(errMsg(e, "Unable to load nature of payment."));
+      const [natureResult, ledgerResult] = await Promise.allSettled([
+        tdsApi.getNatures(),
+        ledgerApi.getAll({}),
+      ]);
+
+      if (natureResult.status === "fulfilled") {
+        const natureList = extractArray(
+          natureResult.value,
+          "natures",
+        );
+        setNatures(natureList);
+      } else {
+        toast.error(
+          errMsg(
+            natureResult.reason,
+            "Unable to load TDS natures.",
+          ),
+        );
+      }
+
+      if (ledgerResult.status === "fulfilled") {
+        const ledgerList = extractArray(
+          ledgerResult.value,
+          "ledgers",
+        );
+
+        setLedgers(ledgerList);
+
+        if (ledgerList.length === 0) {
+          console.warn(
+            "Ledger API returned no ledgers:",
+            ledgerResult.value?.data,
+          );
+        }
+      } else {
+        setLedgers([]);
+        toast.error(
+          errMsg(
+            ledgerResult.reason,
+            "Unable to load accounting ledgers.",
+          ),
+        );
+      }
+    } catch (loadError) {
+      toast.error(
+        errMsg(loadError, "Unable to load TDS data."),
+      );
     } finally {
       setLoading(false);
+      setLedgerLoading(false);
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
-  const taxLedgers = useMemo(() => ledgers.filter((l) => l.type === "TAX"), [ledgers]);
-  const ledgerName = (id) => ledgers.find((l) => l._id === id)?.name || "-";
+  // Include every active TAX liability ledger.
+  // Do not filter by the ledger name, because a valid TDS ledger
+  // might have a different name.
+  const taxLedgers = useMemo(
+    () =>
+      ledgers.filter(
+        (ledger) =>
+          normalize(ledger.type) === "TAX" &&
+          normalize(ledger.nature) === "LIABILITY" &&
+          ledger.isActive !== false,
+      ),
+    [ledgers],
+  );
 
-  const patchRate = (i, patch) => setRates((c) => c.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  const ledgerName = (id) => {
+    const ledger = ledgers.find(
+      (item) => String(item._id) === String(id?._id ?? id),
+    );
+
+    return ledger?.name || "-";
+  };
+
+  const patchRate = (index, patch) => {
+    setRates((current) =>
+      current.map((rate, rowIndex) =>
+        rowIndex === index ? { ...rate, ...patch } : rate,
+      ),
+    );
+  };
+
+  const resetForm = () => {
+    setSection("");
+    setName("");
+    setPaymentCode("");
+    setTdsLedgerId("");
+    setRates([emptyRate()]);
+    setSingleLimit("");
+    setAnnualLimit("");
+    setEffectiveFrom(todayInput());
+    setError("");
+  };
 
   const submit = async (event) => {
     event.preventDefault();
+
     if (saving) return;
 
     const single = optionalPaise(singleLimit);
     const annual = optionalPaise(annualLimit);
 
     let problem = "";
-    if (!section.trim()) problem = "Enter the section.";
-    else if (!name.trim()) problem = "Enter a name.";
-    else if (!tdsLedgerId) problem = "Choose the TDS payable ledger.";
-    else if (single === null || annual === null) problem = "Limits must be valid amounts (up to 2 decimals).";
-    else if (rates.some((r) => r.withPan === "" || r.withoutPan === "" || Number.isNaN(Number(r.withPan)) || Number.isNaN(Number(r.withoutPan)))) {
-      problem = "Enter both rates (with and without PAN) on every row.";
-    } else if (new Set(rates.map((r) => r.deducteeType)).size !== rates.length) {
+
+    if (!section.trim()) {
+      problem = "Enter the section.";
+    } else if (!name.trim()) {
+      problem = "Enter a name.";
+    } else if (
+      !taxLedgers.some(
+        (ledger) => String(ledger._id) === String(tdsLedgerId),
+      )
+    ) {
+      problem = "Choose a valid active TDS payable ledger.";
+    } else if (single === null || annual === null) {
+      problem = "Limits must be valid amounts (up to 2 decimals).";
+    } else if (
+      rates.some(
+        (rate) =>
+          rate.withPan.trim() === "" ||
+          rate.withoutPan.trim() === "" ||
+          !Number.isFinite(Number(rate.withPan)) ||
+          !Number.isFinite(Number(rate.withoutPan)) ||
+          Number(rate.withPan) < 0 ||
+          Number(rate.withoutPan) < 0,
+      )
+    ) {
+      problem = "Enter valid rates with and without PAN on every row.";
+    } else if (
+      new Set(rates.map((rate) => rate.deducteeType)).size !==
+      rates.length
+    ) {
       problem = "Each deductee type can appear only once.";
+    } else if (!effectiveFrom) {
+      problem = "Select the effective date.";
     }
 
     setError(problem);
+
     if (problem) return;
 
     setSaving(true);
+
     try {
       await tdsApi.createNature({
         section: section.trim(),
@@ -87,19 +222,24 @@ export default function TdsNatures() {
         singleThresholdPaise: single,
         annualThresholdPaise: annual,
         effectiveFrom,
-        rates: rates.map((r) => ({
-          deducteeType: r.deducteeType,
-          withPanPercent: Number(r.withPan),
-          withoutPanPercent: Number(r.withoutPan),
+        rates: rates.map((rate) => ({
+          deducteeType: rate.deducteeType,
+          withPanPercent: Number(rate.withPan),
+          withoutPanPercent: Number(rate.withoutPan),
         })),
       });
-      toast.success("Nature of payment saved");
+
+      toast.success("Nature of payment saved.");
+      resetForm();
       setShowForm(false);
-      setSection(""); setName(""); setPaymentCode(""); setRates([emptyRate()]);
-      setSingleLimit(""); setAnnualLimit("");
-      load();
-    } catch (e) {
-      const message = errMsg(e, "Unable to save.");
+
+      await load();
+    } catch (saveError) {
+      const message = errMsg(
+        saveError,
+        "Unable to save nature of payment.",
+      );
+
       setError(message);
       toast.error(message);
     } finally {
@@ -112,80 +252,224 @@ export default function TdsNatures() {
       <div className="dl-header">
         <div className="dl-header-content">
           <h1>TDS Nature of Payment</h1>
-          <p>Sections, rates and thresholds used when deducting tax</p>
+          <p>
+            Sections, rates and thresholds used when deducting tax
+          </p>
         </div>
+
         <div className="td-head-actions">
-          <button type="button" className="dl-tool" onClick={() => navigate("/accounting/tds")}>
+          <button
+            type="button"
+            className="dl-tool"
+            onClick={() => navigate("/accounting/tds")}
+          >
             <ArrowLeft size={14} /> Register
           </button>
-          <button type="button" className="so-primary-button dl-add-button" onClick={() => setShowForm((v) => !v)}>
-            <Plus size={14} /> {showForm ? "Close" : "New Nature"}
+
+          <button
+            type="button"
+            className="so-primary-button dl-add-button"
+            onClick={() => {
+              if (showForm) {
+                setShowForm(false);
+                setError("");
+              } else {
+                setShowForm(true);
+                setError("");
+                void load();
+              }
+            }}
+          >
+            <Plus size={14} />
+            {showForm ? "Close" : "New Nature"}
           </button>
         </div>
       </div>
 
       {showForm && (
         <form className="cn-form" onSubmit={submit} noValidate>
-          {error && <div className="cn-error" role="alert">{error}</div>}
+          {error && (
+            <div className="cn-error" role="alert">
+              {error}
+            </div>
+          )}
 
           <section className="dl-card cn-section">
             <h3>Section</h3>
+
             <div className="cn-grid">
               <div className="dl-field">
                 <label htmlFor="tn-section">Section</label>
-                <input id="tn-section" value={section} onChange={(e) => setSection(e.target.value)} />
+                <input
+                  id="tn-section"
+                  value={section}
+                  onChange={(event) => setSection(event.target.value)}
+                />
               </div>
+
               <div className="dl-field">
                 <label htmlFor="tn-name">Name</label>
-                <input id="tn-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={200} />
+                <input
+                  id="tn-name"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  maxLength={200}
+                />
               </div>
+
               <div className="dl-field">
-                <label htmlFor="tn-code">Payment code (optional)</label>
-                <input id="tn-code" value={paymentCode} onChange={(e) => setPaymentCode(e.target.value)} />
+                <label htmlFor="tn-code">
+                  Payment code (optional)
+                </label>
+                <input
+                  id="tn-code"
+                  value={paymentCode}
+                  onChange={(event) =>
+                    setPaymentCode(event.target.value)
+                  }
+                />
               </div>
+
               <div className="dl-field">
-                <label htmlFor="tn-ledger">TDS payable ledger</label>
-                <select id="tn-ledger" value={tdsLedgerId} onChange={(e) => setTdsLedgerId(e.target.value)}>
-                  <option value="">{taxLedgers.length ? "Select ledger" : "No tax ledgers found"}</option>
-                  {taxLedgers.map((l) => <option key={l._id} value={l._id}>{l.name} ({l.code})</option>)}
+                <label htmlFor="tn-ledger">
+                  TDS payable ledger
+                </label>
+
+                <select
+                  id="tn-ledger"
+                  value={tdsLedgerId}
+                  onChange={(event) =>
+                    setTdsLedgerId(event.target.value)
+                  }
+                  disabled={ledgerLoading}
+                >
+                  <option value="">
+                    {ledgerLoading
+                      ? "Loading ledgers..."
+                      : taxLedgers.length
+                        ? "Select ledger"
+                        : "No tax liability ledgers found"}
+                  </option>
+
+                  {taxLedgers.map((ledger) => (
+                    <option key={ledger._id} value={ledger._id}>
+                      {ledger.name} ({ledger.code})
+                    </option>
+                  ))}
                 </select>
-                <span className="cn-hint">A Duties &amp; Taxes ledger of type Tax</span>
+
+                <span className="cn-hint">
+                  Select an active Tax ledger under a Liability group.
+                </span>
+
+                {!ledgerLoading && taxLedgers.length === 0 && (
+                  <button
+                    type="button"
+                    className="dl-tool"
+                    onClick={() => void load()}
+                    style={{ marginTop: 8 }}
+                  >
+                    Retry loading ledgers
+                  </button>
+                )}
               </div>
+
               <div className="dl-field">
                 <label htmlFor="tn-from">Effective from</label>
-                <input id="tn-from" type="date" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} />
+                <input
+                  id="tn-from"
+                  type="date"
+                  value={effectiveFrom}
+                  onChange={(event) =>
+                    setEffectiveFrom(event.target.value)
+                  }
+                />
               </div>
             </div>
           </section>
 
           <section className="dl-card cn-section">
             <h3>Rates</h3>
+
             <div className="dl-table-wrapper">
               <table className="dl-table cn-lines">
                 <thead>
                   <tr>
                     <th>Deductee type</th>
                     <th className="gs-num">Rate with PAN (%)</th>
-                    <th className="gs-num">Rate without PAN (%)</th>
+                    <th className="gs-num">
+                      Rate without PAN (%)
+                    </th>
                     <th />
                   </tr>
                 </thead>
+
                 <tbody>
-                  {rates.map((r, i) => (
-                    <tr key={i}>
+                  {rates.map((rate, index) => (
+                    <tr key={index}>
                       <td>
-                        <select aria-label={`Row ${i + 1} deductee type`} value={r.deducteeType}
-                          onChange={(e) => patchRate(i, { deducteeType: e.target.value })}>
-                          {RATE_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                        <select
+                          aria-label={`Row ${index + 1} deductee type`}
+                          value={rate.deducteeType}
+                          onChange={(event) =>
+                            patchRate(index, {
+                              deducteeType: event.target.value,
+                            })
+                          }
+                        >
+                          {RATE_TYPES.map((type) => (
+                            <option
+                              key={type.value}
+                              value={type.value}
+                            >
+                              {type.label}
+                            </option>
+                          ))}
                         </select>
                       </td>
-                      <td><input className="gs-num" inputMode="decimal" aria-label={`Row ${i + 1} rate with PAN`}
-                        value={r.withPan} onChange={(e) => patchRate(i, { withPan: e.target.value })} /></td>
-                      <td><input className="gs-num" inputMode="decimal" aria-label={`Row ${i + 1} rate without PAN`}
-                        value={r.withoutPan} onChange={(e) => patchRate(i, { withoutPan: e.target.value })} /></td>
+
                       <td>
-                        <button type="button" className="cn-icon" aria-label={`Remove row ${i + 1}`}
-                          disabled={rates.length === 1} onClick={() => setRates((c) => c.filter((_, j) => j !== i))}>
+                        <input
+                          className="gs-num"
+                          inputMode="decimal"
+                          aria-label={`Row ${index + 1} rate with PAN`}
+                          value={rate.withPan}
+                          onChange={(event) =>
+                            patchRate(index, {
+                              withPan: event.target.value,
+                            })
+                          }
+                        />
+                      </td>
+
+                      <td>
+                        <input
+                          className="gs-num"
+                          inputMode="decimal"
+                          aria-label={`Row ${index + 1} rate without PAN`}
+                          value={rate.withoutPan}
+                          onChange={(event) =>
+                            patchRate(index, {
+                              withoutPan: event.target.value,
+                            })
+                          }
+                        />
+                      </td>
+
+                      <td>
+                        <button
+                          type="button"
+                          className="cn-icon"
+                          aria-label={`Remove row ${index + 1}`}
+                          disabled={rates.length === 1}
+                          onClick={() =>
+                            setRates((current) =>
+                              current.filter(
+                                (_, rowIndex) => rowIndex !== index,
+                              ),
+                            )
+                          }
+                        >
                           <Trash2 size={14} />
                         </button>
                       </td>
@@ -194,40 +478,97 @@ export default function TdsNatures() {
                 </tbody>
               </table>
             </div>
-            <button type="button" className="dl-tool cn-add" onClick={() => setRates((c) => [...c, emptyRate()])}>
+
+            <button
+              type="button"
+              className="dl-tool cn-add"
+              onClick={() =>
+                setRates((current) => [
+                  ...current,
+                  emptyRate(),
+                ])
+              }
+            >
               <Plus size={14} /> Add deductee type
             </button>
           </section>
 
           <section className="dl-card cn-section">
             <h3>Thresholds</h3>
+
             <div className="cn-grid">
               <div className="dl-field">
-                <label htmlFor="tn-single">Single payment limit</label>
-                <input id="tn-single" inputMode="decimal" value={singleLimit} onChange={(e) => setSingleLimit(e.target.value)} placeholder="No limit" />
+                <label htmlFor="tn-single">
+                  Single payment limit (₹)
+                </label>
+                <input
+                  id="tn-single"
+                  inputMode="decimal"
+                  value={singleLimit}
+                  onChange={(event) =>
+                    setSingleLimit(event.target.value)
+                  }
+                  placeholder="No limit"
+                />
               </div>
+
               <div className="dl-field">
-                <label htmlFor="tn-annual">Annual limit per party</label>
-                <input id="tn-annual" inputMode="decimal" value={annualLimit} onChange={(e) => setAnnualLimit(e.target.value)} placeholder="No limit" />
+                <label htmlFor="tn-annual">
+                  Annual limit per party (₹)
+                </label>
+                <input
+                  id="tn-annual"
+                  inputMode="decimal"
+                  value={annualLimit}
+                  onChange={(event) =>
+                    setAnnualLimit(event.target.value)
+                  }
+                  placeholder="No limit"
+                />
               </div>
             </div>
-            <span className="cn-hint">TDS starts when a payment is over the single limit or the year's total passes the annual limit.</span>
+
+            <span className="cn-hint">
+              Configure thresholds according to the applicable tax rules.
+            </span>
           </section>
 
           <div className="cn-actions">
-            <button type="button" className="dl-tool" onClick={() => setShowForm(false)} disabled={saving}>Cancel</button>
-            <button type="submit" className="so-primary-button" disabled={saving}>{saving ? "Saving..." : "Save nature of payment"}</button>
+            <button
+              type="button"
+              className="dl-tool"
+              onClick={() => {
+                setShowForm(false);
+                setError("");
+              }}
+              disabled={saving}
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              className="so-primary-button"
+              disabled={saving || ledgerLoading}
+            >
+              {saving ? "Saving..." : "Save nature of payment"}
+            </button>
           </div>
         </form>
       )}
 
       <div className="dl-card">
         {loading ? (
-          <div className="dl-state"><span>Loading...</span></div>
-        ) : !natures.length ? (
+          <div className="dl-state">
+            <span>Loading...</span>
+          </div>
+        ) : natures.length === 0 ? (
           <div className="dl-state">
             <strong>No nature of payment yet</strong>
-            <span>Add each section you deduct under. Rates are yours to enter and confirm with your CA.</span>
+            <span>
+              Add each applicable payment section and its rates.
+              Confirm the values with your CA before production use.
+            </span>
           </div>
         ) : (
           <div className="dl-table-wrapper">
@@ -243,22 +584,52 @@ export default function TdsNatures() {
                   <th>Ledger</th>
                 </tr>
               </thead>
+
               <tbody>
-                {natures.map((n) => (
-                  <tr key={n._id}>
-                    <td><strong>{n.section}</strong></td>
-                    <td>{n.name}</td>
+                {natures.map((nature) => (
+                  <tr key={nature._id}>
                     <td>
-                      {n.rates.map((r) => (
-                        <span key={r.deducteeType} className="td-rate">
-                          {RATE_TYPES.find((t) => t.value === r.deducteeType)?.label}: {r.withPanPercent}% / {r.withoutPanPercent}%
+                      <strong>{nature.section}</strong>
+                    </td>
+
+                    <td>{nature.name}</td>
+
+                    <td>
+                      {(nature.rates || []).map((rate) => (
+                        <span
+                          key={rate.deducteeType}
+                          className="td-rate"
+                        >
+                          {RATE_TYPES.find(
+                            (type) =>
+                              type.value === rate.deducteeType,
+                          )?.label || rate.deducteeType}
+                          : {rate.withPanPercent}% /{" "}
+                          {rate.withoutPanPercent}%
                         </span>
                       ))}
                     </td>
-                    <td className="gs-num">{n.singleThresholdPaise ? money(n.singleThresholdPaise) : "-"}</td>
-                    <td className="gs-num">{n.annualThresholdPaise ? money(n.annualThresholdPaise) : "-"}</td>
-                    <td>{formatDate(n.effectiveFrom)}{n.effectiveTo ? ` to ${formatDate(n.effectiveTo)}` : ""}</td>
-                    <td>{ledgerName(n.tdsLedgerId)}</td>
+
+                    <td className="gs-num">
+                      {nature.singleThresholdPaise
+                        ? money(nature.singleThresholdPaise)
+                        : "-"}
+                    </td>
+
+                    <td className="gs-num">
+                      {nature.annualThresholdPaise
+                        ? money(nature.annualThresholdPaise)
+                        : "-"}
+                    </td>
+
+                    <td>
+                      {formatDate(nature.effectiveFrom)}
+                      {nature.effectiveTo
+                        ? ` to ${formatDate(nature.effectiveTo)}`
+                        : ""}
+                    </td>
+
+                    <td>{ledgerName(nature.tdsLedgerId)}</td>
                   </tr>
                 ))}
               </tbody>

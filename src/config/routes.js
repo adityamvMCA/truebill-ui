@@ -158,6 +158,7 @@ const routes = {
     chartOfAccounts: "/accounting/chart-of-accounts",
     journal: "/accounting/journal",
     ledger: "/accounting/ledger",
+    createLedger: "/accounting/ledger/creation",
 
     receivables: "/accounting/receivables",
     payables: "/accounting/payables",
@@ -168,6 +169,8 @@ const routes = {
     balancesheet: "/accounting/balance-sheet",
     customerledger: "/accounting/customer-ledger",
     supplierledger: "/accounting/supplier-ledger",
+    cashBook: "/accounting/cash-book",
+    pettyCash: "/accounting/petty-cash",
   },
 
   entrySheet: {

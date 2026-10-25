@@ -1,7 +1,5 @@
-import { useEffect, useState } from "react";
-
+import { useEffect, useRef, useState } from "react";
 import { Building2, CreditCard, FileText, MapPin } from "lucide-react";
-
 import toast from "react-hot-toast";
 
 import Button from "../../components/common/Form/Button";
@@ -14,142 +12,73 @@ import supplierApi from "../../services/modules/supplierApi";
 const initialFormData = {
   supplierName: "",
   supplierType: "Business",
-
   contactPerson: "",
   phone: "",
   alternatePhone: "",
   email: "",
-
   gstNo: "",
   panNo: "",
-
   billingAddress: "",
   shippingAddress: "",
-
   city: "",
   state: "Karnataka",
   pincode: "",
   country: "India",
-
   paymentTerms: "Due on Receipt",
   creditLimit: "",
   creditDays: "",
-
   openingBalance: "",
   openingBalanceType: "CREDIT",
-
   status: "Active",
-
   notes: "",
 };
 
 const supplierTypeOptions = [
-  {
-    value: "Business",
-    label: "Business",
-  },
-  {
-    value: "Individual",
-    label: "Individual",
-  },
+  { value: "Business", label: "Business" },
+  { value: "Individual", label: "Individual" },
 ];
 
 const stateOptions = [
-  {
-    value: "Karnataka",
-    label: "Karnataka",
-  },
-  {
-    value: "Maharashtra",
-    label: "Maharashtra",
-  },
-  {
-    value: "Goa",
-    label: "Goa",
-  },
-  {
-    value: "Telangana",
-    label: "Telangana",
-  },
-  {
-    value: "Tamil Nadu",
-    label: "Tamil Nadu",
-  },
-  {
-    value: "Andhra Pradesh",
-    label: "Andhra Pradesh",
-  },
-  {
-    value: "Kerala",
-    label: "Kerala",
-  },
-  {
-    value: "Gujarat",
-    label: "Gujarat",
-  },
-  {
-    value: "Delhi",
-    label: "Delhi",
-  },
+  { value: "Karnataka", label: "Karnataka" },
+  { value: "Maharashtra", label: "Maharashtra" },
+  { value: "Goa", label: "Goa" },
+  { value: "Telangana", label: "Telangana" },
+  { value: "Tamil Nadu", label: "Tamil Nadu" },
+  { value: "Andhra Pradesh", label: "Andhra Pradesh" },
+  { value: "Kerala", label: "Kerala" },
+  { value: "Gujarat", label: "Gujarat" },
+  { value: "Delhi", label: "Delhi" },
 ];
 
 const paymentTermsOptions = [
-  {
-    value: "Due on Receipt",
-    label: "Due on Receipt",
-  },
-  {
-    value: "Cash",
-    label: "Cash",
-  },
-  {
-    value: "15 Days",
-    label: "15 Days",
-  },
-  {
-    value: "30 Days",
-    label: "30 Days",
-  },
-  {
-    value: "45 Days",
-    label: "45 Days",
-  },
-  {
-    value: "60 Days",
-    label: "60 Days",
-  },
-  {
-    value: "90 Days",
-    label: "90 Days",
-  },
+  { value: "Due on Receipt", label: "Due on Receipt" },
+  { value: "Cash", label: "Cash" },
+  { value: "15 Days", label: "15 Days" },
+  { value: "30 Days", label: "30 Days" },
+  { value: "45 Days", label: "45 Days" },
+  { value: "60 Days", label: "60 Days" },
+  { value: "90 Days", label: "90 Days" },
 ];
 
 const openingBalanceTypeOptions = [
-  {
-    value: "CREDIT",
-    label: "Credit - We owe supplier",
-  },
-  {
-    value: "DEBIT",
-    label: "Debit - Supplier owes us",
-  },
+  { value: "CREDIT", label: "Credit - We owe supplier" },
+  { value: "DEBIT", label: "Debit - Supplier owes us" },
 ];
 
 const statusOptions = [
-  {
-    value: "Active",
-    label: "Active",
-  },
-  {
-    value: "Inactive",
-    label: "Inactive",
-  },
+  { value: "Active", label: "Active" },
+  { value: "Inactive", label: "Inactive" },
 ];
 
-function SupplierRegistration({ isOpen, onClose, onSave, editData = null }) {
+function SupplierRegistration({
+  isOpen,
+  onClose,
+  onSave,
+  editData = null,
+}) {
   const [formData, setFormData] = useState(initialFormData);
-
   const [saving, setSaving] = useState(false);
+  const saveLockRef = useRef(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -159,49 +88,28 @@ function SupplierRegistration({ isOpen, onClose, onSave, editData = null }) {
     if (editData) {
       setFormData({
         ...initialFormData,
-
         supplierName: editData.supplierName || "",
         supplierType: editData.supplierType || "Business",
-
         contactPerson: editData.contactPerson || "",
-
         phone: editData.phone || "",
-
         alternatePhone: editData.alternatePhone || "",
-
         email: editData.email || "",
-
         gstNo: editData.gstNo || "",
-
         panNo: editData.panNo || "",
-
         billingAddress: editData.billingAddress || "",
-
         shippingAddress: editData.shippingAddress || "",
-
         city: editData.city || "",
-
         state: editData.state || "Karnataka",
-
         pincode: editData.pincode || "",
-
         country: editData.country || "India",
-
         paymentTerms: editData.paymentTerms || "Due on Receipt",
-
         creditLimit: editData.creditLimit?.toString() || "",
-
         creditDays: editData.creditDays?.toString() || "",
-
         openingBalance: editData.openingBalance?.toString() || "",
-
         openingBalanceType: editData.openingBalanceType || "CREDIT",
-
         status: editData.status || "Active",
-
         notes: editData.notes || "",
       });
-
       return;
     }
 
@@ -232,16 +140,20 @@ function SupplierRegistration({ isOpen, onClose, onSave, editData = null }) {
         : null;
 
     const rawMessage =
-      (typeof responseData?.message === "string" && responseData.message) ||
-      (typeof responseData?.error === "string" && responseData.error) ||
+      (typeof responseData?.message === "string" &&
+        responseData.message) ||
+      (typeof responseData?.error === "string" &&
+        responseData.error) ||
       nestedError?.message ||
       error?.message ||
       "";
 
-    const code = responseData?.code ?? nestedError?.code ?? error?.code;
+    const code =
+      responseData?.code ?? nestedError?.code ?? error?.code;
 
     const isDuplicate =
-      Number(code) === 11000 || /E11000|duplicate key/i.test(rawMessage);
+      Number(code) === 11000 ||
+      /E11000|duplicate key/i.test(rawMessage);
 
     if (isDuplicate) {
       const keyValue =
@@ -286,12 +198,17 @@ function SupplierRegistration({ isOpen, onClose, onSave, editData = null }) {
       return "A supplier with the same unique details already exists. Check supplier code, phone, email, GST, or PAN.";
     }
 
-    if (Array.isArray(responseData?.errors) && responseData.errors.length > 0) {
+    if (
+      Array.isArray(responseData?.errors) &&
+      responseData.errors.length > 0
+    ) {
       return responseData.errors
         .map((item) =>
           typeof item === "string"
             ? item
-            : item?.message || item?.msg || "Invalid supplier information",
+            : item?.message ||
+              item?.msg ||
+              "Invalid supplier information",
         )
         .join(", ");
     }
@@ -307,23 +224,34 @@ function SupplierRegistration({ isOpen, onClose, onSave, editData = null }) {
 
     if (
       formData.email.trim() &&
-      !/^\S+@\S+\.\S+$/.test(formData.email.trim())
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+        formData.email.trim(),
+      )
     ) {
       toast.error("Enter a valid email address");
       return false;
     }
 
-    if (formData.gstNo.trim() && formData.gstNo.trim().length !== 15) {
+    if (
+      formData.gstNo.trim() &&
+      formData.gstNo.trim().length !== 15
+    ) {
       toast.error("GST number must contain 15 characters");
       return false;
     }
 
-    if (formData.panNo.trim() && formData.panNo.trim().length !== 10) {
+    if (
+      formData.panNo.trim() &&
+      formData.panNo.trim().length !== 10
+    ) {
       toast.error("PAN number must contain 10 characters");
       return false;
     }
 
-    if (formData.pincode.trim() && !/^\d{6}$/.test(formData.pincode.trim())) {
+    if (
+      formData.pincode.trim() &&
+      !/^\d{6}$/.test(formData.pincode.trim())
+    ) {
       toast.error("Pincode must contain 6 digits");
       return false;
     }
@@ -363,55 +291,42 @@ function SupplierRegistration({ isOpen, onClose, onSave, editData = null }) {
     try {
       const payload = {
         supplierName: formData.supplierName.trim(),
-
         supplierType: formData.supplierType,
-
         contactPerson: formData.contactPerson.trim() || null,
-
         phone: formData.phone.trim() || null,
-
         alternatePhone: formData.alternatePhone.trim() || null,
-
         email: formData.email.trim().toLowerCase() || null,
-
         gstNo: formData.gstNo.trim().toUpperCase() || null,
-
         panNo: formData.panNo.trim().toUpperCase() || null,
-
         billingAddress: formData.billingAddress.trim() || null,
-
         shippingAddress: formData.shippingAddress.trim() || null,
-
         city: formData.city.trim() || null,
-
         state: formData.state.trim() || null,
-
         pincode: formData.pincode.trim() || null,
-
         country: formData.country.trim() || "India",
-
-        paymentTerms: formData.paymentTerms.trim() || "Due on Receipt",
-
+        paymentTerms:
+          formData.paymentTerms.trim() || "Due on Receipt",
         creditLimit: Number(formData.creditLimit || 0),
-
         creditDays: Number(formData.creditDays || 0),
-
         openingBalance: Number(formData.openingBalance || 0),
-
         openingBalanceType: formData.openingBalanceType,
-
         status: formData.status,
-
         notes: formData.notes.trim() || null,
       };
 
       const response = editData?.supplierCode
-        ? await supplierApi.update(editData.supplierCode, payload)
+        ? await supplierApi.update(
+            editData.supplierCode,
+            payload,
+          )
         : await supplierApi.create(payload);
 
       savedSupplier =
-        response?.data?.supplier || response?.data?.data || response?.data;
+        response?.data?.supplier ||
+        response?.data?.data ||
+        response?.data;
 
+      // Correct syntax: no backslash before _id.
       if (!savedSupplier?._id) {
         throw new Error(
           "The server did not return the saved supplier. Check the supplier list before trying again.",
@@ -447,7 +362,10 @@ function SupplierRegistration({ isOpen, onClose, onSave, editData = null }) {
     try {
       await onSave?.(savedSupplier);
     } catch (callbackError) {
-      console.error("Supplier saved, but onSave failed:", callbackError);
+      console.error(
+        "Supplier saved, but onSave failed:",
+        callbackError,
+      );
 
       toast.error(
         "Supplier was saved, but the page could not refresh. Reload the supplier list; do not save again.",
@@ -500,7 +418,9 @@ function SupplierRegistration({ isOpen, onClose, onSave, editData = null }) {
     <BoxModal
       show={isOpen}
       onClose={onClose}
-      title={editData ? "Edit Supplier" : "Supplier Registration"}
+      title={
+        editData ? "Edit Supplier" : "Supplier Registration"
+      }
       subtitle={
         editData
           ? "Update supplier information"
@@ -510,7 +430,6 @@ function SupplierRegistration({ isOpen, onClose, onSave, editData = null }) {
       footer={footer}
     >
       {/* SUPPLIER INFORMATION */}
-
       <div className="box-modal-section">
         <div className="box-modal-section-header">
           <div className="box-modal-section-icon">
@@ -519,7 +438,6 @@ function SupplierRegistration({ isOpen, onClose, onSave, editData = null }) {
 
           <div className="box-modal-section-header-content">
             <h3>Supplier Information</h3>
-
             <p>Basic supplier and contact details</p>
           </div>
         </div>
@@ -595,7 +513,6 @@ function SupplierRegistration({ isOpen, onClose, onSave, editData = null }) {
       </div>
 
       {/* TAX INFORMATION */}
-
       <div className="box-modal-section">
         <div className="box-modal-section-header">
           <div className="box-modal-section-icon">
@@ -604,7 +521,6 @@ function SupplierRegistration({ isOpen, onClose, onSave, editData = null }) {
 
           <div className="box-modal-section-header-content">
             <h3>Tax Information</h3>
-
             <p>GST and PAN registration information</p>
           </div>
         </div>
@@ -633,7 +549,6 @@ function SupplierRegistration({ isOpen, onClose, onSave, editData = null }) {
       </div>
 
       {/* ADDRESS DETAILS */}
-
       <div className="box-modal-section">
         <div className="box-modal-section-header">
           <div className="box-modal-section-icon">
@@ -642,7 +557,6 @@ function SupplierRegistration({ isOpen, onClose, onSave, editData = null }) {
 
           <div className="box-modal-section-header-content">
             <h3>Address Details</h3>
-
             <p>Billing and shipping information</p>
           </div>
         </div>
@@ -712,7 +626,6 @@ function SupplierRegistration({ isOpen, onClose, onSave, editData = null }) {
       </div>
 
       {/* FINANCIAL INFORMATION */}
-
       <div className="box-modal-section">
         <div className="box-modal-section-header">
           <div className="box-modal-section-icon">
@@ -721,7 +634,6 @@ function SupplierRegistration({ isOpen, onClose, onSave, editData = null }) {
 
           <div className="box-modal-section-header-content">
             <h3>Financial Information</h3>
-
             <p>Credit terms and opening payable balance</p>
           </div>
         </div>
@@ -784,7 +696,6 @@ function SupplierRegistration({ isOpen, onClose, onSave, editData = null }) {
       </div>
 
       {/* NOTES */}
-
       <div className="box-modal-section">
         <div className="box-modal-section-header">
           <div className="box-modal-section-icon">
@@ -793,7 +704,6 @@ function SupplierRegistration({ isOpen, onClose, onSave, editData = null }) {
 
           <div className="box-modal-section-header-content">
             <h3>Additional Information</h3>
-
             <p>Notes and special instructions</p>
           </div>
         </div>

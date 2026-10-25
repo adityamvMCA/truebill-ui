@@ -33,6 +33,8 @@ import {
   localDate,
 } from "./purchaseBill.utils";
 
+import TdsFields, { emptyTds, buildTdsPayload, validateTds } from "../accounting/tds/TdsFields";
+
 import "../../styles/invoice-common1.css";
 
 const supplierApi = api.suppliers || api.supplier;
@@ -99,6 +101,7 @@ function PurchaseBillCreate1() {
 
   const [form, setForm] = useState(initialForm);
   const [items, setItems] = useState(() => [newItem()]);
+  const [tds, setTds] = useState(emptyTds);
 
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
@@ -128,6 +131,7 @@ function PurchaseBillCreate1() {
     JSON.stringify({
       form,
       items: itemSnapshot(items),
+      tds,
       sourceType,
       receiptId,
       quotationNumber,
@@ -310,6 +314,7 @@ function PurchaseBillCreate1() {
     JSON.stringify({
       form,
       items: itemSnapshot(items),
+      tds,
       sourceType,
       receiptId,
       quotationNumber,
@@ -628,6 +633,11 @@ function PurchaseBillCreate1() {
       messages.push("A purchase bill must have a positive total.");
     }
 
+    const tdsError = validateTds(tds);
+    if (tdsError) {
+      messages.push(tdsError);
+    }
+
     return messages;
   };
 
@@ -659,6 +669,9 @@ function PurchaseBillCreate1() {
 
         paymentTerms: form.paymentTerms.trim() || "Due on Receipt",
         taxMode: form.taxMode,
+
+        // TDS is optional; buildTdsPayload returns null when disabled.
+        tds: buildTdsPayload(tds),
 
         // Receipt-linked bills must never update stock.
         updateStock: linkedToReceipt ? false : form.updateStock,
@@ -1224,6 +1237,20 @@ function PurchaseBillCreate1() {
                   Add Item
                 </button>
               </div>
+            </section>
+
+            <section className="doc-panel purchase-bill-tds-panel">
+              <h2 className="doc-panel-title">Tax Deducted at Source (TDS)</h2>
+              <TdsFields
+                supplierLedgerId={selectedSupplier?.ledgerId}
+                baseAmountPaise={totals.taxable}
+                date={form.billDate}
+                value={tds}
+                onChange={(nextTds) => {
+                  setTds(nextTds);
+                  setErrors([]);
+                }}
+              />
             </section>
 
             <section className="doc-bottom">
