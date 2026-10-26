@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useNavigate } from "react-router-dom";
-import { Plus, Truck } from "lucide-react";
+import { Plus, Truck, IndianRupee, CheckCircle2, Receipt } from "lucide-react";
 import toast from "react-hot-toast";
 
 import salesInvoiceApi from "../../../services/modules/salesInvoiceApi";
-
+import routes from "../../../config/routes";
+import { Printer } from "lucide-react";
 import {
   SALES_PATHS,
   formatDate,
@@ -16,10 +17,12 @@ import {
 } from "./salesInvoiceUtils";
 
 import "../../../styles/invoice-common1.css";
+import "../../../styles/salesInvoicePayment.css";
 import DataList from "../../../components/common/DataList/DataList";
 import ConfirmModal from "../../../components/common/ConfirmModal/ConfirmModal";
 import StatusField from "../../../components/common/StatusField/StatusField";
 import EwayBillModal from "./EwayBillModal";
+import { PrintInvoiceButton } from "../../../invoice-templates/TemplateManager";
 
 const INITIAL_CONFIRM = {
   open: false,
@@ -32,6 +35,11 @@ const INITIAL_CONFIRM = {
 };
 
 const isCreated = (invoice) => invoice?.status === "CREATED";
+
+const canReceivePayment = (row) =>
+  row?.status === "POSTED" &&
+  Number(row?.outstandingAmountPaise) > 0 &&
+  row?.paymentStatus !== "PAID";
 
 /*
  * List rows are fetched WITHOUT items (.select("-items")), so the e-way
@@ -63,7 +71,6 @@ function EwayBillCell({ row, onGenerate }) {
   const state = getEwayState(row);
   const ewb = row.ewayBill || {};
 
-  // Already generated (or expired): no generate button in the list.
   if (state === "GENERATED" || state === "EXPIRED") {
     return (
       <small>
@@ -99,6 +106,72 @@ function EwayBillCell({ row, onGenerate }) {
   return <span className="dl-muted-value">—</span>;
 }
 
+function PaymentCell({ row, onReceive }) {
+  if (row?.status !== "POSTED") {
+    return <span className="dl-muted-value">—</span>;
+  }
+
+  const receipts = Array.isArray(row.receiptNumbers) ? row.receiptNumbers : [];
+  const latest = receipts[receipts.length - 1];
+  const partial = row.paymentStatus === "PARTIALLY_PAID";
+
+  return (
+    <div className="sip-cell">
+      {canReceivePayment(row) && (
+        <button
+          type="button"
+          className="sip-btn"
+          title={partial ? "Receive remaining balance" : "Receive payment"}
+          aria-label={`Receive payment for ${row.invoiceNumber}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onReceive(row);
+          }}
+        >
+          <span className="sip-btn-icon">
+            <IndianRupee size={14} strokeWidth={2.8} />
+          </span>
+          <span className="sip-btn-text">
+            {partial ? "Receive Balance" : "Receive"}
+          </span>
+        </button>
+      )}
+
+      {row.paymentStatus === "PAID" && (
+        <span
+          className="sip-badge sip-badge-paid"
+          title={
+            receipts.length
+              ? `Receipts: ${receipts.join(", ")}`
+              : "Fully received"
+          }
+        >
+          <CheckCircle2 size={14} />
+          <span>{latest || "Received"}</span>
+          {receipts.length > 1 && <em>+{receipts.length - 1}</em>}
+        </span>
+      )}
+
+      {latest && row.paymentStatus !== "PAID" && (
+        <span
+          className="sip-badge sip-badge-receipt"
+          title={`Receipts: ${receipts.join(", ")}`}
+        >
+          <Receipt size={12} />
+          <span>{latest}</span>
+          {receipts.length > 1 && <em>+{receipts.length - 1}</em>}
+        </span>
+      )}
+    </div>
+  );
+}
+const fetchFullInvoice = async (invoiceNumber) => {
+  const res = await salesInvoiceApi.getByNumber(invoiceNumber); // <- your method name
+  const data = res?.data?.data ?? res?.data;
+  const invoice = data?.invoice ?? data;
+  if (!invoice?.invoiceNumber) throw new Error("Invoice not found.");
+  return invoice;
+};
 function SalesInvoicesListContent() {
   const navigate = useNavigate();
 
@@ -162,9 +235,26 @@ function SalesInvoicesListContent() {
     setEwayBillInvoiceNumber(invoiceNumber);
   }, []);
 
+  const handleReceivePayment = useCallback(
+    (row) => {
+      const customerId = row.customerId?._id || row.customerId;
+
+      if (!customerId || !row._id) {
+        toast.error("Customer or invoice id is missing.");
+        return;
+      }
+
+      const params = new URLSearchParams({
+        customerId: String(customerId),
+        invoiceId: String(row._id),
+      });
+
+      navigate(`${routes.customerReceipts.create}?${params.toString()}`);
+    },
+    [navigate],
+  );
+
   const handleEwayBillUpdated = useCallback((updatedInvoice) => {
-    // Merge so list-only fields are kept; the button disappears as soon as
-    // ewayBill.status becomes GENERATED.
     setInvoices((previous) =>
       previous.map((item) =>
         item.invoiceNumber === updatedInvoice.invoiceNumber
@@ -209,7 +299,42 @@ function SalesInvoicesListContent() {
         key: "ewayBill",
         label: "E-Way Bill",
         sortable: false,
-        render: (_, row) => <EwayBillCell row={row} onGenerate={openEwayBill} />,
+        render: (_, row) => (
+          <EwayBillCell row={row} onGenerate={openEwayBill} />
+        ),
+      },
+      {
+        key: "receivePayment",
+        label: "Payment",
+        sortable: false,
+        render: (_, row) => (
+          <PaymentCell row={row} onReceive={handleReceivePayment} />
+        ),
+      },
+      {
+        key: "print",
+        label: "Print",
+        sortable: false,
+        render: (_, row) =>
+          row.status === "CANCELLED" ? (
+            <span className="dl-muted-value">—</span>
+          ) : (
+            <div className="sip-cell">
+              <PrintInvoiceButton
+                invoiceNumber={row.invoiceNumber}
+                fetchInvoice={fetchFullInvoice}
+                className="sip-btn sip-btn-print"
+                label={
+                  <>
+                    <span className="sip-btn-icon">
+                      <Printer size={14} strokeWidth={2.5} />
+                    </span>
+                    <span className="sip-btn-text">Print</span>
+                  </>
+                }
+              />
+            </div>
+          ),
       },
       {
         key: "invoiceDate",
@@ -318,7 +443,7 @@ function SalesInvoicesListContent() {
         render: (value) => value || <span className="dl-muted-value">N/A</span>,
       },
     ],
-    [handleView, openEwayBill],
+    [handleView, openEwayBill, handleReceivePayment],
   );
 
   const filters = [

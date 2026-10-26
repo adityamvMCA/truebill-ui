@@ -4028,5 +4028,6 @@ export default function SalesInvoiceCreate({ mode = "create" }) {
       invoiceNumber={invoiceNumber}
       sourceOrderNumber={sourceOrderNumber}
     />
+    
   );
 }

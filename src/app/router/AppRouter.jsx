@@ -98,6 +98,7 @@ import TdsNatures from "../../pages/accounting/tds/TdsNatures";
 import LedgersList from "../../pages/accounting/Ledger/LedgersList";
 import CashBook from "../../pages/accounting/report/CashBook";
 import PettyCash from "../../pages/accounting/report/PettyCash";
+import TemplateSettingsPage from "../../Settings/TemplateSettingsPage";
 
 // import InventoryReport from "../../pages/Reportdashboard/InventoryReport";
 
@@ -652,6 +653,8 @@ const AppRouter = () => (
             path={routes.accounting.supplierledger}
             element={gated("ledger.view", <SupplierLedger />)}
           />
+
+          <Route path="/settings/print-templates" element={<TemplateSettingsPage />} />
           {/* =====================
               PLATFORM ROUTES
               Developer + Support

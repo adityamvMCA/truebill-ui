@@ -1,0 +1,128 @@
+/* Sales invoice list - Payment column */
+
+.sip-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 120px;
+}
+
+.sip-cell .sip-btn {
+  -webkit-appearance: none;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  margin: 0;
+  padding: 0 14px 0 5px;
+  border: 0;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  color: #ffffff;
+  white-space: nowrap;
+  cursor: pointer;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  box-shadow: 0 3px 10px rgba(79, 70, 229, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+.sip-cell .sip-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.45);
+  filter: brightness(1.05);
+}
+
+.sip-cell .sip-btn:active {
+  transform: translateY(0);
+}
+
+.sip-cell .sip-btn:focus-visible {
+  outline: 2px solid #7c3aed;
+  outline-offset: 2px;
+}
+
+.sip-cell .sip-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: #4f46e5;
+  background: #ffffff;
+}
+
+.sip-cell .sip-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.sip-cell .sip-badge-paid {
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid #bbf7d0;
+}
+
+.sip-cell .sip-badge-receipt {
+  color: #4338ca;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+}
+
+.sip-cell .sip-badge em {
+  font-style: normal;
+  font-weight: 700;
+  opacity: 0.8;
+}
+
+@media (max-width: 640px) {
+  .sip-cell .sip-btn-text {
+    display: none;
+  }
+
+  .sip-cell .sip-btn {
+    padding: 0 5px;
+  }
+}
+
+/* Print button (Sales invoice list) */
+.sip-cell {
+  min-width: 0;
+}
+
+.sip-cell .sip-btn-print {
+  background: linear-gradient(135deg, #334155 0%, #0f172a 100%);
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.28);
+}
+
+.sip-cell .sip-btn-print:hover {
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.4);
+}
+
+.sip-cell .sip-btn-print .sip-btn-icon {
+  color: #0f172a;
+}
+
+.sip-cell .sip-btn-print:focus-visible {
+  outline-color: #334155;
+}
+
+.sip-cell .sip-btn-print:disabled {
+  opacity: 0.65;
+  cursor: progress;
+  transform: none;
+  filter: none;
+}
