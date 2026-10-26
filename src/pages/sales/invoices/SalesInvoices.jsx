@@ -407,6 +407,8 @@ function SalesInvoiceEditor({ invoice, onClose, onSaved }) {
     );
 
     setForm((previous) => ({
+
+      
       ...previous,
       customerId: customer ? idOf(customer) : "",
       paymentTerms: customer?.paymentTerms || "Due on Receipt",

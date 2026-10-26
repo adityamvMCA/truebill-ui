@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useNavigate } from "react-router-dom";
-import { Plus } from "lucide-react";
+import { Plus, Truck } from "lucide-react";
 import toast from "react-hot-toast";
 
 import salesInvoiceApi from "../../../services/modules/salesInvoiceApi";
@@ -19,6 +19,7 @@ import "../../../styles/invoice-common1.css";
 import DataList from "../../../components/common/DataList/DataList";
 import ConfirmModal from "../../../components/common/ConfirmModal/ConfirmModal";
 import StatusField from "../../../components/common/StatusField/StatusField";
+import EwayBillModal from "./EwayBillModal";
 
 const INITIAL_CONFIRM = {
   open: false,
@@ -32,9 +33,76 @@ const INITIAL_CONFIRM = {
 
 const isCreated = (invoice) => invoice?.status === "CREATED";
 
+/*
+ * List rows are fetched WITHOUT items (.select("-items")), so the e-way
+ * bill state must come from stored fields only:
+ * ewayBillRequired, ewayBill.status and ewayBill.validUntil.
+ */
+const getEwayState = (row) => {
+  const ewb = row?.ewayBill || {};
+
+  if (ewb.status === "GENERATED") {
+    return ewb.validUntil && new Date(ewb.validUntil) <= new Date()
+      ? "EXPIRED"
+      : "GENERATED";
+  }
+
+  if (row?.status === "CANCELLED") return null;
+  if (ewb.status === "CANCELLED") return "CANCELLED";
+  if (!row?.ewayBillRequired) return null;
+
+  return row.status === "POSTED" ? "PENDING" : "AFTER_POSTING";
+};
+
+const canGenerateEwayBill = (row) =>
+  row?.status === "POSTED" &&
+  Boolean(row?.ewayBillRequired) &&
+  row?.ewayBill?.status !== "GENERATED";
+
+function EwayBillCell({ row, onGenerate }) {
+  const state = getEwayState(row);
+  const ewb = row.ewayBill || {};
+
+  // Already generated (or expired): no generate button in the list.
+  if (state === "GENERATED" || state === "EXPIRED") {
+    return (
+      <small>
+        {state === "EXPIRED" ? "EWB Expired" : `EWB ${ewb.ewbNumber || ""}`}
+      </small>
+    );
+  }
+
+  if (canGenerateEwayBill(row)) {
+    return (
+      <div>
+        <button
+          type="button"
+          className="so-primary-button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onGenerate(row.invoiceNumber);
+          }}
+        >
+          <Truck size={16} />
+          <span>
+            {state === "CANCELLED" ? "Generate Again" : "Generate E-Way Bill"}
+          </span>
+        </button>
+      </div>
+    );
+  }
+
+  if (state === "AFTER_POSTING") {
+    return <small>Post invoice first</small>;
+  }
+
+  return <span className="dl-muted-value">—</span>;
+}
+
 function SalesInvoicesListContent() {
   const navigate = useNavigate();
 
+  const [ewayBillInvoiceNumber, setEwayBillInvoiceNumber] = useState("");
   const [loading, setLoading] = useState(true);
   const [invoices, setInvoices] = useState([]);
   const [confirm, setConfirm] = useState(INITIAL_CONFIRM);
@@ -90,6 +158,22 @@ function SalesInvoicesListContent() {
     [navigate],
   );
 
+  const openEwayBill = useCallback((invoiceNumber) => {
+    setEwayBillInvoiceNumber(invoiceNumber);
+  }, []);
+
+  const handleEwayBillUpdated = useCallback((updatedInvoice) => {
+    // Merge so list-only fields are kept; the button disappears as soon as
+    // ewayBill.status becomes GENERATED.
+    setInvoices((previous) =>
+      previous.map((item) =>
+        item.invoiceNumber === updatedInvoice.invoiceNumber
+          ? { ...item, ...updatedInvoice }
+          : item,
+      ),
+    );
+  }, []);
+
   const columns = useMemo(
     () => [
       {
@@ -120,6 +204,12 @@ function SalesInvoicesListContent() {
             <span>{row.customerCode || "N/A"}</span>
           </div>
         ),
+      },
+      {
+        key: "ewayBill",
+        label: "E-Way Bill",
+        sortable: false,
+        render: (_, row) => <EwayBillCell row={row} onGenerate={openEwayBill} />,
       },
       {
         key: "invoiceDate",
@@ -228,7 +318,7 @@ function SalesInvoicesListContent() {
         render: (value) => value || <span className="dl-muted-value">N/A</span>,
       },
     ],
-    [handleView],
+    [handleView, openEwayBill],
   );
 
   const filters = [
@@ -236,7 +326,6 @@ function SalesInvoicesListContent() {
       key: "status",
       label: "Invoice Status",
       type: "select",
-      // options: ["DRAFT", "POSTED", "CANCELLED"],
       options: ["CREATED", "POSTED", "CANCELLED"],
     },
     {
@@ -263,31 +352,22 @@ function SalesInvoicesListContent() {
   ];
 
   const quickFilters = [
-    {
-      key: "status",
-      value: "",
-      label: "All",
-    },
-    {
-      key: "status",
-      value: "CREATED",
-      label: "Created",
-    },
-    {
-      key: "status",
-      value: "POSTED",
-      label: "Posted",
-    },
-    {
-      key: "status",
-      value: "CANCELLED",
-      label: "Cancelled",
-    },
+    { key: "status", value: "", label: "All" },
+    { key: "status", value: "CREATED", label: "Created" },
+    { key: "status", value: "POSTED", label: "Posted" },
+    { key: "status", value: "CANCELLED", label: "Cancelled" },
   ];
 
   const handleEdit = (row) => {
     if (!isCreated(row)) {
-      toast.error("Only draft sales invoices can be edited.");
+      toast.error("Only created sales invoices can be edited.");
+      return;
+    }
+
+    if (row.sourceSalesOrderId) {
+      toast.error(
+        "Order-linked invoices cannot be edited. Delete and recreate from the Sales Order.",
+      );
       return;
     }
 
@@ -298,7 +378,7 @@ function SalesInvoicesListContent() {
     if (actionLock.current || !rows?.length) return;
 
     if (rows.some((row) => !isCreated(row))) {
-      toast.error("Select only draft sales invoices.");
+      toast.error("Select only created sales invoices.");
       return;
     }
 
@@ -309,11 +389,11 @@ function SalesInvoicesListContent() {
       type: "danger",
       title: posting
         ? "Post selected sales invoices?"
-        : "Delete selected drafts?",
+        : "Delete selected invoices?",
       message: posting
         ? `Post ${rows.length} invoice(s)? This creates accounting entries and deducts tracked stock where selected. Posted invoices cannot be edited or deleted.`
-        : `Delete ${rows.length} sales invoice draft(s)? These drafts will be marked as deleted.`,
-      confirmText: posting ? "Post Drafts" : "Delete Drafts",
+        : `Delete ${rows.length} created sales invoice(s)? They will be marked as deleted.`,
+      confirmText: posting ? "Post Invoices" : "Delete Invoices",
       rows,
       action,
     });
@@ -365,8 +445,6 @@ function SalesInvoicesListContent() {
         toast.error(`${failures.length} action(s) failed. ${failures[0]}`);
       }
 
-      // Close and refresh even after uncertain responses.
-      // Do not immediately offer the same stale action again.
       setConfirm(INITIAL_CONFIRM);
 
       await loadInvoices();
@@ -407,12 +485,12 @@ function SalesInvoicesListContent() {
         bulkActions={[
           {
             key: "post",
-            label: "Post Drafts",
+            label: "Post Invoices",
             action: (rows) => openAction(rows, "post"),
           },
           {
             key: "delete",
-            label: "Delete Drafts",
+            label: "Delete Invoices",
             danger: true,
             action: (rows) => openAction(rows, "delete"),
           },
@@ -445,6 +523,15 @@ function SalesInvoicesListContent() {
         }}
         onConfirm={handleConfirm}
       />
+
+      {ewayBillInvoiceNumber && (
+        <EwayBillModal
+          key={ewayBillInvoiceNumber}
+          invoiceNumber={ewayBillInvoiceNumber}
+          onClose={() => setEwayBillInvoiceNumber("")}
+          onUpdated={handleEwayBillUpdated}
+        />
+      )}
     </>
   );
 }

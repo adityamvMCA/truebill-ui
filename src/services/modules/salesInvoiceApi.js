@@ -156,6 +156,45 @@ const salesInvoiceApi = {
       params,
     });
   },
+  /* ==========================================
+     E-WAY BILL
+     ========================================== */
+
+  saveEwayBill(invoiceNumber, payload) {
+    return apiClient.put(`${getInvoicePath(invoiceNumber)}/eway-bill`, payload);
+  },
+
+  exportEwayBill(invoiceNumber) {
+    return apiClient.get(`${getInvoicePath(invoiceNumber)}/eway-bill/export`);
+  },
+
+  recordEwayBill(invoiceNumber, payload) {
+    return apiClient.post(
+      `${getInvoicePath(invoiceNumber)}/eway-bill/record`,
+      payload,
+    );
+  },
+
+  updateEwayBillVehicle(invoiceNumber, payload) {
+    return apiClient.post(
+      `${getInvoicePath(invoiceNumber)}/eway-bill/vehicle`,
+      payload,
+    );
+  },
+
+  extendEwayBill(invoiceNumber, payload) {
+    return apiClient.post(
+      `${getInvoicePath(invoiceNumber)}/eway-bill/extend`,
+      payload,
+    );
+  },
+
+  cancelEwayBill(invoiceNumber, payload) {
+    return apiClient.post(
+      `${getInvoicePath(invoiceNumber)}/eway-bill/cancel`,
+      payload,
+    );
+  },
 };
 
 export default salesInvoiceApi;
