@@ -70,12 +70,7 @@ const statusOptions = [
   { value: "Inactive", label: "Inactive" },
 ];
 
-function SupplierRegistration({
-  isOpen,
-  onClose,
-  onSave,
-  editData = null,
-}) {
+function SupplierRegistration({ isOpen, onClose, onSave, editData = null }) {
   const [formData, setFormData] = useState(initialFormData);
   const [saving, setSaving] = useState(false);
   const saveLockRef = useRef(false);
@@ -140,20 +135,16 @@ function SupplierRegistration({
         : null;
 
     const rawMessage =
-      (typeof responseData?.message === "string" &&
-        responseData.message) ||
-      (typeof responseData?.error === "string" &&
-        responseData.error) ||
+      (typeof responseData?.message === "string" && responseData.message) ||
+      (typeof responseData?.error === "string" && responseData.error) ||
       nestedError?.message ||
       error?.message ||
       "";
 
-    const code =
-      responseData?.code ?? nestedError?.code ?? error?.code;
+    const code = responseData?.code ?? nestedError?.code ?? error?.code;
 
     const isDuplicate =
-      Number(code) === 11000 ||
-      /E11000|duplicate key/i.test(rawMessage);
+      Number(code) === 11000 || /E11000|duplicate key/i.test(rawMessage);
 
     if (isDuplicate) {
       const keyValue =
@@ -198,17 +189,12 @@ function SupplierRegistration({
       return "A supplier with the same unique details already exists. Check supplier code, phone, email, GST, or PAN.";
     }
 
-    if (
-      Array.isArray(responseData?.errors) &&
-      responseData.errors.length > 0
-    ) {
+    if (Array.isArray(responseData?.errors) && responseData.errors.length > 0) {
       return responseData.errors
         .map((item) =>
           typeof item === "string"
             ? item
-            : item?.message ||
-              item?.msg ||
-              "Invalid supplier information",
+            : item?.message || item?.msg || "Invalid supplier information",
         )
         .join(", ");
     }
@@ -224,34 +210,23 @@ function SupplierRegistration({
 
     if (
       formData.email.trim() &&
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-        formData.email.trim(),
-      )
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())
     ) {
       toast.error("Enter a valid email address");
       return false;
     }
 
-    if (
-      formData.gstNo.trim() &&
-      formData.gstNo.trim().length !== 15
-    ) {
+    if (formData.gstNo.trim() && formData.gstNo.trim().length !== 15) {
       toast.error("GST number must contain 15 characters");
       return false;
     }
 
-    if (
-      formData.panNo.trim() &&
-      formData.panNo.trim().length !== 10
-    ) {
+    if (formData.panNo.trim() && formData.panNo.trim().length !== 10) {
       toast.error("PAN number must contain 10 characters");
       return false;
     }
 
-    if (
-      formData.pincode.trim() &&
-      !/^\d{6}$/.test(formData.pincode.trim())
-    ) {
+    if (formData.pincode.trim() && !/^\d{6}$/.test(formData.pincode.trim())) {
       toast.error("Pincode must contain 6 digits");
       return false;
     }
@@ -304,8 +279,7 @@ function SupplierRegistration({
         state: formData.state.trim() || null,
         pincode: formData.pincode.trim() || null,
         country: formData.country.trim() || "India",
-        paymentTerms:
-          formData.paymentTerms.trim() || "Due on Receipt",
+        paymentTerms: formData.paymentTerms.trim() || "Due on Receipt",
         creditLimit: Number(formData.creditLimit || 0),
         creditDays: Number(formData.creditDays || 0),
         openingBalance: Number(formData.openingBalance || 0),
@@ -315,16 +289,11 @@ function SupplierRegistration({
       };
 
       const response = editData?.supplierCode
-        ? await supplierApi.update(
-            editData.supplierCode,
-            payload,
-          )
+        ? await supplierApi.update(editData.supplierCode, payload)
         : await supplierApi.create(payload);
 
       savedSupplier =
-        response?.data?.supplier ||
-        response?.data?.data ||
-        response?.data;
+        response?.data?.supplier || response?.data?.data || response?.data;
 
       // Correct syntax: no backslash before _id.
       if (!savedSupplier?._id) {
@@ -362,10 +331,7 @@ function SupplierRegistration({
     try {
       await onSave?.(savedSupplier);
     } catch (callbackError) {
-      console.error(
-        "Supplier saved, but onSave failed:",
-        callbackError,
-      );
+      console.error("Supplier saved, but onSave failed:", callbackError);
 
       toast.error(
         "Supplier was saved, but the page could not refresh. Reload the supplier list; do not save again.",
@@ -418,9 +384,7 @@ function SupplierRegistration({
     <BoxModal
       show={isOpen}
       onClose={onClose}
-      title={
-        editData ? "Edit Supplier" : "Supplier Registration"
-      }
+      title={editData ? "Edit Supplier" : "Supplier Registration"}
       subtitle={
         editData
           ? "Update supplier information"

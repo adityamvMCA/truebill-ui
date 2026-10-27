@@ -1,28 +1,50 @@
-import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
-  INVOICE_TEMPLATES, EWAY_TEMPLATES, DEFAULT_SELECTED, STORAGE_KEY, PAPERS, DEFAULTS,
-} from './templates.config';
-import InvoiceTemplate from './InvoiceTemplate';
-import EwayBillTemplate from './EwayBillTemplate';
-import { SAMPLE_INVOICE } from './sampleData';
+  INVOICE_TEMPLATES,
+  EWAY_TEMPLATES,
+  DEFAULT_SELECTED,
+  STORAGE_KEY,
+  PAPERS,
+  DEFAULTS,
+} from "./templates.config";
+import InvoiceTemplate from "./InvoiceTemplate";
+import EwayBillTemplate from "./EwayBillTemplate";
+import { SAMPLE_INVOICE } from "./sampleData";
 
 const KINDS = {
-  invoice: { label: 'Sales invoice', list: INVOICE_TEMPLATES, Doc: InvoiceTemplate },
-  eway: { label: 'E-way bill', list: EWAY_TEMPLATES, Doc: EwayBillTemplate },
+  invoice: {
+    label: "Sales invoice",
+    list: INVOICE_TEMPLATES,
+    Doc: InvoiceTemplate,
+  },
+  eway: { label: "E-way bill", list: EWAY_TEMPLATES, Doc: EwayBillTemplate },
 };
 const mm = (v) => (v * 96) / 25.4;
-const dims = (t) => { const P = PAPERS[t.paper || DEFAULTS.paper]; return { w: mm(P.w), h: mm(P.h) }; };
+const dims = (t) => {
+  const P = PAPERS[t.paper || DEFAULTS.paper];
+  return { w: mm(P.w), h: mm(P.h) };
+};
 
 export function useSelectedTemplates() {
   const [sel, setSel] = useState(() => {
-    try { return { ...DEFAULT_SELECTED, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') }; }
-    catch { return DEFAULT_SELECTED; }
+    try {
+      return {
+        ...DEFAULT_SELECTED,
+        ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"),
+      };
+    } catch {
+      return DEFAULT_SELECTED;
+    }
   });
   const choose = (kind, id) => {
     const next = { ...sel, [kind]: id };
     setSel(next);
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
   };
   return [sel, choose];
 }
@@ -31,6 +53,10 @@ function PrintPortal({ children }) {
   return createPortal(<div id="print-root">{children}</div>, document.body);
 }
 function printWithTitle(title) {
+  if (typeof window !== "undefined" && window.AndroidPrint?.print) {
+    window.AndroidPrint.print(title);
+    return;
+  }
   const old = document.title;
   document.title = title;
   window.print();
@@ -39,28 +65,60 @@ function printWithTitle(title) {
 
 function Scaled({ w, h, scale, children }) {
   return (
-    <div style={{ width: w * scale, height: h * scale, overflow: 'hidden', flex: 'none', background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,.2)' }}>
-      <div style={{ width: w, transform: `scale(${scale})`, transformOrigin: 'top left', pointerEvents: 'none' }}>
+    <div
+      style={{
+        width: w * scale,
+        height: h * scale,
+        overflow: "hidden",
+        flex: "none",
+        background: "#fff",
+        boxShadow: "0 1px 4px rgba(0,0,0,.2)",
+      }}
+    >
+      <div
+        style={{
+          width: w,
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+          pointerEvents: "none",
+        }}
+      >
         {children}
       </div>
     </div>
   );
 }
 
-export function PrintDocument({ invoice, kind = 'invoice', label }) {
+export function PrintDocument({ invoice, kind = "invoice", label }) {
   const [sel] = useSelectedTemplates();
   const { Doc } = KINDS[kind];
   return (
     <>
-      <button className="tm-btn primary" onClick={() => printWithTitle(`${kind === 'eway' ? 'EWB' : 'Invoice'}-${invoice.invoiceNumber}`)}>
-        {label || (kind === 'eway' ? 'Print e-way bill' : 'Print invoice')}
+      <button
+        className="tm-btn primary"
+        onClick={() =>
+          printWithTitle(
+            `${kind === "eway" ? "EWB" : "Invoice"}-${invoice.invoiceNumber}`,
+          )
+        }
+      >
+        {label || (kind === "eway" ? "Print e-way bill" : "Print invoice")}
       </button>
-      <PrintPortal><Doc invoice={invoice} templateId={sel[kind]} /></PrintPortal>
+      <PrintPortal>
+        <Doc invoice={invoice} templateId={sel[kind]} />
+      </PrintPortal>
     </>
   );
 }
 
-export function PrintInvoiceButton({ invoiceNumber, fetchInvoice, kind = 'invoice', company, label = 'Print', className = 'tm-btn' }) {
+export function PrintInvoiceButton({
+  invoiceNumber,
+  fetchInvoice,
+  kind = "invoice",
+  company,
+  label = "Print",
+  className = "tm-btn",
+}) {
   const [sel] = useSelectedTemplates();
   const [doc, setDoc] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -69,11 +127,18 @@ export function PrintInvoiceButton({ invoiceNumber, fetchInvoice, kind = 'invoic
   useEffect(() => {
     if (!doc) return undefined;
     const done = () => setDoc(null);
-    window.addEventListener('afterprint', done);
-    const id = requestAnimationFrame(() => requestAnimationFrame(() => {
-      printWithTitle(`${kind === 'eway' ? 'EWB' : 'Invoice'}-${doc.invoiceNumber}`);
-    }));
-    return () => { cancelAnimationFrame(id); window.removeEventListener('afterprint', done); };
+    window.addEventListener("afterprint", done);
+    const id = requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        printWithTitle(
+          `${kind === "eway" ? "EWB" : "Invoice"}-${doc.invoiceNumber}`,
+        );
+      }),
+    );
+    return () => {
+      cancelAnimationFrame(id);
+      window.removeEventListener("afterprint", done);
+    };
   }, [doc, kind]);
 
   const handle = async (e) => {
@@ -91,20 +156,33 @@ export function PrintInvoiceButton({ invoiceNumber, fetchInvoice, kind = 'invoic
 
   return (
     <>
-      <button type="button" className={className} onClick={handle} disabled={busy} aria-label={`Print ${invoiceNumber}`}>
-        {busy ? 'Loading…' : label}
+      <button
+        type="button"
+        className={className}
+        onClick={handle}
+        disabled={busy}
+        aria-label={`Print ${invoiceNumber}`}
+      >
+        {busy ? "Loading…" : label}
       </button>
-      {doc && <PrintPortal><Doc invoice={doc} templateId={sel[kind]} company={company} /></PrintPortal>}
+      {doc && (
+        <PrintPortal>
+          <Doc invoice={doc} templateId={sel[kind]} company={company} />
+        </PrintPortal>
+      )}
     </>
   );
 }
 
 export default function TemplateManager({ invoice }) {
-  const [kind, setKind] = useState('invoice');
+  const [kind, setKind] = useState("invoice");
   const [sel, choose] = useSelectedTemplates();
-  const [preview, setPreview] = useState({ invoice: sel.invoice, eway: sel.eway });
+  const [preview, setPreview] = useState({
+    invoice: sel.invoice,
+    eway: sel.eway,
+  });
   const [live, setLive] = useState(false);
-  const [group, setGroup] = useState('All');
+  const [group, setGroup] = useState("All");
   const boxRef = useRef(null);
   const [boxW, setBoxW] = useState(520);
 
@@ -121,8 +199,8 @@ export default function TemplateManager({ invoice }) {
   const current = list.find((t) => t.id === preview[kind]) || list[0];
   const cd = dims(current);
   const scale = Math.min(1, (boxW - 2) / cd.w);
-  const groups = ['All', ...new Set(list.map((t) => t.group).filter(Boolean))];
-  const shown = list.filter((t) => group === 'All' || t.group === group);
+  const groups = ["All", ...new Set(list.map((t) => t.group).filter(Boolean))];
+  const shown = list.filter((t) => group === "All" || t.group === group);
 
   return (
     <div className="tm">
@@ -130,11 +208,24 @@ export default function TemplateManager({ invoice }) {
       <div className="tm-top">
         <div>
           <h2>Print templates</h2>
-          <p>Pick a look for each document. The selected template is used whenever you print.</p>
+          <p>
+            Pick a look for each document. The selected template is used
+            whenever you print.
+          </p>
         </div>
         <div className="tm-tabs" role="tablist">
           {Object.entries(KINDS).map(([k, v]) => (
-            <button key={k} role="tab" aria-selected={kind === k} onClick={() => { setKind(k); setGroup('All'); }}>{v.label}</button>
+            <button
+              key={k}
+              role="tab"
+              aria-selected={kind === k}
+              onClick={() => {
+                setKind(k);
+                setGroup("All");
+              }}
+            >
+              {v.label}
+            </button>
           ))}
         </div>
       </div>
@@ -143,18 +234,43 @@ export default function TemplateManager({ invoice }) {
         <div>
           {groups.length > 2 && (
             <div className="tm-chips">
-              {groups.map((g) => <button key={g} data-on={g === group} onClick={() => setGroup(g)}>{g}</button>)}
+              {groups.map((g) => (
+                <button
+                  key={g}
+                  data-on={g === group}
+                  onClick={() => setGroup(g)}
+                >
+                  {g}
+                </button>
+              ))}
             </div>
           )}
           <div className="tm-grid">
-            {shown.map((t) => { const d = dims(t); return (
-              <button key={t.id} className="tm-card" data-active={t.id === current.id}
-                onClick={() => setPreview({ ...preview, [kind]: t.id })}>
-                <div className="tm-thumb"><Scaled w={d.w} h={d.h} scale={Math.min(150 / d.w, 205 / d.h)}><Doc invoice={SAMPLE_INVOICE} templateId={t.id} /></Scaled></div>
-                <span className="tm-name">{t.name}</span>
-                {sel[kind] === t.id && <span className="tm-badge">In use</span>}
-              </button>
-            ); })}
+            {shown.map((t) => {
+              const d = dims(t);
+              return (
+                <button
+                  key={t.id}
+                  className="tm-card"
+                  data-active={t.id === current.id}
+                  onClick={() => setPreview({ ...preview, [kind]: t.id })}
+                >
+                  <div className="tm-thumb">
+                    <Scaled
+                      w={d.w}
+                      h={d.h}
+                      scale={Math.min(150 / d.w, 205 / d.h)}
+                    >
+                      <Doc invoice={SAMPLE_INVOICE} templateId={t.id} />
+                    </Scaled>
+                  </div>
+                  <span className="tm-name">{t.name}</span>
+                  {sel[kind] === t.id && (
+                    <span className="tm-badge">In use</span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -164,25 +280,44 @@ export default function TemplateManager({ invoice }) {
             <div className="tm-actions">
               {invoice && (
                 <label className="tm-sw">
-                  <input type="checkbox" checked={live} onChange={(e) => setLive(e.target.checked)} /> Use my invoice
+                  <input
+                    type="checkbox"
+                    checked={live}
+                    onChange={(e) => setLive(e.target.checked)}
+                  />{" "}
+                  Use my invoice
                 </label>
               )}
-              <button className="tm-btn" disabled={sel[kind] === current.id} onClick={() => choose(kind, current.id)}>
-                {sel[kind] === current.id ? 'In use' : 'Use this template'}
+              <button
+                className="tm-btn"
+                disabled={sel[kind] === current.id}
+                onClick={() => choose(kind, current.id)}
+              >
+                {sel[kind] === current.id ? "In use" : "Use this template"}
               </button>
-              <button className="tm-btn primary" onClick={() => printWithTitle(`${current.name}-${data.invoiceNumber}`)}>Print</button>
+              <button
+                className="tm-btn primary"
+                onClick={() =>
+                  printWithTitle(`${current.name}-${data.invoiceNumber}`)
+                }
+              >
+                Print
+              </button>
             </div>
           </div>
           <div ref={boxRef} className="tm-preview">
-            <Scaled w={cd.w} h={cd.h} scale={scale}><Doc invoice={data} templateId={current.id} /></Scaled>
+            <Scaled w={cd.w} h={cd.h} scale={scale}>
+              <Doc invoice={data} templateId={current.id} />
+            </Scaled>
           </div>
         </aside>
       </div>
-      <PrintPortal><Doc invoice={data} templateId={current.id} /></PrintPortal>
+      <PrintPortal>
+        <Doc invoice={data} templateId={current.id} />
+      </PrintPortal>
     </div>
   );
 }
-
 
 const TM_CSS = `
 .tm{font-family:Inter,"Segoe UI",Arial,sans-serif;color:#111827;padding:20px;max-width:1280px;margin:0 auto}

@@ -99,6 +99,7 @@ import LedgersList from "../../pages/accounting/Ledger/LedgersList";
 import CashBook from "../../pages/accounting/report/CashBook";
 import PettyCash from "../../pages/accounting/report/PettyCash";
 import TemplateSettingsPage from "../../Settings/TemplateSettingsPage";
+import CustomerEdit from "../../pages/customers/CustomerEdit";
 
 // import InventoryReport from "../../pages/Reportdashboard/InventoryReport";
 
@@ -343,6 +344,10 @@ const AppRouter = () => (
           <Route
             path={routes.customers.create}
             element={gated("sales.customers", <CustomerCreate />)}
+          />
+          <Route
+            path={routes.customers.edit}
+            element={gated("sales.customers", <CustomerEdit />)}
           />
           <Route
             path={routes.customers.outstanding}

@@ -1,0 +1,89 @@
+/*
+  The text field itself reuses the shared <Input /> component, so it keeps the
+  app's existing look. Only the dropdown needs styles. Colours use your theme
+  variables when they exist and fall back to neutral values otherwise; rename
+  the variables below to match your theme if they differ.
+*/
+
+.async-select {
+  position: relative;
+  width: 100%;
+}
+
+.async-select-menu {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--border-color, var(--border, #e2e8f0));
+  border-radius: 10px;
+  background: var(--surface, var(--card-bg, var(--bg-card, #ffffff)));
+  color: var(--text-color, var(--text, inherit));
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+}
+
+.async-select-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.async-select-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.async-select-option.is-highlighted {
+  background: var(--hover-bg, var(--bg-hover, rgba(100, 116, 139, 0.12)));
+}
+
+.async-select-option.is-selected .async-select-option-label {
+  font-weight: 600;
+  color: var(--primary, var(--primary-color, #16a34a));
+}
+
+.async-select-option-label {
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.async-select-option-sub {
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+.async-select-status,
+.async-select-hint {
+  padding: 10px;
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+.async-select-hint {
+  border-top: 1px solid var(--border-color, var(--border, #e2e8f0));
+  font-size: 12px;
+}
+
+.async-select-retry {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--primary, var(--primary-color, #16a34a));
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* The dropdown must not be clipped by the invoice panel */
+.doc-party-panel {
+  overflow: visible;
+}
