@@ -24,6 +24,7 @@
 //   confirmText: "Confirm",
 //   onConfirm: null,
 // };
+
 // const CSV_MAX_ROWS = 500;
 
 // const REQUIRED_CSV_HEADERS = ["name", "type", "unit"];
@@ -98,7 +99,7 @@
 //       .map((item) =>
 //         typeof item === "string"
 //           ? item
-//           : item?.message || item?.msg || "Validation failed",
+//           : item?.message || item?.msg || "Validation failed"
 //       )
 //       .join(", ");
 //   }
@@ -136,7 +137,7 @@
 
 //   if (!product?._id || !product?.productCode) {
 //     throw new Error(
-//       "The server did not return a valid Product. Refresh the list before trying again.",
+//       "The server did not return a valid Product. Refresh the list before trying again."
 //     );
 //   }
 
@@ -181,18 +182,9 @@
 //   const errors = [];
 
 //   const name = String(row.name ?? "").trim();
-
-//   const type = String(row.type ?? "")
-//     .trim()
-//     .toUpperCase();
-
-//   const unit = String(row.unit ?? "")
-//     .trim()
-//     .toUpperCase();
-
-//   const status = String(row.status || "ACTIVE")
-//     .trim()
-//     .toUpperCase();
+//   const type = String(row.type ?? "").trim().toUpperCase();
+//   const unit = String(row.unit ?? "").trim().toUpperCase();
+//   const status = String(row.status || "ACTIVE").trim().toUpperCase();
 
 //   if (name.length < 2 || name.length > 200) {
 //     errors.push("Name must contain 2–200 characters");
@@ -237,7 +229,6 @@
 
 //     if (!Number.isFinite(number) || number < 0 || number > rule.maximum) {
 //       errors.push(`${rule.label} must be between 0 and ${rule.maximum}`);
-
 //       continue;
 //     }
 
@@ -256,7 +247,7 @@
 
 //   const trackInventory = parsePreviewBoolean(
 //     row.trackInventory,
-//     type === "GOODS",
+//     type === "GOODS"
 //   );
 
 //   if (trackInventory === null) {
@@ -280,7 +271,7 @@
 //       !(Number(row.openingStock) > 0)
 //     ) {
 //       errors.push(
-//         "warehouseId requires inventory-tracked Goods with positive opening stock",
+//         "warehouseId requires inventory-tracked Goods with positive opening stock"
 //       );
 //     }
 //   }
@@ -302,7 +293,6 @@
 //   return {
 //     createdCount: body.createdCount,
 //     failedCount: body.failedCount,
-
 //     errors: Array.isArray(body.errors) ? body.errors : [],
 //   };
 // };
@@ -329,19 +319,14 @@
 //   const [showProductModal, setShowProductModal] = useState(false);
 
 //   const [selectedProduct, setSelectedProduct] = useState(null);
-
 //   const [productModalMode, setProductModalMode] = useState("view");
 
 //   const [confirmState, setConfirmState] = useState(INITIAL_CONFIRM_STATE);
-
 //   const [confirmLoading, setConfirmLoading] = useState(false);
 
 //   const [importPreview, setImportPreview] = useState(null);
-
 //   const [importLoading, setImportLoading] = useState(false);
-
 //   const [importMessage, setImportMessage] = useState("");
-
 //   const [importUncertain, setImportUncertain] = useState(false);
 
 //   const [bulkProgress, setBulkProgress] = useState("");
@@ -365,7 +350,7 @@
 //       const records = [...getProductList(firstResponse)];
 
 //       const totalPages = Number(
-//         firstResponse?.data?.pagination?.totalPages ?? 1,
+//         firstResponse?.data?.pagination?.totalPages ?? 1
 //       );
 
 //       if (!Number.isSafeInteger(totalPages) || totalPages < 0) {
@@ -394,9 +379,7 @@
 //       }
 
 //       const uniqueRecords = Array.from(
-//         new Map(
-//           records.map((product) => [String(product._id), product]),
-//         ).values(),
+//         new Map(records.map((product) => [String(product._id), product])).values()
 //       );
 
 //       setProducts(uniqueRecords);
@@ -444,22 +427,22 @@
 //       }
 
 //       return previous.map((product) =>
-//         product._id === record._id ? record : product,
+//         product._id === record._id ? record : product
 //       );
 //     });
 
 //     setSelectedProduct((current) =>
-//       current?._id === record._id ? record : current,
+//       current?._id === record._id ? record : current
 //     );
 //   }, []);
 
 //   const removeProduct = useCallback((record) => {
 //     setProducts((previous) =>
-//       previous.filter((product) => product._id !== record._id),
+//       previous.filter((product) => product._id !== record._id)
 //     );
 
 //     setSelectedProduct((current) =>
-//       current?._id === record._id ? null : current,
+//       current?._id === record._id ? null : current
 //     );
 //   }, []);
 
@@ -479,55 +462,45 @@
 //         label: "Code",
 //         sortable: true,
 //       },
-
 //       {
 //         key: "name",
 //         label: "Product",
 //         sortable: true,
-
 //         render: (value, row) => (
 //           <div className="dl-customer">
 //             <strong>{value || "—"}</strong>
-
 //             <span>{row.category || "Uncategorized"}</span>
 //           </div>
 //         ),
 //       },
-
 //       {
 //         key: "type",
 //         label: "Type",
 //         sortable: true,
-
 //         render: (value) => <StatusField value={value} />,
 //       },
-
 //       {
 //         key: "unit",
 //         label: "Unit",
 //         sortable: true,
 //       },
-
 //       {
 //         key: "salePrice",
 //         label: "Sale Price",
 //         type: "currency",
 //         sortable: true,
 //       },
-
 //       {
 //         key: "purchasePrice",
 //         label: "Cost",
 //         type: "currency",
 //         sortable: true,
 //       },
-
 //       {
 //         key: "currentStock",
 //         label: "Stock",
 //         type: "number",
 //         sortable: true,
-
 //         render: (value, row) => {
 //           if (!tracksInventory(row)) {
 //             return <span className="dl-muted-value">N/A</span>;
@@ -540,13 +513,11 @@
 //             : "—";
 //         },
 //       },
-
 //       {
 //         key: "reorderLevel",
 //         label: "Reorder",
 //         type: "number",
 //         sortable: true,
-
 //         render: (value, row) => {
 //           if (!tracksInventory(row)) {
 //             return <span className="dl-muted-value">N/A</span>;
@@ -559,45 +530,37 @@
 //             : "—";
 //         },
 //       },
-
 //       {
 //         key: "status",
 //         label: "Status",
 //         sortable: true,
-
 //         render: (value) => <StatusField value={value} />,
 //       },
-
 //       {
 //         key: "brand",
 //         label: "Brand",
 //         sortable: true,
 //         visible: false,
 //       },
-
 //       {
 //         key: "category",
 //         label: "Category",
 //         sortable: true,
 //         visible: false,
 //       },
-
 //       {
 //         key: "trackInventory",
 //         label: "Stock Tracked",
 //         sortable: true,
 //         visible: false,
-
 //         render: (_, row) => (tracksInventory(row) ? "Yes" : "No"),
 //       },
-
 //       {
 //         key: "hsnSacCode",
 //         label: "HSN / SAC",
 //         sortable: true,
 //         visible: false,
 //       },
-
 //       {
 //         key: "gstRate",
 //         label: "GST %",
@@ -606,7 +569,7 @@
 //         visible: false,
 //       },
 //     ],
-//     [],
+//     []
 //   );
 
 //   const filters = useMemo(
@@ -617,19 +580,16 @@
 //         type: "select",
 //         options: ["GOODS", "SERVICE"],
 //       },
-
 //       {
 //         key: "status",
 //         label: "Status",
 //         type: "select",
 //         options: ["ACTIVE", "INACTIVE"],
 //       },
-
 //       {
 //         key: "trackInventory",
 //         label: "Stock Tracked",
 //         type: "select",
-
 //         options: [
 //           {
 //             label: "Yes",
@@ -642,7 +602,7 @@
 //         ],
 //       },
 //     ],
-//     [],
+//     []
 //   );
 
 //   const quickFilters = useMemo(
@@ -673,7 +633,7 @@
 //         label: "Services",
 //       },
 //     ],
-//     [],
+//     []
 //   );
 
 //   const openConfirmModal = (configuration) => {
@@ -723,15 +683,11 @@
 //   const handleDelete = (row) => {
 //     openConfirmModal({
 //       action: "delete",
-
 //       title: "Delete product?",
-
 //       message:
 //         `Delete "${row.name}" (${row.productCode})?\n` +
 //         "It will be removed from the active Product list. Historical transactions will remain.",
-
 //       confirmText: "Delete Product",
-
 //       onConfirm: async () => {
 //         try {
 //           await api.product.delete(row.productCode);
@@ -749,7 +705,7 @@
 
 //   const executeBulkAction = async (rows, action) => {
 //     const uniqueRows = Array.from(
-//       new Map(rows.map((row) => [String(row._id), row])).values(),
+//       new Map(rows.map((row) => [String(row._id), row])).values()
 //     );
 
 //     let successCount = 0;
@@ -759,7 +715,7 @@
 //       const row = uniqueRows[index];
 
 //       setBulkProgress(
-//         `Processing ${index + 1} of ${uniqueRows.length} Products…`,
+//         `Processing ${index + 1} of ${uniqueRows.length} Products…`
 //       );
 
 //       try {
@@ -779,7 +735,6 @@
 //       } catch (error) {
 //         failures.push({
 //           productCode: row.productCode,
-
 //           message: getErrorMessage(error),
 //         });
 //       }
@@ -790,20 +745,26 @@
 //         action === "DELETE"
 //           ? "deleted"
 //           : action === "ACTIVE"
-//             ? "activated"
-//             : "deactivated";
+//           ? "activated"
+//           : "deactivated";
 
 //       toast.success(
-//         `${successCount} Product${successCount === 1 ? "" : "s"} ${label} successfully`,
+//         `${successCount} Product${
+//           successCount === 1 ? "" : "s"
+//         } ${label} successfully`
 //       );
 //     }
 
 //     if (failures.length > 0) {
 //       toast.error(
-//         `${failures.length} Product operation${failures.length === 1 ? "" : "s"} could not be confirmed. ${failures[0].productCode}: ${failures[0].message}`,
+//         `${failures.length} Product operation${
+//           failures.length === 1 ? "" : "s"
+//         } could not be confirmed. ${failures[0].productCode}: ${
+//           failures[0].message
+//         }`,
 //         {
 //           duration: 7000,
-//         },
+//         }
 //       );
 //     }
 
@@ -816,32 +777,24 @@
 //     }
 
 //     const count = rows.length;
-
 //     const noun = count === 1 ? "product" : "products";
 
 //     const configuration = {
 //       DELETE: {
 //         action: "delete",
 //         label: "Delete",
-
 //         message:
 //           `Delete ${count} selected ${noun}?\n` +
 //           "They will be removed from the active Product list. Historical transactions will remain.",
 //       },
-
 //       ACTIVE: {
 //         action: "activate",
 //         label: "Activate",
-
-//         message:
-//           `Activate ${count} selected ${noun}?\n` +
-//           "They will be marked as active.",
+//         message: `Activate ${count} selected ${noun}?\nThey will be marked as active.`,
 //       },
-
 //       INACTIVE: {
 //         action: "deactivate",
 //         label: "Deactivate",
-
 //         message:
 //           `Deactivate ${count} selected ${noun}?\n` +
 //           "They will be marked as inactive. Existing transaction history will remain.",
@@ -854,13 +807,11 @@
 
 //     openConfirmModal({
 //       action: configuration.action,
-
 //       title: `${configuration.label} selected ${noun}?`,
-
 //       message: configuration.message,
-
-//       confirmText: `${configuration.label} ${count} ${count === 1 ? "Product" : "Products"}`,
-
+//       confirmText: `${configuration.label} ${count} ${
+//         count === 1 ? "Product" : "Products"
+//       }`,
 //       onConfirm: () => executeBulkAction(rows, operation),
 //     });
 //   };
@@ -872,7 +823,7 @@
 
 //     if (importUncertain) {
 //       toast.error(
-//         "Review the previous import outcome before starting another import.",
+//         "Review the previous import outcome before starting another import."
 //       );
 
 //       return;
@@ -910,13 +861,11 @@
 
 //         if (duplicateHeader) {
 //           toast.error(`Duplicate CSV header: ${duplicateHeader}`);
-
 //           return;
 //         }
 
 //         if (result.errors?.length) {
 //           toast.error(`Unable to parse CSV: ${result.errors[0].message}`);
-
 //           return;
 //         }
 
@@ -924,12 +873,12 @@
 //         const columns = result.meta.fields || [];
 
 //         const missingHeaders = REQUIRED_CSV_HEADERS.filter(
-//           (header) => !columns.includes(header),
+//           (header) => !columns.includes(header)
 //         );
 
 //         if (missingHeaders.length) {
 //           toast.error(
-//             `Missing required CSV headers: ${missingHeaders.join(", ")}`,
+//             `Missing required CSV headers: ${missingHeaders.join(", ")}`
 //           );
 
 //           return;
@@ -937,13 +886,12 @@
 
 //         if (!rows.length) {
 //           toast.error("The CSV file has no data rows");
-
 //           return;
 //         }
 
 //         if (rows.length > CSV_MAX_ROWS) {
 //           toast.error(
-//             `Import supports a maximum of ${CSV_MAX_ROWS} Products per file`,
+//             `Import supports a maximum of ${CSV_MAX_ROWS} Products per file`
 //           );
 
 //           return;
@@ -986,7 +934,9 @@
 //   const finishImport = async (result) => {
 //     if (result.createdCount > 0) {
 //       toast.success(
-//         `${result.createdCount} Product${result.createdCount === 1 ? "" : "s"} imported successfully`,
+//         `${result.createdCount} Product${
+//           result.createdCount === 1 ? "" : "s"
+//         } imported successfully`
 //       );
 //     }
 
@@ -994,8 +944,9 @@
 
 //     if (result.failedCount > 0) {
 //       const message =
-//         `${result.failedCount} row${result.failedCount === 1 ? "" : "s"} failed.` +
-//         (firstError ? ` ${firstError}` : "");
+//         `${result.failedCount} row${
+//           result.failedCount === 1 ? "" : "s"
+//         } failed.` + (firstError ? ` ${firstError}` : "");
 
 //       setImportMessage(message);
 
@@ -1022,7 +973,7 @@
 
 //     if (Object.keys(importPreview.rowErrors).length > 0) {
 //       toast.error(
-//         "Fix the highlighted CSV errors and upload the corrected file.",
+//         "Fix the highlighted CSV errors and upload the corrected file."
 //       );
 
 //       return;
@@ -1032,23 +983,10 @@
 //     setImportLoading(true);
 
 //     try {
-//       const csv = Papa.unparse({
-//         fields: importPreview.columns,
-
-//         data: importPreview.rows.map((row) =>
-//           importPreview.columns.map((column) => row[column] ?? ""),
-//         ),
+//       // Send parsed CSV rows as JSON, matching the working supplier import flow.
+//       const response = await api.product.import({
+//         rows: importPreview.rows,
 //       });
-
-//       const normalizedFile = new File([csv], importPreview.file.name, {
-//         type: "text/csv",
-//       });
-
-//       const formData = new FormData();
-
-//       formData.append("file", normalizedFile);
-
-//       const response = await api.product.import(formData);
 
 //       const result = getImportResult(response?.data);
 
@@ -1075,7 +1013,7 @@
 //         setImportPreview(null);
 
 //         setImportMessage(
-//           "The import outcome is uncertain. Some rows may already have been created. Check the Product list and server import results before importing again.",
+//           "The import outcome is uncertain. Some rows may already have been created. Check the Product list and server import results before importing again."
 //         );
 
 //         toast.error("Import result uncertain. Do not resubmit the same file.", {
@@ -1166,7 +1104,6 @@
 //     ],
 
 //     onUpload: handleProductCsvUpload,
-
 //     onError: (message) => toast.error(message),
 //   };
 
@@ -1228,11 +1165,7 @@
 //       )}
 
 //       {bulkProgress && (
-//         <div
-//           className="products-list-progress"
-//           role="status"
-//           aria-live="polite"
-//         >
+//         <div className="products-list-progress" role="status" aria-live="polite">
 //           {bulkProgress}
 //         </div>
 //       )}
@@ -1257,29 +1190,24 @@
 //         searchPlaceholder="Search code, product, category, brand, HSN/SAC..."
 //         actions={{
 //           view: (row) => openProduct(row, "view"),
-
 //           edit: (row) => openProduct(row, "edit"),
-
 //           delete: handleDelete,
 //         }}
 //         bulkActions={[
 //           {
 //             key: "activate",
 //             label: "Activate",
-
 //             action: (rows) => confirmBulkAction(rows, "ACTIVE"),
 //           },
 //           {
 //             key: "deactivate",
 //             label: "Deactivate",
-
 //             action: (rows) => confirmBulkAction(rows, "INACTIVE"),
 //           },
 //           {
 //             key: "delete",
 //             label: "Delete",
 //             danger: true,
-
 //             action: (rows) => confirmBulkAction(rows, "DELETE"),
 //           },
 //         ]}
@@ -1325,6 +1253,7 @@
 //         onCancel={closeConfirmModal}
 //         onConfirm={handleConfirmAction}
 //       />
+
 //       <ImportPreviewModal
 //         isOpen={Boolean(importPreview)}
 //         fileName={importPreview?.file?.name}
@@ -1442,7 +1371,7 @@ const getErrorMessage = (error) => {
       .map((item) =>
         typeof item === "string"
           ? item
-          : item?.message || item?.msg || "Validation failed"
+          : item?.message || item?.msg || "Validation failed",
       )
       .join(", ");
   }
@@ -1480,7 +1409,7 @@ const getProductRecord = (response) => {
 
   if (!product?._id || !product?.productCode) {
     throw new Error(
-      "The server did not return a valid Product. Refresh the list before trying again."
+      "The server did not return a valid Product. Refresh the list before trying again.",
     );
   }
 
@@ -1525,9 +1454,15 @@ const validateImportRow = (row) => {
   const errors = [];
 
   const name = String(row.name ?? "").trim();
-  const type = String(row.type ?? "").trim().toUpperCase();
-  const unit = String(row.unit ?? "").trim().toUpperCase();
-  const status = String(row.status || "ACTIVE").trim().toUpperCase();
+  const type = String(row.type ?? "")
+    .trim()
+    .toUpperCase();
+  const unit = String(row.unit ?? "")
+    .trim()
+    .toUpperCase();
+  const status = String(row.status || "ACTIVE")
+    .trim()
+    .toUpperCase();
 
   if (name.length < 2 || name.length > 200) {
     errors.push("Name must contain 2–200 characters");
@@ -1590,7 +1525,7 @@ const validateImportRow = (row) => {
 
   const trackInventory = parsePreviewBoolean(
     row.trackInventory,
-    type === "GOODS"
+    type === "GOODS",
   );
 
   if (trackInventory === null) {
@@ -1614,7 +1549,7 @@ const validateImportRow = (row) => {
       !(Number(row.openingStock) > 0)
     ) {
       errors.push(
-        "warehouseId requires inventory-tracked Goods with positive opening stock"
+        "warehouseId requires inventory-tracked Goods with positive opening stock",
       );
     }
   }
@@ -1658,6 +1593,27 @@ function ProductsList() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [products, setProducts] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [productCounts, setProductCounts] = useState({
+    all: 0,
+    active: 0,
+    inactive: 0,
+    goods: 0,
+    services: 0,
+  });
+  const [query, setQuery] = useState({
+    page: 1,
+    limit: 20,
+    search: "",
+    sortBy: "",
+    sortOrder: "",
+    filters: {
+      status: "",
+      type: "",
+      trackInventory: "",
+    },
+  });
 
   const [showProductModal, setShowProductModal] = useState(false);
 
@@ -1678,114 +1634,178 @@ function ProductsList() {
   const mutationLockRef = useRef(false);
   const csvParseRef = useRef(0);
 
-  const loadProducts = useCallback(async () => {
-    const requestId = ++loadRequestRef.current;
-
-    setLoading(true);
-    setLoadError("");
-
-    try {
-      const firstResponse = await api.product.getAll({
-        page: 1,
-        limit: 100,
-      });
-
-      const records = [...getProductList(firstResponse)];
-
-      const totalPages = Number(
-        firstResponse?.data?.pagination?.totalPages ?? 1
-      );
-
-      if (!Number.isSafeInteger(totalPages) || totalPages < 0) {
-        throw new Error("The server returned invalid Product pagination.");
-      }
-
-      for (let page = 2; page <= totalPages; page += 1) {
-        if (requestId !== loadRequestRef.current) {
-          return;
-        }
-
-        const response = await api.product.getAll({
-          page,
-          limit: 100,
-        });
-
-        records.push(...getProductList(response));
-      }
-
-      if (requestId !== loadRequestRef.current) {
-        return;
-      }
-
-      if (records.some((product) => !product?._id || !product?.productCode)) {
-        throw new Error("One or more Product records are invalid.");
-      }
-
-      const uniqueRecords = Array.from(
-        new Map(records.map((product) => [String(product._id), product])).values()
-      );
-
-      setProducts(uniqueRecords);
-
-      setSelectedProduct((current) => {
-        if (!current) {
-          return null;
-        }
-
-        return (
-          uniqueRecords.find((product) => product._id === current._id) || null
-        );
-      });
-    } catch (error) {
-      if (requestId !== loadRequestRef.current) {
-        return;
-      }
-
-      const message = getErrorMessage(error);
-
-      setLoadError(message);
-      toast.error(message);
-    } finally {
-      if (requestId === loadRequestRef.current) {
-        setLoading(false);
-      }
-    }
+  // Trigger a refresh after mutations/imports without downloading the whole catalogue.
+  const loadProducts = useCallback(() => {
+    setReloadKey((current) => current + 1);
   }, []);
 
+  // Fetch only the requested page. Search and filters run on the server.
   useEffect(() => {
-    loadProducts();
+    const requestId = ++loadRequestRef.current;
+
+    const load = async () => {
+      setLoading(true);
+      setLoadError("");
+
+      try {
+        const params = {
+          page: query.page,
+          limit: query.limit,
+        };
+
+        const searchValue = query.search.trim();
+        if (searchValue) {
+          params.search = searchValue;
+        }
+
+        if (query.sortBy && query.sortOrder) {
+          params.sortBy = query.sortBy;
+          params.sortOrder = query.sortOrder;
+        }
+
+        for (const key of ["status", "type", "trackInventory"]) {
+          const value = query.filters[key];
+          if (value !== undefined && value !== null && value !== "") {
+            params[key] = value;
+          }
+        }
+
+        const response = await api.product.getAll(params);
+
+        if (requestId !== loadRequestRef.current) return;
+
+        const records = getProductList(response);
+        if (records.some((product) => !product?._id || !product?.productCode)) {
+          throw new Error("One or more Product records are invalid.");
+        }
+
+        const serverTotal = Number(response?.data?.pagination?.total);
+        const serverCounts = response?.data?.counts;
+
+        setProducts(records);
+        setTotal(
+          Number.isFinite(serverTotal) && serverTotal >= 0
+            ? serverTotal
+            : records.length,
+        );
+
+        if (serverCounts && typeof serverCounts === "object") {
+          setProductCounts({
+            all: Number.isFinite(Number(serverCounts.all))
+              ? Number(serverCounts.all)
+              : 0,
+            active: Number.isFinite(Number(serverCounts.active))
+              ? Number(serverCounts.active)
+              : 0,
+            inactive: Number.isFinite(Number(serverCounts.inactive))
+              ? Number(serverCounts.inactive)
+              : 0,
+            goods: Number.isFinite(Number(serverCounts.goods))
+              ? Number(serverCounts.goods)
+              : 0,
+            services: Number.isFinite(Number(serverCounts.services))
+              ? Number(serverCounts.services)
+              : 0,
+          });
+        }
+
+        setSelectedProduct((current) => {
+          if (!current) return null;
+          return (
+            records.find((product) => product._id === current._id) || current
+          );
+        });
+      } catch (error) {
+        if (requestId !== loadRequestRef.current) return;
+        const message = getErrorMessage(error);
+        setLoadError(message);
+        toast.error(message);
+      } finally {
+        if (requestId === loadRequestRef.current) setLoading(false);
+      }
+    };
+
+    load();
 
     return () => {
+      // Ignore any request that belongs to an older query or an unmounted page.
       loadRequestRef.current += 1;
       csvParseRef.current += 1;
     };
-  }, [loadProducts]);
+  }, [query, reloadKey]);
 
-  const upsertProduct = useCallback((record, prepend = false) => {
-    setProducts((previous) => {
-      const exists = previous.some((product) => product._id === record._id);
-
-      if (!exists) {
-        return prepend ? [record, ...previous] : [...previous, record];
-      }
-
-      return previous.map((product) =>
-        product._id === record._id ? record : product
-      );
-    });
-
-    setSelectedProduct((current) =>
-      current?._id === record._id ? record : current
+  const handlePageChange = useCallback((page) => {
+    setQuery((current) =>
+      current.page === page ? current : { ...current, page },
     );
   }, []);
 
+  const handlePageSizeChange = useCallback((limit) => {
+    setQuery((current) => ({ ...current, page: 1, limit }));
+  }, []);
+
+  const handleSearch = useCallback((search) => {
+    setQuery((current) => {
+      const nextSearch = search ?? "";
+      if (current.search === nextSearch && current.page === 1) return current;
+      return { ...current, page: 1, search: nextSearch };
+    });
+  }, []);
+
+  const handleSort = useCallback((sort) => {
+    setQuery((current) => ({
+      ...current,
+      page: 1,
+      sortBy: sort?.key || "",
+      sortOrder: sort?.direction || "",
+    }));
+  }, []);
+
+  const handleFilterChange = useCallback((filters) => {
+    setQuery((current) => ({
+      ...current,
+      page: 1,
+      filters: {
+        status: filters?.status ?? "",
+        type: filters?.type ?? "",
+        trackInventory: filters?.trackInventory ?? "",
+      },
+    }));
+  }, []);
+
+  const upsertProduct = useCallback(
+    (record, prepend = false) => {
+      setProducts((previous) => {
+        const exists = previous.some((product) => product._id === record._id);
+
+        if (!exists) {
+          if (prepend) {
+            return [record, ...previous].slice(0, query.limit);
+          }
+
+          return [...previous, record];
+        }
+
+        return previous.map((product) =>
+          product._id === record._id ? record : product,
+        );
+      });
+
+      setSelectedProduct((current) =>
+        current?._id === record._id ? record : current,
+      );
+    },
+    [query.limit],
+  );
+
   const removeProduct = useCallback((record) => {
     setProducts((previous) =>
-      previous.filter((product) => product._id !== record._id)
+      previous.filter((product) => product._id !== record._id),
     );
+    setTotal((current) => Math.max(0, current - 1));
 
     setSelectedProduct((current) =>
-      current?._id === record._id ? null : current
+      current?._id === record._id ? null : current,
     );
   }, []);
 
@@ -1912,7 +1932,7 @@ function ProductsList() {
         visible: false,
       },
     ],
-    []
+    [],
   );
 
   const filters = useMemo(
@@ -1945,7 +1965,7 @@ function ProductsList() {
         ],
       },
     ],
-    []
+    [],
   );
 
   const quickFilters = useMemo(
@@ -1954,29 +1974,34 @@ function ProductsList() {
         key: "status",
         value: "",
         label: "All",
+        count: productCounts.all,
       },
       {
         key: "status",
         value: "ACTIVE",
         label: "Active",
+        count: productCounts.active,
       },
       {
         key: "status",
         value: "INACTIVE",
         label: "Inactive",
+        count: productCounts.inactive,
       },
       {
         key: "type",
         value: "GOODS",
         label: "Goods",
+        count: productCounts.goods,
       },
       {
         key: "type",
         value: "SERVICE",
         label: "Services",
+        count: productCounts.services,
       },
     ],
-    []
+    [productCounts],
   );
 
   const openConfirmModal = (configuration) => {
@@ -2048,7 +2073,7 @@ function ProductsList() {
 
   const executeBulkAction = async (rows, action) => {
     const uniqueRows = Array.from(
-      new Map(rows.map((row) => [String(row._id), row])).values()
+      new Map(rows.map((row) => [String(row._id), row])).values(),
     );
 
     let successCount = 0;
@@ -2058,7 +2083,7 @@ function ProductsList() {
       const row = uniqueRows[index];
 
       setBulkProgress(
-        `Processing ${index + 1} of ${uniqueRows.length} Products…`
+        `Processing ${index + 1} of ${uniqueRows.length} Products…`,
       );
 
       try {
@@ -2088,13 +2113,13 @@ function ProductsList() {
         action === "DELETE"
           ? "deleted"
           : action === "ACTIVE"
-          ? "activated"
-          : "deactivated";
+            ? "activated"
+            : "deactivated";
 
       toast.success(
         `${successCount} Product${
           successCount === 1 ? "" : "s"
-        } ${label} successfully`
+        } ${label} successfully`,
       );
     }
 
@@ -2107,7 +2132,7 @@ function ProductsList() {
         }`,
         {
           duration: 7000,
-        }
+        },
       );
     }
 
@@ -2166,7 +2191,7 @@ function ProductsList() {
 
     if (importUncertain) {
       toast.error(
-        "Review the previous import outcome before starting another import."
+        "Review the previous import outcome before starting another import.",
       );
 
       return;
@@ -2216,12 +2241,12 @@ function ProductsList() {
         const columns = result.meta.fields || [];
 
         const missingHeaders = REQUIRED_CSV_HEADERS.filter(
-          (header) => !columns.includes(header)
+          (header) => !columns.includes(header),
         );
 
         if (missingHeaders.length) {
           toast.error(
-            `Missing required CSV headers: ${missingHeaders.join(", ")}`
+            `Missing required CSV headers: ${missingHeaders.join(", ")}`,
           );
 
           return;
@@ -2234,7 +2259,7 @@ function ProductsList() {
 
         if (rows.length > CSV_MAX_ROWS) {
           toast.error(
-            `Import supports a maximum of ${CSV_MAX_ROWS} Products per file`
+            `Import supports a maximum of ${CSV_MAX_ROWS} Products per file`,
           );
 
           return;
@@ -2279,7 +2304,7 @@ function ProductsList() {
       toast.success(
         `${result.createdCount} Product${
           result.createdCount === 1 ? "" : "s"
-        } imported successfully`
+        } imported successfully`,
       );
     }
 
@@ -2316,7 +2341,7 @@ function ProductsList() {
 
     if (Object.keys(importPreview.rowErrors).length > 0) {
       toast.error(
-        "Fix the highlighted CSV errors and upload the corrected file."
+        "Fix the highlighted CSV errors and upload the corrected file.",
       );
 
       return;
@@ -2356,7 +2381,7 @@ function ProductsList() {
         setImportPreview(null);
 
         setImportMessage(
-          "The import outcome is uncertain. Some rows may already have been created. Check the Product list and server import results before importing again."
+          "The import outcome is uncertain. Some rows may already have been created. Check the Product list and server import results before importing again.",
         );
 
         toast.error("Import result uncertain. Do not resubmit the same file.", {
@@ -2508,7 +2533,11 @@ function ProductsList() {
       )}
 
       {bulkProgress && (
-        <div className="products-list-progress" role="status" aria-live="polite">
+        <div
+          className="products-list-progress"
+          role="status"
+          aria-live="polite"
+        >
           {bulkProgress}
         </div>
       )}
@@ -2527,6 +2556,15 @@ function ProductsList() {
         selectable
         columnVisibility
         pagination
+        serverMode
+        total={total}
+        page={query.page}
+        pageSize={query.limit}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+        onSearch={handleSearch}
+        onSort={handleSort}
+        onFilterChange={handleFilterChange}
         filters={filters}
         quickFilters={quickFilters}
         storageKey="trustiq-products"
@@ -2573,7 +2611,11 @@ function ProductsList() {
       <ProductModal
         isOpen={showProductModal}
         onClose={() => setShowProductModal(false)}
-        onSave={(createdProduct) => upsertProduct(createdProduct, true)}
+        onSave={async (createdProduct) => {
+          upsertProduct(createdProduct, true);
+          setQuery((current) => ({ ...current, page: 1 }));
+          loadProducts();
+        }}
       />
 
       <ProductDetailsModal

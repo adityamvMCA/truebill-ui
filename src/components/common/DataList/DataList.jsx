@@ -1162,30 +1162,52 @@ function DataList({
     setActionMenu(null);
   };
 
-  const getQuickFilterCount = (filter) => {
-    if (typeof filter.count === "number") {
-      return filter.count;
-    }
+  // const getQuickFilterCount = (filter) => {
+  //   if (typeof filter.count === "number") {
+  //     return filter.count;
+  //   }
 
-    if (typeof filter.count === "function") {
-      return filter.count(data);
-    }
+  //   if (typeof filter.count === "function") {
+  //     return filter.count(data);
+  //   }
 
-    if (serverMode) {
-      return null;
-    }
+  //   if (serverMode) {
+  //     return null;
+  //   }
 
-    if (filter.value === "") {
-      return data.length;
-    }
+  //   if (filter.value === "") {
+  //     return data.length;
+  //   }
 
-    return data.filter(
-      (row) =>
-        normalize(row[filter.key]) ===
-        normalize(filter.value)
-    ).length;
-  };
+  //   return data.filter(
+  //     (row) =>
+  //       normalize(row[filter.key]) ===
+  //       normalize(filter.value)
+  //   ).length;
+  // };
+const getQuickFilterCount = (filter) => {
+  if (typeof filter.count === "number") {
+    return filter.count;
+  }
 
+  if (typeof filter.count === "function") {
+    return filter.count(data);
+  }
+
+  if (serverMode) {
+    return null;
+  }
+
+  if (filter.value === "") {
+    return data.length;
+  }
+
+  return data.filter(
+    (row) =>
+      normalize(row[filter.key]) ===
+      normalize(filter.value)
+  ).length;
+};
   return (
     <div className="data-list">
       <div className="dl-header">
