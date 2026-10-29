@@ -2,9 +2,7 @@ import apiClient from "../apiClient";
 
 const productCategoryApi = {
   getAll: (params = {}) =>
-    apiClient.get("/product-categories", {
-      params,
-    }),
+    apiClient.get("/product-categories", { params }),
 
   getByCode: (categoryCode) =>
     apiClient.get(`/product-categories/${encodeURIComponent(categoryCode)}`),
@@ -16,6 +14,9 @@ const productCategoryApi = {
       `/product-categories/${encodeURIComponent(categoryCode)}`,
       data,
     ),
+
+  bulkStatus: (payload) =>
+    apiClient.post("/product-categories/bulk-status", payload),
 
   import: (formData) => apiClient.post("/product-categories/import", formData),
 };

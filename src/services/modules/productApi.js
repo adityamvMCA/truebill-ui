@@ -1,4 +1,3 @@
-
 import apiClient from "../apiClient";
 
 const productApi = {
@@ -19,6 +18,8 @@ const productApi = {
 
   delete: (productCode) =>
     apiClient.delete(`/products/code/${encodeURIComponent(productCode)}`),
+
+  bulkAction: (payload) => apiClient.post("/products/bulk-action", payload),
 };
 
 export default productApi;
