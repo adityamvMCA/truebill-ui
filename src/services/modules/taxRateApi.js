@@ -15,6 +15,11 @@ const taxRateApi = {
     apiClient.patch(`/tax-rates/${encodeURIComponent(taxRateId)}`, data),
 
   import: (formData) => apiClient.post("/tax-rates/import", formData),
+
+  getCounts: () => apiClient.get("/tax-rates/counts"),
+
+  bulkStatus: (ids, status) =>
+    apiClient.patch("/tax-rates/bulk-status", { ids, status }),
 };
 
 export default taxRateApi;

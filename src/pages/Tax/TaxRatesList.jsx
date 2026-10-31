@@ -19,6 +19,26 @@ import taxRateApi from "../../services/modules/taxRateApi";
 
 import TaxRateModal from "./TaxRateModal";
 
+const PAGE_SIZES = [20, 50, 100];
+const SEARCH_DEBOUNCE_MS = 400;
+
+const INITIAL_QUERY = {
+  page: 1,
+  limit: 20,
+  search: "",
+  status: "",
+  taxType: "",
+  sortBy: "",
+  sortDir: "",
+};
+
+const INITIAL_COUNTS = {
+  total: 0,
+  active: 0,
+  inactive: 0,
+  taxTypes: { GST: 0, VAT: 0, CUSTOM: 0 },
+};
+
 const INITIAL_MODAL = {
   open: false,
   mode: "create",
@@ -57,20 +77,6 @@ const getErrorMessage = (error) => {
     error?.message ||
     "Unable to complete the request."
   );
-};
-
-const extractTaxRate = (response) => {
-  const record =
-    response?.data?.data ||
-    response?.data?.taxRate;
-
-  if (!record?._id || !record?.name) {
-    throw new Error(
-      "The server did not return a valid tax rate.",
-    );
-  }
-
-  return record;
 };
 
 const canonicalHeader = (header) => {
@@ -113,28 +119,29 @@ function TaxRatesList() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
-  const [modalState, setModalState] =
-    useState(INITIAL_MODAL);
+  const [query, setQuery] = useState(INITIAL_QUERY);
+  const [searchText, setSearchText] = useState("");
 
-  const [confirmState, setConfirmState] =
-    useState(INITIAL_CONFIRM);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 1,
+  });
 
-  const [confirmLoading, setConfirmLoading] =
-    useState(false);
+  const [counts, setCounts] = useState(INITIAL_COUNTS);
 
-  const [importPreview, setImportPreview] =
-    useState(null);
+  const [modalState, setModalState] = useState(INITIAL_MODAL);
+  const [confirmState, setConfirmState] = useState(INITIAL_CONFIRM);
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
-  const [importLoading, setImportLoading] =
-    useState(false);
-
-  const [importMessage, setImportMessage] =
-    useState("");
-
-  const [importUncertain, setImportUncertain] =
-    useState(false);
+  const [importPreview, setImportPreview] = useState(null);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importMessage, setImportMessage] = useState("");
+  const [importUncertain, setImportUncertain] = useState(false);
 
   const loadIdRef = useRef(0);
+  const countIdRef = useRef(0);
   const parseIdRef = useRef(0);
   const mutationLockRef = useRef(false);
 
@@ -145,142 +152,134 @@ function TaxRatesList() {
     setLoadError("");
 
     try {
-      const first =
-        await taxRateApi.getAll({
-          page: 1,
-          limit: 100,
-        });
+      const params = {};
 
-      if (!Array.isArray(first?.data?.data)) {
-        throw new Error(
-          "The server returned an invalid tax rate list.",
-        );
-      }
-
-      const items = [...first.data.data];
-
-      const pages = Number(
-        first.data.pagination?.totalPages ?? 1,
-      );
-
-      if (
-        !Number.isSafeInteger(pages) ||
-        pages < 0
-      ) {
-        throw new Error(
-          "Invalid tax rate pagination.",
-        );
-      }
-
-      for (
-        let page = 2;
-        page <= pages;
-        page += 1
-      ) {
-        if (
-          requestId !== loadIdRef.current
-        ) {
-          return;
+      Object.entries(query).forEach(([key, value]) => {
+        if (value !== "" && value != null) {
+          params[key] = value;
         }
+      });
 
-        const response =
-          await taxRateApi.getAll({
-            page,
-            limit: 100,
-          });
+      const response = await taxRateApi.getAll(params);
 
-        if (
-          !Array.isArray(response?.data?.data)
-        ) {
-          throw new Error(
-            "Unable to read a tax rate page.",
-          );
-        }
-
-        items.push(...response.data.data);
-      }
-
-      if (
-        items.some(
-          (item) => !item?._id,
-        )
-      ) {
-        throw new Error(
-          "One or more tax rate records are invalid.",
-        );
-      }
-
-      if (
-        requestId === loadIdRef.current
-      ) {
-        setRecords(
-          Array.from(
-            new Map(
-              items.map((item) => [
-                item._id,
-                item,
-              ]),
-            ).values(),
-          ),
-        );
-      }
-    } catch (error) {
-      if (
-        requestId === loadIdRef.current
-      ) {
-        setLoadError(
-          getErrorMessage(error),
-        );
-      }
-    } finally {
-      if (
-        requestId === loadIdRef.current
-      ) {
-        setLoading(false);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    loadRecords();
-
-    return () => {
-      loadIdRef.current += 1;
-      parseIdRef.current += 1;
-    };
-  }, [loadRecords]);
-
-  const upsertRecord = (record) => {
-    setRecords((previous) => {
-      const exists = previous.some(
-        (item) =>
-          item._id === record._id,
-      );
-
-      return exists
-        ? previous.map((item) =>
-            item._id === record._id
-              ? record
-              : item,
-          )
-        : [record, ...previous];
-    });
-  };
-
-  const openRecord = useCallback(
-    (record = null, mode = "create") => {
-      if (mutationLockRef.current) {
+      if (requestId !== loadIdRef.current) {
         return;
       }
 
-      setModalState({
-        open: true,
-        mode,
-        record,
-      });
-    },
-    [],
-  );
+      const body = response?.data;
+
+      if (!Array.isArray(body?.data) || !body?.pagination) {
+        throw new Error("The server returned an invalid tax rate list.");
+      }
+
+      if (body.data.some((item) => !item?._id)) {
+        throw new Error("One or more tax rate records are invalid.");
+      }
+
+      setRecords(body.data);
+      setPagination(body.pagination);
+    } catch (error) {
+      if (requestId === loadIdRef.current) {
+        setLoadError(getErrorMessage(error));
+      }
+    } finally {
+      if (requestId === loadIdRef.current) {
+        setLoading(false);
+      }
+    }
+  }, [query]);
+
+  const loadCounts = useCallback(async () => {
+    const requestId = ++countIdRef.current;
+
+    try {
+      const response = await taxRateApi.getCounts();
+      const next = response?.data?.counts;
+
+      if (requestId === countIdRef.current && next) {
+        setCounts({ ...INITIAL_COUNTS, ...next });
+      }
+    } catch {
+      // Counts are informational; the list stays usable
+    }
+  }, []);
+
+  const refreshAll = useCallback(async () => {
+    await Promise.all([loadRecords(), loadCounts()]);
+  }, [loadRecords, loadCounts]);
+
+  useEffect(() => {
+    loadRecords();
+  }, [loadRecords]);
+
+  useEffect(() => {
+    loadCounts();
+
+    return () => {
+      loadIdRef.current += 1;
+      countIdRef.current += 1;
+      parseIdRef.current += 1;
+    };
+  }, [loadCounts]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setQuery((previous) =>
+        previous.search === searchText.trim()
+          ? previous
+          : { ...previous, search: searchText.trim(), page: 1 },
+      );
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => clearTimeout(timer);
+  }, [searchText]);
+
+  const handlePageChange = useCallback((page) => {
+    const next = Number(page) || 1;
+
+    setQuery((previous) =>
+      previous.page === next ? previous : { ...previous, page: next },
+    );
+  }, []);
+
+  const handleSearch = useCallback((value) => {
+    setSearchText(String(value ?? ""));
+  }, []);
+
+  const handlePageSizeChange = useCallback((limit) => {
+    const size = PAGE_SIZES.includes(Number(limit)) ? Number(limit) : 20;
+
+    setQuery((previous) => ({ ...previous, limit: size, page: 1 }));
+  }, []);
+
+  const handleSortChange = useCallback((sort) => {
+    const key = sort?.key || "";
+    const direction = sort?.direction === "desc" ? "desc" : key ? "asc" : "";
+
+    setQuery((previous) => ({
+      ...previous,
+      sortBy: key,
+      sortDir: direction,
+      page: 1,
+    }));
+  }, []);
+
+  const handleFilterChange = useCallback((filters = {}) => {
+    setQuery((previous) => ({
+      ...previous,
+      status: filters.status || "",
+      taxType: filters.taxType || "",
+      page: 1,
+    }));
+  }, []);
+
+  const openRecord = useCallback((record = null, mode = "create") => {
+    if (mutationLockRef.current) {
+      return;
+    }
+
+    setModalState({ open: true, mode, record });
+  }, []);
 
   const columns = useMemo(
     () => [
@@ -308,11 +307,7 @@ function TaxRatesList() {
         label: "Rate",
         type: "number",
         sortable: true,
-
-        render: (value) =>
-          value == null
-            ? "—"
-            : `${value}%`,
+        render: (value) => (value == null ? "—" : `${value}%`),
       },
       {
         key: "taxType",
@@ -322,28 +317,21 @@ function TaxRatesList() {
       {
         key: "description",
         label: "Description",
-        sortable: true,
-
-        render: (value) =>
-          value || "No description",
+        sortable: false,
+        render: (value) => value || "No description",
       },
       {
         key: "status",
         label: "Status",
         sortable: true,
-
-        render: (value) => (
-          <StatusField value={value} />
-        ),
+        render: (value) => <StatusField value={value} />,
       },
       {
         key: "isSystem",
         label: "Source",
-        sortable: true,
+        sortable: false,
         visible: false,
-
-        render: (value) =>
-          value ? "System" : "Custom",
+        render: (value) => (value ? "System" : "Custom"),
       },
       {
         key: "createdAt",
@@ -363,146 +351,78 @@ function TaxRatesList() {
     [openRecord],
   );
 
-  const updateStatuses = async (
-    rows,
-    status,
-  ) => {
-    let successCount = 0;
-    const failures = [];
+  const filters = useMemo(
+    () => [
+      { key: "status", label: "Status", type: "select", options: ["ACTIVE", "INACTIVE"] },
+      { key: "taxType", label: "Tax Type", type: "select", options: ["GST", "VAT", "CUSTOM"] },
+    ],
+    [],
+  );
 
-    const uniqueRows = Array.from(
-      new Map(
-        rows.map((row) => [
-          row._id,
-          row,
-        ]),
-      ).values(),
-    );
+  const quickFilters = useMemo(
+    () => [
+      { key: "status", value: "", label: "All", count: counts.total },
+      { key: "status", value: "ACTIVE", label: "Active", count: counts.active },
+      { key: "status", value: "INACTIVE", label: "Inactive", count: counts.inactive },
+      { key: "taxType", value: "GST", label: "GST", count: counts.taxTypes?.GST ?? 0 },
+      { key: "taxType", value: "VAT", label: "VAT", count: counts.taxTypes?.VAT ?? 0 },
+      { key: "taxType", value: "CUSTOM", label: "Custom", count: counts.taxTypes?.CUSTOM ?? 0 },
+    ],
+    [counts],
+  );
 
-    for (const row of uniqueRows) {
-      try {
-        const current =
-          extractTaxRate(
-            await taxRateApi.getById(
-              row._id,
-            ),
-          );
+  const updateStatuses = async (rows, status) => {
+    const ids = Array.from(new Set(rows.map((row) => row._id)));
 
-        if (current.status === status) {
-          upsertRecord(current);
-          successCount += 1;
-          continue;
-        }
+    try {
+      const response = await taxRateApi.bulkStatus(ids, status);
+      const result = response?.data || {};
+      const changed = Number(result.modifiedCount) || 0;
+      const skipped = Number(result.skippedCount) || 0;
 
-        if (
-          !Number.isSafeInteger(current.__v) ||
-          current.__v < 0
-        ) {
-          throw new Error(
-            "Tax rate version is missing.",
-          );
-        }
-
-        const response =
-          await taxRateApi.update(
-            current._id,
-            {
-              version: current.__v,
-              status,
-            },
-          );
-
-        upsertRecord(
-          extractTaxRate(response),
+      if (changed) {
+        toast.success(
+          `${changed} tax rate${changed === 1 ? "" : "s"} ${status === "ACTIVE" ? "activated" : "deactivated"}`,
         );
-
-        successCount += 1;
-      } catch (error) {
-        failures.push({
-          name: row.name,
-          message:
-            getErrorMessage(error),
-        });
       }
+
+      if (skipped) {
+        toast(`${skipped} already ${status === "ACTIVE" ? "active" : "inactive"}`);
+      }
+    } catch (error) {
+      toast.error(getErrorMessage(error), { duration: 7000 });
     }
 
-    if (successCount) {
-      toast.success(
-        `${successCount} tax rate${successCount === 1 ? "" : "s"} ${status === "ACTIVE" ? "active" : "inactive"}`,
-      );
-    }
-
-    if (failures.length) {
-      toast.error(
-        `${failures.length} operation${failures.length === 1 ? "" : "s"} could not be confirmed. ${failures[0].name}: ${failures[0].message}`,
-        {
-          duration: 7000,
-        },
-      );
-    }
-
-    await loadRecords();
+    await refreshAll();
   };
 
-  const confirmStatus = (
-    rows,
-    status,
-  ) => {
-    if (
-      !rows?.length ||
-      mutationLockRef.current
-    ) {
+  const confirmStatus = (rows, status) => {
+    if (!rows?.length || mutationLockRef.current) {
       return;
     }
 
-    const activate =
-      status === "ACTIVE";
-
-    const label =
-      activate
-        ? "Activate"
-        : "Deactivate";
-
-    const noun =
-      rows.length === 1
-        ? "tax rate"
-        : "tax rates";
+    const activate = status === "ACTIVE";
+    const label = activate ? "Activate" : "Deactivate";
+    const noun = rows.length === 1 ? "tax rate" : "tax rates";
 
     setConfirmState({
       open: true,
-
-      action:
-        activate
-          ? "activate"
-          : "deactivate",
-
-      title:
-        `${label} selected ${noun}?`,
-
+      action: activate ? "activate" : "deactivate",
+      title: `${label} selected ${noun}?`,
       message:
         `${label} ${rows.length} selected ${noun}?\n` +
-        (
-          activate
-            ? "They will become available for new assignments."
-            : "Existing Product and transaction rates will remain unchanged."
-        ),
-
-      confirmText:
-        `${label} ${rows.length}`,
-
-      onConfirm: () =>
-        updateStatuses(
-          rows,
-          status,
-        ),
+        (activate
+          ? "They will become available for new assignments."
+          : "Existing Product and transaction rates will remain unchanged."),
+      confirmText: `${label} ${rows.length}`,
+      onConfirm: () => updateStatuses(rows, status),
     });
   };
 
   const handleConfirm = async () => {
     if (
       mutationLockRef.current ||
-      typeof confirmState.onConfirm !==
-        "function"
+      typeof confirmState.onConfirm !== "function"
     ) {
       return;
     }
@@ -512,14 +432,9 @@ function TaxRatesList() {
 
     try {
       await confirmState.onConfirm();
-
-      setConfirmState(
-        INITIAL_CONFIRM,
-      );
+      setConfirmState(INITIAL_CONFIRM);
     } catch (error) {
-      toast.error(
-        getErrorMessage(error),
-      );
+      toast.error(getErrorMessage(error));
     } finally {
       mutationLockRef.current = false;
       setConfirmLoading(false);
@@ -780,117 +695,62 @@ function TaxRatesList() {
     }
 
     setImportPreview(null);
-    await loadRecords();
+    await refreshAll();
 
     return true;
   };
 
-  const confirmImport = async () => {
-    if (
-      !importPreview ||
-      mutationLockRef.current ||
-      importUncertain
-    ) {
-      return;
+const confirmImport = async () => {
+  if (!importPreview || mutationLockRef.current || importUncertain) {
+    return;
+  }
+
+  if (Object.keys(importPreview.rowErrors).length) {
+    toast.error("Correct the highlighted errors and upload the file again.");
+
+    return;
+  }
+
+  mutationLockRef.current = true;
+  setImportLoading(true);
+
+  try {
+    const response = await taxRateApi.import({
+      rows: importPreview.rows,
+      rowOffset: 0,
+    });
+
+    if (!(await finishImport(response?.data || {}))) {
+      throw new Error("The import result was not confirmed.");
     }
+  } catch (error) {
+    const status = error?.response?.status;
 
-    if (
-      Object.keys(
-        importPreview.rowErrors,
-      ).length
-    ) {
-      toast.error(
-        "Correct the highlighted errors and upload the file again.",
-      );
-
-      return;
-    }
-
-    mutationLockRef.current = true;
-    setImportLoading(true);
-
-    try {
-      const csv = Papa.unparse({
-        fields:
-          importPreview.columns,
-
-        data: importPreview.rows.map(
-          (row) =>
-            importPreview.columns.map(
-              (field) =>
-                row[field] ?? "",
-            ),
-        ),
-      });
-
-      const formData = new FormData();
-
-      formData.append(
-        "file",
-        new File(
-          [csv],
-          importPreview.file.name,
-          {
-            type: "text/csv",
-          },
-        ),
-      );
-
-      const response =
-        await taxRateApi.import(
-          formData,
-        );
-
-      if (
-        !(await finishImport(
-          response?.data || {},
-        ))
-      ) {
-        throw new Error(
-          "The import result was not confirmed.",
-        );
-      }
-    } catch (error) {
-      const status =
-        error?.response?.status;
-
-      if (
-        status &&
-        status < 500 &&
-        status !== 408
-      ) {
-        if (
-          await finishImport(
-            error.response?.data || {},
-          )
-        ) {
-          return;
-        }
-
-        toast.error(
-          getErrorMessage(error),
-        );
-
+    if (status && status < 500 && status !== 408) {
+      if (await finishImport(error.response?.data || {})) {
         return;
       }
 
-      setImportUncertain(true);
-      setImportPreview(null);
+      toast.error(getErrorMessage(error));
 
-      setImportMessage(
-        "The import outcome is uncertain. Some tax rates may already have been created. Review the list and server results before importing again.",
-      );
-
-      toast.error(
-        "Import outcome uncertain. Do not resubmit the file.",
-      );
-
-      await loadRecords();
-    } finally {
-      mutationLockRef.current = false;
-      setImportLoading(false);
+      return;
     }
-  };
+
+    setImportUncertain(true);
+    setImportPreview(null);
+
+    setImportMessage(
+      "The import outcome is uncertain. Some tax rates may already have been created. Review the list and server results before importing again.",
+    );
+
+    toast.error("Import outcome uncertain. Do not resubmit the file.");
+
+    await refreshAll();
+  } finally {
+    mutationLockRef.current = false;
+    setImportLoading(false);
+  }
+};
 
   return (
     <>
@@ -909,7 +769,7 @@ function TaxRatesList() {
               confirmLoading ||
               importLoading
             }
-            onClick={loadRecords}
+            onClick={refreshAll}
           >
             Retry
           </button>
@@ -939,46 +799,19 @@ function TaxRatesList() {
         selectable
         columnVisibility
         pagination
+        serverMode
+        total={pagination.total}
+        page={query.page}
+        pageSize={query.limit}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+        onSearch={handleSearch}
+        onSort={handleSortChange}
+        onFilterChange={handleFilterChange}
+        filters={filters}
+        quickFilters={quickFilters}
         storageKey="trustiq-tax-rates"
-        searchPlaceholder="Search tax name, type or description..."
-        filters={[
-          {
-            key: "status",
-            label: "Status",
-            type: "select",
-            options: [
-              "ACTIVE",
-              "INACTIVE",
-            ],
-          },
-          {
-            key: "taxType",
-            label: "Tax Type",
-            type: "select",
-            options: [
-              "GST",
-              "VAT",
-              "CUSTOM",
-            ],
-          },
-        ]}
-        quickFilters={[
-          {
-            key: "status",
-            value: "",
-            label: "All",
-          },
-          {
-            key: "status",
-            value: "ACTIVE",
-            label: "Active",
-          },
-          {
-            key: "status",
-            value: "INACTIVE",
-            label: "Inactive",
-          },
-        ]}
+        searchPlaceholder="Search tax name..."
         actions={{
           view: (row) =>
             openRecord(row, "view"),
@@ -1008,7 +841,7 @@ function TaxRatesList() {
               ),
           },
         ]}
-        onRefresh={loadRecords}
+        onRefresh={refreshAll}
         importConfig={{
           templateFileName:
             "tax-rates-import-template.csv",
@@ -1069,7 +902,7 @@ function TaxRatesList() {
             INITIAL_MODAL,
           )
         }
-        onSave={upsertRecord}
+        onSave={refreshAll}
       />
 
       <ConfirmModal

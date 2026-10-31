@@ -2,19 +2,28 @@ import apiClient from "../apiClient";
 
 const hsnSacCodeApi = {
   getAll: (params = {}) =>
-    apiClient.get("/hsn-sac-codes", {
-      params,
-    }),
+    apiClient.get("/hsn-sac-codes", { params }),
 
   getByCode: (code) =>
-    apiClient.get(`/hsn-sac-codes/${encodeURIComponent(code)}`),
+    apiClient.get(
+      `/hsn-sac-codes/${encodeURIComponent(code)}`
+    ),
 
-  create: (data) => apiClient.post("/hsn-sac-codes", data),
+  create: (data) =>
+    apiClient.post("/hsn-sac-codes", data),
 
   update: (code, data) =>
-    apiClient.patch(`/hsn-sac-codes/${encodeURIComponent(code)}`, data),
+    apiClient.patch(
+      `/hsn-sac-codes/${encodeURIComponent(code)}`,
+      data
+    ),
 
-  import: (formData) => apiClient.post("/hsn-sac-codes/import", formData),
+  import: (formData) =>
+    apiClient.post("/hsn-sac-codes/import", formData),
+
+  // Bulk update ACTIVE / INACTIVE status
+  bulkUpdateStatus: (payload) =>
+    apiClient.patch("/hsn-sac-codes/bulk-status", payload),
 };
 
 export default hsnSacCodeApi;

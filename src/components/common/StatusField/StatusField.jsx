@@ -59,6 +59,24 @@ const STATUS_CONFIG = {
     tone: "purple",
   },
 
+  ARCHIVED: {
+    label: "Archived",
+    icon: FileText,
+    tone: "neutral",
+  },
+
+  DELETED: {
+    label: "Deleted",
+    icon: XCircle,
+    tone: "danger",
+  },
+
+  ON_HOLD: {
+    label: "On Hold",
+    icon: Clock3,
+    tone: "warning",
+  },
+
   // Product types
   GOODS: {
     label: "Goods",
@@ -70,6 +88,38 @@ const STATUS_CONFIG = {
     label: "Service",
     icon: FileText,
     tone: "purple",
+  },
+
+  // Stock states
+  IN_STOCK: {
+    label: "In Stock",
+    icon: PackageCheck,
+    tone: "success",
+  },
+
+  OUT_OF_STOCK: {
+    label: "Out of Stock",
+    icon: AlertCircle,
+    tone: "danger",
+  },
+
+  LOW_STOCK: {
+    label: "Low Stock",
+    icon: AlertCircle,
+    tone: "warning",
+  },
+
+  // Valuation states
+  VALUED: {
+    label: "Valued",
+    icon: CheckCircle2,
+    tone: "success",
+  },
+
+  UNVALUED: {
+    label: "Missing Valuation",
+    icon: AlertCircle,
+    tone: "warning",
   },
 
   // Document and accounting statuses
@@ -213,6 +263,12 @@ const STATUS_CONFIG = {
     tone: "warning",
   },
 
+  PARTIALLY_INVOICED: {
+    label: "Partially Invoiced",
+    icon: FileText,
+    tone: "warning",
+  },
+
   // Delivery and receiving statuses
   DELIVERED: {
     label: "Delivered",
@@ -247,6 +303,12 @@ const STATUS_CONFIG = {
   PARTIALLY_RECEIVED: {
     label: "Partially Received",
     icon: PackageCheck,
+    tone: "warning",
+  },
+
+  NOT_RECEIVED: {
+    label: "Not Received",
+    icon: Clock3,
     tone: "warning",
   },
 

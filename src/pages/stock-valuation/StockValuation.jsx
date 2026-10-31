@@ -14,59 +14,50 @@ import StatusField from "../../components/common/StatusField/StatusField";
 
 import stockValuationApi from "../../services/modules/stockValuationApi";
 
-const integerFormatter = new Intl.NumberFormat(
-  "en-IN",
-  {
-    maximumFractionDigits: 0,
-  },
-);
+const PAGE_SIZES = [20, 50, 100];
+const SEARCH_DEBOUNCE_MS = 400;
 
-const quantityFormatter = new Intl.NumberFormat(
-  "en-IN",
-  {
-    maximumFractionDigits: 3,
-  },
-);
+const INITIAL_QUERY = {
+  page: 1,
+  limit: 20,
+  search: "",
+  category: "",
+  brand: "",
+  stockState: "",
+  valuationState: "",
+  sortBy: "",
+  sortDir: "",
+};
+
+const integerFormatter = new Intl.NumberFormat("en-IN", {
+  maximumFractionDigits: 0,
+});
+
+const quantityFormatter = new Intl.NumberFormat("en-IN", {
+  maximumFractionDigits: 3,
+});
 
 const formatPaise = (value) => {
-  if (
-    value === null ||
-    value === undefined
-  ) {
+  if (value === null || value === undefined) {
     return "—";
   }
 
   const paise = BigInt(value);
   const rupees = paise / 100n;
+  const fraction = String(paise % 100n).padStart(2, "0");
 
-  const fraction = String(
-    paise % 100n,
-  ).padStart(2, "0");
-
-  return (
-    `₹${integerFormatter.format(rupees)}` +
-    `.${fraction}`
-  );
+  return `₹${integerFormatter.format(rupees)}.${fraction}`;
 };
 
 const rupeesToPaise = (value, label) => {
-  if (
-    typeof value !== "number" ||
-    !Number.isFinite(value) ||
-    value < 0
-  ) {
-    throw new Error(
-      `${label} must be a valid non-negative amount.`,
-    );
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    throw new Error(`${label} must be a valid non-negative amount.`);
   }
 
   const scaled = value * 100;
   const paise = Math.round(scaled);
 
-  if (
-    !Number.isSafeInteger(paise) ||
-    Math.abs(scaled - paise) > 0.000001
-  ) {
+  if (!Number.isSafeInteger(paise) || Math.abs(scaled - paise) > 0.000001) {
     throw new Error(
       `${label} exceeds the supported range or contains more than two decimal places.`,
     );
@@ -78,17 +69,12 @@ const rupeesToPaise = (value, label) => {
 const getErrorMessage = (error) => {
   const body = error?.response?.data;
 
-  if (
-    Array.isArray(body?.errors) &&
-    body.errors.length
-  ) {
+  if (Array.isArray(body?.errors) && body.errors.length) {
     return body.errors
       .map((item) =>
         typeof item === "string"
           ? item
-          : item?.message ||
-            item?.msg ||
-            "Validation failed",
+          : item?.message || item?.msg || "Validation failed",
       )
       .join(", ");
   }
@@ -114,12 +100,10 @@ const normalizeRow = (record) => {
   }
 
   const hasRate =
-    record.purchasePrice !== null &&
-    record.purchasePrice !== undefined;
+    record.purchasePrice !== null && record.purchasePrice !== undefined;
 
   const hasValue =
-    record.stockValue !== null &&
-    record.stockValue !== undefined;
+    record.stockValue !== null && record.stockValue !== undefined;
 
   const valuationRatePaise = hasRate
     ? rupeesToPaise(
@@ -137,161 +121,85 @@ const normalizeRow = (record) => {
 
   return {
     ...record,
-
-    rowId: String(
-      record._id || record.productCode,
-    ),
-
-    category:
-      record.category || "Uncategorized",
-
-    brand:
-      record.brand || "Not specified",
-
-    unit:
-      record.unit || "",
-
+    rowId: String(record._id || record.productCode),
+    category: record.category || "Uncategorized",
+    brand: record.brand || "Not specified",
+    unit: record.unit || "",
     stockState:
-      record.currentStock > 0
-        ? "IN_STOCK"
-        : "OUT_OF_STOCK",
-
-    valuationState:
-      hasValue ? "VALUED" : "UNVALUED",
-
+      record.currentStock > 0 ? "IN_STOCK" : "OUT_OF_STOCK",
+    valuationState: hasValue ? "VALUED" : "UNVALUED",
     valuationRatePaise,
-
     stockValuePaise,
-
-    valuationMethod:
-      "Current Product purchase price",
+    valuationMethod: "Current Product purchase price",
   };
 };
 
 function StockValuation() {
-  const [records, setRecords] =
-    useState([]);
+  const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [loadedAt, setLoadedAt] = useState(null);
 
-  const [loading, setLoading] =
-    useState(true);
-
-  const [error, setError] =
-    useState("");
-
-  const [selectedRecord, setSelectedRecord] =
-    useState(null);
-
-  const [loadedAt, setLoadedAt] =
-    useState(null);
+  const [query, setQuery] = useState(INITIAL_QUERY);
+  const [searchText, setSearchText] = useState("");
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 1,
+  });
+  const [summary, setSummary] = useState({
+    totalProducts: 0,
+    totalQuantity: 0,
+    totalStockValue: 0,
+  });
 
   const requestIdRef = useRef(0);
 
   const loadValuation = useCallback(async () => {
-    const requestId =
-      ++requestIdRef.current;
-
-    const isCurrent = () =>
-      requestId === requestIdRef.current;
+    const requestId = ++requestIdRef.current;
+    const isCurrent = () => requestId === requestIdRef.current;
 
     setLoading(true);
     setError("");
 
     try {
-      const first =
-        await stockValuationApi.getAll({
-          page: 1,
-          limit: 100,
-        });
+      const params = {};
 
-      if (!isCurrent()) {
-        return;
-      }
+      Object.entries(query).forEach(([key, value]) => {
+        if (value !== "" && value != null) params[key] = value;
+      });
 
-      if (
-        !Array.isArray(first?.data?.data)
-      ) {
+      const response = await stockValuationApi.getAll(params);
+
+      if (!isCurrent()) return;
+
+      const body = response?.data;
+
+      if (!Array.isArray(body?.data) || !body?.pagination) {
         throw new Error(
           "Invalid stock valuation response. Expected data to be an array.",
         );
       }
 
-      const pagination =
-        first.data.pagination;
+      const normalized = body.data.map(normalizeRow);
 
-      if (!pagination) {
-        throw new Error(
-          "The valuation API did not return pagination.",
-        );
-      }
+      const identifiers = new Set(normalized.map((r) => r.rowId));
 
-      const pages = Number(
-        pagination.totalPages,
-      );
-
-      if (
-        !Number.isSafeInteger(pages) ||
-        pages < 0
-      ) {
-        throw new Error(
-          "Invalid stock valuation pagination.",
-        );
-      }
-
-      const rows = [...first.data.data];
-
-      for (
-        let page = 2;
-        page <= pages;
-        page += 1
-      ) {
-        if (!isCurrent()) {
-          return;
-        }
-
-        const response =
-          await stockValuationApi.getAll({
-            page,
-            limit: 100,
-          });
-
-        if (!isCurrent()) {
-          return;
-        }
-
-        if (
-          !Array.isArray(response?.data?.data)
-        ) {
-          throw new Error(
-            "Unable to read a valuation report page.",
-          );
-        }
-
-        rows.push(...response.data.data);
-      }
-
-      const normalized =
-        rows.map(normalizeRow);
-
-      const identifiers = new Set(
-        normalized.map(
-          (record) => record.rowId,
-        ),
-      );
-
-      if (
-        identifiers.size !==
-        normalized.length
-      ) {
+      if (identifiers.size !== normalized.length) {
         throw new Error(
           "The report returned duplicate Product rows. Refresh and try again.",
         );
       }
 
-      if (!isCurrent()) {
-        return;
+      setRecords(normalized);
+      setPagination(body.pagination);
+
+      if (body.summary) {
+        setSummary(body.summary);
       }
 
-      setRecords(normalized);
       setSelectedRecord(null);
       setLoadedAt(new Date());
     } catch (requestError) {
@@ -299,17 +207,12 @@ function StockValuation() {
         setRecords([]);
         setSelectedRecord(null);
         setLoadedAt(null);
-
-        setError(
-          getErrorMessage(requestError),
-        );
+        setError(getErrorMessage(requestError));
       }
     } finally {
-      if (isCurrent()) {
-        setLoading(false);
-      }
+      if (isCurrent()) setLoading(false);
     }
-  }, []);
+  }, [query]);
 
   useEffect(() => {
     loadValuation();
@@ -319,34 +222,55 @@ function StockValuation() {
     };
   }, [loadValuation]);
 
-  const summary = useMemo(() => {
-    let totalValuePaise = 0n;
-    let inStockProducts = 0;
-    let unvaluedProducts = 0;
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setQuery((previous) =>
+        previous.search === searchText.trim()
+          ? previous
+          : { ...previous, search: searchText.trim(), page: 1 },
+      );
+    }, SEARCH_DEBOUNCE_MS);
 
-    for (const record of records) {
-      if (record.currentStock > 0) {
-        inStockProducts += 1;
-      }
+    return () => clearTimeout(timer);
+  }, [searchText]);
 
-      if (
-        record.stockValuePaise === null
-      ) {
-        unvaluedProducts += 1;
-      } else {
-        totalValuePaise += BigInt(
-          record.stockValuePaise,
-        );
-      }
-    }
+  const handlePageChange = useCallback((page) => {
+    const next = Number(page) || 1;
 
-    return {
-      productCount: records.length,
-      inStockProducts,
-      unvaluedProducts,
-      totalValuePaise,
-    };
-  }, [records]);
+    setQuery((previous) =>
+      previous.page === next ? previous : { ...previous, page: next },
+    );
+  }, []);
+
+  const handlePageSizeChange = useCallback((limit) => {
+    const size = PAGE_SIZES.includes(Number(limit)) ? Number(limit) : 20;
+
+    setQuery((previous) => ({ ...previous, limit: size, page: 1 }));
+  }, []);
+
+  const handleSearch = useCallback((value) => {
+    setSearchText(String(value ?? ""));
+  }, []);
+
+  const handleSortChange = useCallback((sort) => {
+    const key = sort?.key || "";
+    const direction = sort?.direction === "desc" ? "desc" : key ? "asc" : "";
+
+    setQuery((previous) => ({
+      ...previous,
+      sortBy: key,
+      sortDir: direction,
+      page: 1,
+    }));
+  }, []);
+const handleFilterChange = useCallback((filters = {}) => {
+  setQuery((previous) => ({
+    ...previous,
+    category: filters.category || "",
+    brand: filters.brand || "",
+    page: 1,
+  }));
+}, []);
 
   const columns = useMemo(
     () => [
@@ -369,7 +293,6 @@ function StockValuation() {
           </button>
         ),
       },
-
       {
         key: "name",
         label: "Product",
@@ -382,91 +305,129 @@ function StockValuation() {
           </div>
         ),
       },
-
       {
         key: "brand",
         label: "Brand",
         sortable: true,
       },
-
       {
         key: "unit",
         label: "Unit",
         sortable: true,
       },
-
       {
         key: "currentStock",
         label: "Stock Quantity",
         type: "number",
         sortable: true,
 
-        render: (value) =>
-          quantityFormatter.format(value),
+        render: (value) => quantityFormatter.format(value),
       },
-
       {
         key: "valuationRatePaise",
         label: "Valuation Rate",
         type: "number",
-        sortable: true,
+        sortable: false,
         render: formatPaise,
       },
-
       {
         key: "stockValuePaise",
         label: "Stock Value",
         type: "number",
-        sortable: true,
+        sortable: false,
         render: formatPaise,
       },
-
       {
         key: "valuationState",
         label: "Valuation Status",
-        sortable: true,
+        sortable: false,
 
-        render: (value) => (
-          <StatusField value={value} />
-        ),
+        render: (value) => <StatusField value={value} />,
       },
-
       {
         key: "valuationMethod",
         label: "Valuation Method",
-        sortable: true,
+        sortable: false,
         visible: false,
       },
-
       {
         key: "category",
         label: "Category",
         sortable: true,
         visible: false,
       },
-
       {
         key: "stockState",
         label: "Stock Status",
-        sortable: true,
+        sortable: false,
         visible: false,
 
         render: (value) =>
-          value === "IN_STOCK"
-            ? "In Stock"
-            : "Out of Stock",
+          value === "IN_STOCK" ? "In Stock" : "Out of Stock",
       },
     ],
     [],
   );
 
+  const filters = useMemo(
+    () => [
+      {
+        key: "stockState",
+        label: "Stock Status",
+        type: "select",
+        options: [
+          { value: "IN_STOCK", label: "In Stock" },
+          { value: "OUT_OF_STOCK", label: "Out of Stock" },
+        ],
+      },
+      {
+        key: "valuationState",
+        label: "Valuation Status",
+        type: "select",
+        options: [
+          { value: "VALUED", label: "Valued" },
+          { value: "UNVALUED", label: "Missing Valuation" },
+        ],
+      },
+    ],
+    [],
+  );
+
+  const quickFilters = useMemo(
+    () => [
+      {
+        key: "stockState",
+        value: "",
+        label: "All",
+        count: summary.totalProducts,
+      },
+      {
+        key: "stockState",
+        value: "IN_STOCK",
+        label: "In Stock",
+        count: summary.inStockProducts ?? 0,
+      },
+      {
+        key: "stockState",
+        value: "OUT_OF_STOCK",
+        label: "Out of Stock",
+        count:
+          (summary.totalProducts ?? 0) - (summary.inStockProducts ?? 0),
+      },
+      {
+        key: "valuationState",
+        value: "UNVALUED",
+        label: "Missing Valuation",
+        count: summary.unvaluedProducts ?? 0,
+      },
+    ],
+    [summary],
+  );
+
   return (
     <>
       {error && (
-        <div
-          className="section-form-api-error"
-          role="alert"
-        >
+        <div className="section-form-api-error" role="alert">
           <p>{error}</p>
 
           <Button
@@ -494,89 +455,36 @@ function StockValuation() {
         selectable={false}
         columnVisibility
         pagination
+        serverMode
+        total={pagination.total}
+        page={query.page}
+        pageSize={query.limit}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+        onSearch={handleSearch}
+        onSort={handleSortChange}
+        onFilterChange={handleFilterChange}
+        filters={filters}
+        quickFilters={quickFilters}
         storageKey="trustiq-stock-valuation"
-        searchPlaceholder="Search Product code, name, category or brand..."
-        filters={[
-          {
-            key: "stockState",
-            label: "Stock Status",
-            type: "select",
-
-            options: [
-              {
-                value: "IN_STOCK",
-                label: "In Stock",
-              },
-              {
-                value: "OUT_OF_STOCK",
-                label: "Out of Stock",
-              },
-            ],
-          },
-
-          {
-            key: "valuationState",
-            label: "Valuation Status",
-            type: "select",
-
-            options: [
-              {
-                value: "VALUED",
-                label: "Valued",
-              },
-              {
-                value: "UNVALUED",
-                label: "Missing Valuation",
-              },
-            ],
-          },
-        ]}
-        quickFilters={[
-          {
-            key: "stockState",
-            value: "",
-            label: "All",
-          },
-          {
-            key: "stockState",
-            value: "IN_STOCK",
-            label: "In Stock",
-          },
-          {
-            key: "stockState",
-            value: "OUT_OF_STOCK",
-            label: "Out of Stock",
-          },
-          {
-            key: "valuationState",
-            value: "UNVALUED",
-            label: "Missing Valuation",
-          },
-        ]}
+        searchPlaceholder="Search Product code or name..."
         actions={{
-          view: (row) =>
-            setSelectedRecord(row),
+          view: (row) => setSelectedRecord(row),
         }}
         onRefresh={loadValuation}
       />
 
       <BoxModal
         show={Boolean(selectedRecord)}
-        onClose={() =>
-          setSelectedRecord(null)
-        }
+        onClose={() => setSelectedRecord(null)}
         title="Stock Valuation Details"
-        subtitle={
-          selectedRecord?.productCode || ""
-        }
+        subtitle={selectedRecord?.productCode || ""}
         width="min(680px, calc(100vw - 24px))"
         footer={
           <Button
             type="button"
             variant="secondary"
-            onClick={() =>
-              setSelectedRecord(null)
-            }
+            onClick={() => setSelectedRecord(null)}
           >
             Close
           </Button>
@@ -584,63 +492,28 @@ function StockValuation() {
       >
         {selectedRecord && (
           <div className="box-modal-form-grid">
-            <Input
-              label="Product Code"
-              value={
-                selectedRecord.productCode
-              }
-              readOnly
-            />
-
-            <Input
-              label="Product Name"
-              value={selectedRecord.name}
-              readOnly
-            />
-
-            <Input
-              label="Category"
-              value={selectedRecord.category}
-              readOnly
-            />
-
-            <Input
-              label="Brand"
-              value={selectedRecord.brand}
-              readOnly
-            />
-
+            <Input label="Product Code" value={selectedRecord.productCode} readOnly />
+            <Input label="Product Name" value={selectedRecord.name} readOnly />
+            <Input label="Category" value={selectedRecord.category} readOnly />
+            <Input label="Brand" value={selectedRecord.brand} readOnly />
             <Input
               label="Stock Quantity"
-              value={
-                `${quantityFormatter.format(
-                  selectedRecord.currentStock,
-                )} ${selectedRecord.unit}`
-              }
+              value={`${quantityFormatter.format(selectedRecord.currentStock)} ${selectedRecord.unit}`}
               readOnly
             />
-
             <Input
               label="Valuation Rate"
-              value={formatPaise(
-                selectedRecord.valuationRatePaise,
-              )}
+              value={formatPaise(selectedRecord.valuationRatePaise)}
               readOnly
             />
-
             <Input
               label="Stock Value"
-              value={formatPaise(
-                selectedRecord.stockValuePaise,
-              )}
+              value={formatPaise(selectedRecord.stockValuePaise)}
               readOnly
             />
-
             <Input
               label="Valuation Method"
-              value={
-                selectedRecord.valuationMethod
-              }
+              value={selectedRecord.valuationMethod}
               readOnly
             />
           </div>

@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Plus } from "lucide-react";
 
@@ -14,6 +8,7 @@ import StatusField from "../../components/common/StatusField/StatusField";
 import warehouseApi from "../../services/modules/warehouseApi";
 
 import WarehouseModal from "./WarehouseModal";
+import toast from "react-hot-toast";
 
 const INITIAL_MODAL = {
   open: false,
@@ -24,33 +19,24 @@ const INITIAL_MODAL = {
 const getErrorMessage = (error) => {
   const body = error?.response?.data;
 
-  if (
-    Array.isArray(body?.errors) &&
-    body.errors.length
-  ) {
+  if (Array.isArray(body?.errors) && body.errors.length) {
     return body.errors
       .map((item) =>
         typeof item === "string"
           ? item
-          : item?.message ||
-            item?.msg ||
-            "Validation failed",
+          : item?.message || item?.msg || "Validation failed",
       )
       .join(", ");
   }
 
-  return (
-    body?.message ||
-    error?.message ||
-    "Unable to load warehouses."
-  );
+  return body?.message || error?.message || "Unable to load warehouses.";
 };
 
 const isSetupMissing = (error) =>
   error?.response?.status === 409 &&
-  String(
-    error?.response?.data?.message ?? "",
-  ).includes("Warehouse setup is missing");
+  String(error?.response?.data?.message ?? "").includes(
+    "Warehouse setup is missing",
+  );
 
 const formatDate = (value) => {
   if (!value) {
@@ -68,222 +54,194 @@ const formatDate = (value) => {
       });
 };
 
-const sortWarehouses = (records) =>
-  [...records].sort((first, second) => {
-    if (
-      Boolean(first.isDefault) !==
-      Boolean(second.isDefault)
-    ) {
-      return first.isDefault ? -1 : 1;
-    }
+const PAGE_SIZES = [20, 50, 100];
+const SEARCH_DEBOUNCE_MS = 400;
 
-    return String(first.name ?? "").localeCompare(
-      String(second.name ?? ""),
-    );
-  });
+const INITIAL_QUERY = {
+  page: 1,
+  limit: 20,
+  search: "",
+  status: "",
+  sortBy: "",
+  sortDir: "",
+};
+
+const INITIAL_COUNTS = { total: 0, active: 0, inactive: 0 };
 
 function WarehousesList() {
-  const [warehouses, setWarehouses] =
-    useState([]);
+  const [warehouses, setWarehouses] = useState([]);
+  const [settings, setSettings] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [setupRequired, setSetupRequired] = useState(false);
+  const [setupLoading, setSetupLoading] = useState(false);
+  const [setupError, setSetupError] = useState("");
+  const [modalState, setModalState] = useState(INITIAL_MODAL);
 
-  const [settings, setSettings] =
-    useState(null);
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [loadError, setLoadError] =
-    useState("");
-
-  const [setupRequired, setSetupRequired] =
-    useState(false);
-
-  const [setupLoading, setSetupLoading] =
-    useState(false);
-
-  const [setupError, setSetupError] =
-    useState("");
-
-  const [modalState, setModalState] =
-    useState(INITIAL_MODAL);
+  const [query, setQuery] = useState(INITIAL_QUERY);
+  const [searchText, setSearchText] = useState("");
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 1,
+  });
+  const [counts, setCounts] = useState(INITIAL_COUNTS);
 
   const loadIdRef = useRef(0);
+  const countIdRef = useRef(0);
   const setupLockRef = useRef(false);
   const mountedRef = useRef(false);
 
   const loadWarehouses = useCallback(async () => {
     const requestId = ++loadIdRef.current;
-
-    const isCurrentRequest = () =>
-      mountedRef.current &&
-      requestId === loadIdRef.current;
+    const isCurrent = () =>
+      mountedRef.current && requestId === loadIdRef.current;
 
     setLoading(true);
     setLoadError("");
     setSetupError("");
 
     try {
-      // Read settings first so missing setup does not
-      // trigger a second, redundant failing list request.
-      const settingsResponse =
-        await warehouseApi.getSettings();
+      const settingsResponse = await warehouseApi.getSettings();
 
-      if (!isCurrentRequest()) {
-        return false;
-      }
+      if (!isCurrent()) return false;
 
-      const inventorySettings =
-        settingsResponse?.data?.data;
+      const inventorySettings = settingsResponse?.data?.data;
 
       if (
         !inventorySettings?.defaultWarehouseId ||
-        typeof inventorySettings.multiWarehouseEnabled !==
-          "boolean"
+        typeof inventorySettings.multiWarehouseEnabled !== "boolean"
       ) {
-        throw new Error(
-          "The server returned invalid inventory settings.",
-        );
+        throw new Error("The server returned invalid inventory settings.");
       }
 
-      const first = await warehouseApi.getAll({
-        page: 1,
-        limit: 100,
+      const params = {};
+      Object.entries(query).forEach(([key, value]) => {
+        if (value !== "" && value != null) params[key] = value;
       });
 
-      if (!isCurrentRequest()) {
-        return false;
+      const response = await warehouseApi.getAll(params);
+
+      if (!isCurrent()) return false;
+
+      const body = response?.data;
+
+      if (!Array.isArray(body?.data) || !body?.pagination) {
+        throw new Error("The server returned an invalid warehouse list.");
       }
 
-      if (!Array.isArray(first?.data?.data)) {
-        throw new Error(
-          "The server returned an invalid warehouse list.",
-        );
+      if (body.data.some((r) => !r?._id || !r?.warehouseCode)) {
+        throw new Error("One or more warehouse records are invalid.");
       }
 
-      const records = [...first.data.data];
+      const data = body.data.map((warehouse) => ({
+        ...warehouse,
+        isDefault:
+          String(warehouse._id) ===
+          String(inventorySettings.defaultWarehouseId),
+      }));
 
-      const pages = Number(
-        first.data.pagination?.totalPages ?? 1,
-      );
-
-      if (
-        !Number.isSafeInteger(pages) ||
-        pages < 0
-      ) {
-        throw new Error(
-          "Invalid warehouse pagination.",
-        );
-      }
-
-      for (
-        let page = 2;
-        page <= pages;
-        page += 1
-      ) {
-        if (!isCurrentRequest()) {
-          return false;
-        }
-
-        const response =
-          await warehouseApi.getAll({
-            page,
-            limit: 100,
-          });
-
-        if (!isCurrentRequest()) {
-          return false;
-        }
-
-        if (
-          !Array.isArray(response?.data?.data)
-        ) {
-          throw new Error(
-            "Unable to read a warehouse page.",
-          );
-        }
-
-        records.push(...response.data.data);
-      }
-
-      if (
-        records.some(
-          (record) =>
-            !record?._id ||
-            !record?.warehouseCode,
-        )
-      ) {
-        throw new Error(
-          "One or more warehouse records are invalid.",
-        );
-      }
-
-      if (!isCurrentRequest()) {
-        return false;
-      }
-
-      const uniqueRecords = Array.from(
-        new Map(
-          records.map((record) => [
-            String(record._id),
-            {
-              ...record,
-
-              isDefault:
-                String(record._id) ===
-                String(
-                  inventorySettings.defaultWarehouseId,
-                ),
-            },
-          ]),
-        ).values(),
-      );
-
-      setWarehouses(
-        sortWarehouses(uniqueRecords),
-      );
-
+      setWarehouses(data);
+      setPagination(body.pagination);
       setSettings(inventorySettings);
       setSetupRequired(false);
 
       return true;
     } catch (error) {
-      if (isCurrentRequest()) {
+      if (isCurrent()) {
         setWarehouses([]);
         setSettings(null);
-        setSetupRequired(
-          isSetupMissing(error),
-        );
-        setLoadError(
-          getErrorMessage(error),
-        );
+        setSetupRequired(isSetupMissing(error));
+        setLoadError(getErrorMessage(error));
       }
-
       return false;
     } finally {
-      if (isCurrentRequest()) {
-        setLoading(false);
+      if (isCurrent()) setLoading(false);
+    }
+  }, [query]);
+
+  const loadCounts = useCallback(async () => {
+    const requestId = ++countIdRef.current;
+    try {
+      const response = await warehouseApi.getCounts();
+      const next = response?.data?.counts;
+      if (requestId === countIdRef.current && next) {
+        setCounts({ ...INITIAL_COUNTS, ...next });
       }
+    } catch {
+      // informational only
     }
   }, []);
 
+  const refreshAll = useCallback(async () => {
+    await Promise.all([loadWarehouses(), loadCounts()]);
+  }, [loadWarehouses, loadCounts]);
+
   useEffect(() => {
     mountedRef.current = true;
-
     loadWarehouses();
 
     return () => {
       mountedRef.current = false;
       loadIdRef.current += 1;
+      countIdRef.current += 1;
     };
   }, [loadWarehouses]);
 
+  useEffect(() => {
+    loadCounts();
+  }, [loadCounts]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setQuery((previous) =>
+        previous.search === searchText.trim()
+          ? previous
+          : { ...previous, search: searchText.trim(), page: 1 },
+      );
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => clearTimeout(timer);
+  }, [searchText]);
+
+  const handlePageChange = useCallback((page) => {
+    const next = Number(page) || 1;
+    setQuery((previous) =>
+      previous.page === next ? previous : { ...previous, page: next },
+    );
+  }, []);
+
+  const handlePageSizeChange = useCallback((limit) => {
+    const size = PAGE_SIZES.includes(Number(limit)) ? Number(limit) : 20;
+    setQuery((previous) => ({ ...previous, limit: size, page: 1 }));
+  }, []);
+
+  const handleSearch = useCallback((value) => {
+    setSearchText(String(value ?? ""));
+  }, []);
+
+  const handleSortChange = useCallback((sort) => {
+    const key = sort?.key || "";
+    const direction = sort?.direction === "desc" ? "desc" : key ? "asc" : "";
+    setQuery((previous) => ({
+      ...previous,
+      sortBy: key,
+      sortDir: direction,
+      page: 1,
+    }));
+  }, []);
+
+  const handleFilterChange = useCallback((filters = {}) => {
+    setQuery((previous) => ({
+      ...previous,
+      status: filters.status || "",
+      page: 1,
+    }));
+  }, []);
+
   const handleSetupWarehouses = async () => {
-    if (
-      loading ||
-      setupLoading ||
-      setupLockRef.current ||
-      !setupRequired
-    ) {
+    if (loading || setupLoading || setupLockRef.current || !setupRequired) {
       return;
     }
 
@@ -302,15 +260,11 @@ function WarehousesList() {
     setSetupError("");
 
     try {
-      const response =
-        await warehouseApi.setup();
+      const response = await warehouseApi.setup();
 
-      if (
-        response?.data?.success !== true
-      ) {
+      if (response?.data?.success !== true) {
         throw new Error(
-          response?.data?.message ||
-            "Warehouse setup was not confirmed.",
+          response?.data?.message || "Warehouse setup was not confirmed.",
         );
       }
 
@@ -326,8 +280,7 @@ function WarehousesList() {
         return;
       }
 
-      const status =
-        error?.response?.status;
+      const status = error?.response?.status;
 
       if (status === 403) {
         setSetupError(
@@ -339,18 +292,13 @@ function WarehousesList() {
           "The warehouse setup endpoint was not found. " +
             "Register POST /api/warehouses/setup and restart the backend.",
         );
-      } else if (
-        !status ||
-        status >= 500
-      ) {
+      } else if (!status || status >= 500) {
         setSetupError(
           `${getErrorMessage(error)} ` +
             "Setup may have completed. Click Retry to check before running setup again.",
         );
       } else {
-        setSetupError(
-          getErrorMessage(error),
-        );
+        setSetupError(getErrorMessage(error));
       }
     } finally {
       setupLockRef.current = false;
@@ -363,67 +311,16 @@ function WarehousesList() {
 
   const busy = loading || setupLoading;
 
-  const openWarehouse = useCallback(
-    (record = null, mode = "create") => {
-      setModalState({
-        open: true,
-        mode,
-        record,
-      });
-    },
-    [],
-  );
-
-  const handleSaved = (savedWarehouse) => {
-    if (!savedWarehouse?._id) {
-      return;
-    }
-
-    setWarehouses((previous) => {
-      const existing = previous.find(
-        (record) =>
-          String(record._id) ===
-          String(savedWarehouse._id),
-      );
-
-      const merged = {
-        ...existing,
-        ...savedWarehouse,
-
-        isDefault:
-          String(savedWarehouse._id) ===
-          String(settings?.defaultWarehouseId),
-      };
-
-      const next = existing
-        ? previous.map((record) =>
-            String(record._id) ===
-            String(merged._id)
-              ? merged
-              : record,
-          )
-        : [...previous, merged];
-
-      return sortWarehouses(next);
+  const openWarehouse = useCallback((record = null, mode = "create") => {
+    setModalState({
+      open: true,
+      mode,
+      record,
     });
+  }, []);
 
-    if (
-      String(savedWarehouse._id) ===
-      String(settings?.defaultWarehouseId)
-    ) {
-      setSettings((previous) =>
-        previous
-          ? {
-              ...previous,
-
-              defaultWarehouse: {
-                ...previous.defaultWarehouse,
-                ...savedWarehouse,
-              },
-            }
-          : previous,
-      );
-    }
+  const handleSaved = () => {
+    refreshAll();
   };
 
   const columns = useMemo(
@@ -455,29 +352,23 @@ function WarehousesList() {
       {
         key: "isDefault",
         label: "Location Type",
-        sortable: true,
+        sortable: false,
 
-        render: (value) =>
-          value
-            ? "Default Location"
-            : "Additional Location",
+        render: (value) => (value ? "Default Location" : "Additional Location"),
       },
       {
         key: "address",
         label: "Address",
-        sortable: true,
+        sortable: false,
 
-        render: (value) =>
-          value || "Not provided",
+        render: (value) => value || "Not provided",
       },
       {
         key: "status",
         label: "Status",
         sortable: true,
 
-        render: (value) => (
-          <StatusField value={value} />
-        ),
+        render: (value) => <StatusField value={value} />,
       },
       {
         key: "description",
@@ -485,8 +376,7 @@ function WarehousesList() {
         sortable: true,
         visible: false,
 
-        render: (value) =>
-          value || "No description",
+        render: (value) => value || "No description",
       },
       {
         key: "createdAt",
@@ -506,35 +396,97 @@ function WarehousesList() {
     [openWarehouse],
   );
 
-  const trackingReady =
-    settings?.warehouseTrackingStatus === "READY";
+  const filters = useMemo(
+    () => [
+      {
+        key: "status",
+        label: "Status",
+        type: "select",
+        options: ["ACTIVE", "INACTIVE"],
+      },
+    ],
+    [],
+  );
+
+  const quickFilters = useMemo(
+    () => [
+      { key: "status", value: "", label: "All", count: counts.total },
+      { key: "status", value: "ACTIVE", label: "Active", count: counts.active },
+      {
+        key: "status",
+        value: "INACTIVE",
+        label: "Inactive",
+        count: counts.inactive,
+      },
+    ],
+    [counts],
+  );
+
+  const trackingReady = settings?.warehouseTrackingStatus === "READY";
 
   const handleRefresh = () => {
-    if (
-      !setupLockRef.current &&
-      !loading
-    ) {
+    if (!setupLockRef.current && !loading) {
       return loadWarehouses();
     }
 
     return undefined;
   };
+  const confirmBulkStatus = (rows, status) => {
+    if (!rows?.length) {
+      return;
+    }
 
+    const activate = status === "ACTIVE";
+    const label = activate ? "Activate" : "Deactivate";
+    const noun = rows.length === 1 ? "warehouse" : "warehouses";
+
+    const confirmed = window.confirm(
+      `${label} ${rows.length} selected ${noun}?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    bulkUpdateStatus(rows, status);
+  };
+
+  const bulkUpdateStatus = async (rows, status) => {
+    const ids = Array.from(new Set(rows.map((row) => row._id)));
+
+    try {
+      const response = await warehouseApi.bulkStatus(ids, status);
+      const result = response?.data || {};
+      const changed = Number(result.modifiedCount) || 0;
+      const skipped = Number(result.skippedCount) || 0;
+
+      if (changed) {
+        toast.success(
+          `${changed} warehouse${changed === 1 ? "" : "s"} ${status === "ACTIVE" ? "activated" : "deactivated"}`,
+        );
+      }
+
+      if (skipped) {
+        toast(
+          `${skipped} skipped (default location or already ${status.toLowerCase()})`,
+        );
+      }
+    } catch (error) {
+      toast.error(getErrorMessage(error), { duration: 7000 });
+    }
+
+    await refreshAll();
+  };
   return (
     <>
       {loadError && (
-        <div
-          className="section-form-api-error"
-          role="alert"
-        >
+        <div className="section-form-api-error" role="alert">
           <p>{loadError}</p>
 
           {setupRequired && (
             <p>
-              Complete setup for the currently
-              selected company using the button
-              below. Refreshing alone does not
-              create warehouse settings.
+              Complete setup for the currently selected company using the button
+              below. Refreshing alone does not create warehouse settings.
             </p>
           )}
 
@@ -563,10 +515,7 @@ function WarehousesList() {
       )}
 
       {setupError && (
-        <div
-          className="section-form-api-error"
-          role="alert"
-        >
+        <div className="section-form-api-error" role="alert">
           <p>{setupError}</p>
         </div>
       )}
@@ -581,85 +530,46 @@ function WarehousesList() {
         searchable
         filterable
         sortable
+        selectable
         columnVisibility
         pagination
+        serverMode
+        total={pagination.total}
+        page={query.page}
+        pageSize={query.limit}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+        onSearch={handleSearch}
+        onSort={handleSortChange}
+        onFilterChange={handleFilterChange}
+        filters={filters}
+        quickFilters={quickFilters}
         storageKey="trustiq-warehouses"
-        searchPlaceholder="Search warehouse code, name or address..."
-        filters={[
-          {
-            key: "status",
-            label: "Status",
-            type: "select",
-            options: ["ACTIVE", "INACTIVE"],
-          },
-          {
-            key: "isDefault",
-            label: "Location Type",
-            type: "select",
-
-            options: [
-              {
-                label: "Default Location",
-                value: true,
-              },
-              {
-                label: "Additional Location",
-                value: false,
-              },
-            ],
-          },
-        ]}
-        quickFilters={[
-          {
-            key: "status",
-            value: "",
-            label: "All",
-          },
-          {
-            key: "status",
-            value: "ACTIVE",
-            label: "Active",
-          },
-          {
-            key: "status",
-            value: "INACTIVE",
-            label: "Inactive",
-          },
-        ]}
+        searchPlaceholder="Search warehouse code or name..."
         actions={{
-          view: (row) =>
-            openWarehouse(row, "view"),
-
-          edit: (row) =>
-            openWarehouse(row, "edit"),
+          view: (row) => openWarehouse(row, "view"),
+          edit: (row) => openWarehouse(row, "edit"),
         }}
-        onRefresh={handleRefresh}
-        addButton={
-          <button
-            type="button"
-            className="so-primary-button"
-            disabled={
-              busy ||
-              Boolean(loadError) ||
-              !settings
-            }
-            onClick={() =>
-              openWarehouse()
-            }
-          >
-            <Plus size={16} />
-            <span>New Warehouse</span>
-          </button>
-        }
+        bulkActions={[
+          {
+            key: "activate",
+            label: "Activate",
+            action: (rows) => confirmBulkStatus(rows, "ACTIVE"),
+          },
+          {
+            key: "deactivate",
+            label: "Deactivate",
+            action: (rows) => confirmBulkStatus(rows, "INACTIVE"),
+          },
+        ]}
+        onRefresh={refreshAll}
       />
 
       <WarehouseModal
         isOpen={modalState.open}
         warehouse={modalState.record}
         mode={modalState.mode}
-        onClose={() =>
-          setModalState(INITIAL_MODAL)
-        }
+        onClose={() => setModalState(INITIAL_MODAL)}
         onSave={handleSaved}
       />
     </>
