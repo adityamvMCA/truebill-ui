@@ -26,6 +26,9 @@ const customerApi = {
 
   bulkImport: (data) =>
     apiClient.post("/customers/bulk-import", data, { timeout: 120000 }),
+
+  bulkStatus: (ids, status) =>
+  apiClient.patch("/customers/bulk-status", { ids, status }),
 };
 
 export default customerApi;

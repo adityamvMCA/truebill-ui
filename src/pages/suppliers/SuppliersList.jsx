@@ -4,105 +4,241 @@
 
 // import DataList from "../../components/common/DataList/DataList";
 // import StatusField from "../../components/common/StatusField/StatusField";
-// import api from "../../services/api";
-// import useCsvImport from "../../hooks/useCsvImport";
 // import ConfirmModal from "../../components/common/ConfirmModal/ConfirmModal";
-// import SupplierRegistration from "./SupplierRegistration";
 // import ImportPreviewModal from "../../components/common/DataList/ImportPreviewModal";
+// import { saveCsvFile } from "../../components/common/DataList/fileDownload";
+// import SupplierRegistration from "./SupplierRegistration";
+// import useCsvImport from "../../hooks/useCsvImport";
+// import api from "../../services/api";
+
+// const INITIAL_CONFIRM_STATE = {
+//   open: false,
+//   type: "danger",
+//   title: "",
+//   message: "",
+//   confirmText: "Delete",
+//   onConfirm: null,
+// };
+
+// const EMPTY_STATS = {
+//   all: 0,
+//   active: 0,
+//   inactive: 0,
+//   business: 0,
+//   individual: 0,
+// };
+
+// const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+// const EXPORT_BATCH = 100;
+
+// const STATE_OPTIONS = [
+//   "Andhra Pradesh",
+//   "Delhi",
+//   "Goa",
+//   "Gujarat",
+//   "Karnataka",
+//   "Kerala",
+//   "Maharashtra",
+//   "Tamil Nadu",
+//   "Telangana",
+// ];
+
+// const getErrorMessage = (error) => {
+//   const responseData = error?.response?.data;
+
+//   if (typeof responseData?.message === "string") return responseData.message;
+//   if (typeof responseData?.error === "string") return responseData.error;
+
+//   if (Array.isArray(responseData?.errors) && responseData.errors.length > 0) {
+//     return responseData.errors
+//       .map((item) =>
+//         typeof item === "string"
+//           ? item
+//           : item?.message || item?.msg || String(item),
+//       )
+//       .join(", ");
+//   }
+
+//   return error?.message || "Something went wrong. Please try again.";
+// };
+
+// const getSupplierList = (response) => {
+//   if (Array.isArray(response?.data?.data?.suppliers))
+//     return response.data.data.suppliers;
+//   if (Array.isArray(response?.data?.suppliers)) return response.data.suppliers;
+//   if (Array.isArray(response?.data?.data)) return response.data.data;
+//   if (Array.isArray(response?.data)) return response.data;
+//   return [];
+// };
+
+// const getTotal = (response, fallback) => {
+//   const p = response?.data?.pagination;
+//   return Number(p?.total ?? p?.totalRecords ?? p?.totalItems ?? fallback) || 0;
+// };
+
+// const getSingleSupplier = (response) =>
+//   response?.data?.supplier || response?.data?.data || response?.data || null;
+
+// const renderOptionalText = (value) =>
+//   value || <span className="dl-muted-value">N/A</span>;
+
+// const escapeCsv = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+
+// const validateSupplierRow = (row) => {
+//   const errors = [];
+//   const isNum = (v) => v === "" || v == null || !Number.isNaN(Number(v));
+//   const upper = (v) => String(v || "").toUpperCase();
+
+//   if (!row.supplierName || row.supplierName.trim().length < 2)
+//     errors.push("supplierName is required (min 2 characters)");
+
+//   if (
+//     row.supplierType &&
+//     !["BUSINESS", "INDIVIDUAL"].includes(upper(row.supplierType))
+//   )
+//     errors.push("supplierType must be Business or Individual");
+
+//   if (row.status && !["ACTIVE", "INACTIVE"].includes(upper(row.status)))
+//     errors.push("status must be Active or Inactive");
+
+//   if (
+//     row.openingBalanceType &&
+//     !["DEBIT", "CREDIT"].includes(upper(row.openingBalanceType))
+//   )
+//     errors.push("openingBalanceType must be DEBIT or CREDIT");
+
+//   if (
+//     row.gstNo &&
+//     !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z]Z[0-9A-Z]$/.test(upper(row.gstNo))
+//   )
+//     errors.push("invalid gstNo");
+
+//   if (row.pincode && !/^[0-9]{6}$/.test(row.pincode))
+//     errors.push("pincode must be 6 digits");
+
+//   ["creditLimit", "creditDays", "openingBalance"].forEach((key) => {
+//     if (!isNum(row[key])) errors.push(`${key} must be a number`);
+//   });
+
+//   return errors;
+// };
 
 // function SuppliersList() {
 //   const [loading, setLoading] = useState(true);
-
 //   const [suppliers, setSuppliers] = useState([]);
+//   const [total, setTotal] = useState(0);
+//   const [stats, setStats] = useState(EMPTY_STATS);
+
+//   // Server-side query state
+//   const [page, setPage] = useState(1);
+//   const [pageSize, setPageSize] = useState(20);
+//   const [search, setSearch] = useState("");
+//   const [sort, setSort] = useState({ key: "", direction: "" });
+//   const [filters, setFilters] = useState({});
 
 //   const [showSupplierModal, setShowSupplierModal] = useState(false);
-
 //   // null => create mode, object => edit mode
 //   const [editingSupplier, setEditingSupplier] = useState(null);
-
-//   // Prevents double-clicks on Edit while the supplier is being fetched.
 //   const editLoadingRef = useRef(false);
 
-//   const [confirmState, setConfirmState] = useState({
-//     open: false,
-//     type: "danger",
-//     title: "",
-//     message: "",
-//     confirmText: "Delete",
-//     onConfirm: null,
-//   });
-
+//   const [confirmState, setConfirmState] = useState(INITIAL_CONFIRM_STATE);
 //   const [confirmLoading, setConfirmLoading] = useState(false);
 
-//   const getErrorMessage = (error) => {
-//     const responseData = error?.response?.data;
+//   const requestIdRef = useRef(0);
 
-//     if (typeof responseData?.message === "string") {
-//       return responseData.message;
-//     }
+//   /* ---------------------------------------------------------------- */
+//   /* Data loading                                                      */
+//   /* ---------------------------------------------------------------- */
 
-//     if (typeof responseData?.error === "string") {
-//       return responseData.error;
-//     }
+//   const buildParams = useCallback(
+//     (extra = {}) => {
+//       const params = { ...extra };
 
-//     if (Array.isArray(responseData?.errors) && responseData.errors.length > 0) {
-//       return responseData.errors
-//         .map((item) =>
-//           typeof item === "string"
-//             ? item
-//             : item?.message || item?.msg || String(item),
-//         )
-//         .join(", ");
-//     }
+//       if (search.trim()) params.search = search.trim();
 
-//     return error?.message || "Something went wrong. Please try again.";
-//   };
+//       if (sort.key && sort.direction) {
+//         params.sortBy = sort.key;
+//         params.sortOrder = sort.direction;
+//       }
 
-//   const getSupplierList = (response) => {
-//     if (Array.isArray(response?.data?.data?.suppliers)) {
-//       return response.data.data.suppliers;
-//     }
+//       Object.entries(filters).forEach(([key, value]) => {
+//         if (value) params[key] = value;
+//       });
 
-//     if (Array.isArray(response?.data?.suppliers)) {
-//       return response.data.suppliers;
-//     }
-
-//     if (Array.isArray(response?.data?.data)) {
-//       return response.data.data;
-//     }
-
-//     if (Array.isArray(response?.data)) {
-//       return response.data;
-//     }
-
-//     return [];
-//   };
-
-//   // Single supplier from a getByCode response (same shape handling as the
-//   // registration modal uses for create/update responses).
-//   const getSingleSupplier = (response) =>
-//     response?.data?.supplier || response?.data?.data || response?.data || null;
+//       return params;
+//     },
+//     [search, sort, filters],
+//   );
 
 //   const loadSuppliers = useCallback(async () => {
+//     const requestId = ++requestIdRef.current;
+
 //     try {
 //       setLoading(true);
 
-//       const response = await api.suppliers.getAll({
-//         page: 1,
-//         limit: 100,
-//       });
+//       const response = await api.suppliers.getAll(
+//         buildParams({ page, limit: pageSize }),
+//       );
 
-//       const supplierList = getSupplierList(response);
+//       // Ignore stale responses (user typed / paged quickly)
+//       if (requestId !== requestIdRef.current) return;
 
-//       setSuppliers(supplierList);
+//       const list = getSupplierList(response);
+
+//       setSuppliers(list);
+//       setTotal(getTotal(response, list.length));
 //     } catch (error) {
+//       if (requestId !== requestIdRef.current) return;
+
 //       console.error("Unable to load suppliers:", error);
-
 //       toast.error(getErrorMessage(error));
-
 //       setSuppliers([]);
+//       setTotal(0);
 //     } finally {
-//       setLoading(false);
+//       if (requestId === requestIdRef.current) {
+//         setLoading(false);
+//       }
+//     }
+//   }, [buildParams, page, pageSize]);
+
+//   const loadStats = useCallback(async () => {
+//     try {
+//       const response = await api.suppliers.getStats();
+//       const data = response?.data?.data || response?.data?.stats;
+
+//       if (data && typeof data.all === "number") {
+//         setStats({ ...EMPTY_STATS, ...data });
+//         return;
+//       }
+
+//       throw new Error("Unexpected stats response");
+//     } catch (statsError) {
+//       // Fallback: ask the list endpoint for 1 row and read pagination.total
+//       console.warn("Stats endpoint unavailable, using fallback:", statsError);
+
+//       try {
+//         const count = async (extra = {}) => {
+//           const res = await api.suppliers.getAll({
+//             page: 1,
+//             limit: 1,
+//             ...extra,
+//           });
+//           return getTotal(res, 0);
+//         };
+
+//         const [all, active, inactive, business, individual] =
+//           await Promise.all([
+//             count(),
+//             count({ status: "Active" }),
+//             count({ status: "Inactive" }),
+//             count({ supplierType: "Business" }),
+//             count({ supplierType: "Individual" }),
+//           ]);
+
+//         setStats({ all, active, inactive, business, individual });
+//       } catch (fallbackError) {
+//         console.error("Unable to load supplier counts:", fallbackError);
+//       }
 //     }
 //   }, []);
 
@@ -110,50 +246,44 @@
 //     loadSuppliers();
 //   }, [loadSuppliers]);
 
-//   const validateSupplierRow = (row) => {
-//     const errors = [];
-//     const isNum = (v) => v === "" || v == null || !Number.isNaN(Number(v));
-//     const upper = (v) => String(v || "").toUpperCase();
+//   useEffect(() => {
+//     loadStats();
+//   }, [loadStats]);
 
-//     if (!row.supplierName || row.supplierName.trim().length < 2)
-//       errors.push("supplierName is required (min 2 characters)");
+//   const refreshAll = useCallback(() => {
+//     loadSuppliers();
+//     loadStats();
+//   }, [loadSuppliers, loadStats]);
 
-//     if (
-//       row.supplierType &&
-//       !["BUSINESS", "INDIVIDUAL"].includes(upper(row.supplierType))
-//     )
-//       errors.push("supplierType must be Business or Individual");
+//   /* ---------------------------------------------------------------- */
+//   /* Stable callbacks for DataList (server mode)                       */
+//   /* ---------------------------------------------------------------- */
 
-//     if (row.status && !["ACTIVE", "INACTIVE"].includes(upper(row.status)))
-//       errors.push("status must be Active or Inactive");
+//   const handleSearch = useCallback((value) => setSearch(value), []);
 
-//     if (
-//       row.openingBalanceType &&
-//       !["DEBIT", "CREDIT"].includes(upper(row.openingBalanceType))
-//     )
-//       errors.push("openingBalanceType must be DEBIT or CREDIT");
+//   const handleSort = useCallback((next) => {
+//     setSort(next);
+//     setPage(1);
+//   }, []);
 
-//     if (
-//       row.gstNo &&
-//       !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z]Z[0-9A-Z]$/.test(upper(row.gstNo))
-//     )
-//       errors.push("invalid gstNo");
+//   const handleFilterChange = useCallback((next) => setFilters(next), []);
 
-//     if (row.pincode && !/^[0-9]{6}$/.test(row.pincode))
-//       errors.push("pincode must be 6 digits");
+//   const handlePageChange = useCallback((nextPage) => setPage(nextPage), []);
 
-//     ["creditLimit", "creditDays", "openingBalance"].forEach((key) => {
-//       if (!isNum(row[key])) errors.push(`${key} must be a number`);
-//     });
+//   const handlePageSizeChange = useCallback((size) => {
+//     setPageSize(size);
+//     setPage(1);
+//   }, []);
 
-//     return errors;
-//   };
+//   /* ---------------------------------------------------------------- */
+//   /* Import                                                            */
+//   /* ---------------------------------------------------------------- */
 
 //   const csvImport = useCsvImport({
 //     entityName: "supplier",
 //     validateRow: validateSupplierRow,
 //     upload: (payload) => api.suppliers.import(payload),
-//     onDone: loadSuppliers,
+//     onDone: refreshAll,
 //   });
 
 //   const supplierImportConfig = {
@@ -181,181 +311,221 @@
 //     onError: (message) => toast.error(message),
 //   };
 
+//   /* ---------------------------------------------------------------- */
+//   /* Export (all rows matching current search + filters)               */
+//   /* ---------------------------------------------------------------- */
+
+//   const handleExport = useCallback(async () => {
+//     const toastId = toast.loading("Preparing export...");
+
+//     try {
+//       const first = await api.suppliers.getAll(
+//         buildParams({ page: 1, limit: EXPORT_BATCH }),
+//       );
+
+//       const rows = [...getSupplierList(first)];
+//       const totalPages = Math.max(
+//         1,
+//         Number(first?.data?.pagination?.totalPages) || 1,
+//       );
+
+//       const remaining = Array.from({ length: totalPages - 1 }, (_, i) => i + 2);
+
+//       for (let i = 0; i < remaining.length; i += 5) {
+//         const responses = await Promise.all(
+//           remaining
+//             .slice(i, i + 5)
+//             .map((p) =>
+//               api.suppliers.getAll(buildParams({ page: p, limit: EXPORT_BATCH })),
+//             ),
+//         );
+
+//         responses.forEach((response) => rows.push(...getSupplierList(response)));
+//       }
+
+//       const exportColumns = [
+//         ["supplierCode", "Code"],
+//         ["supplierName", "Supplier"],
+//         ["supplierType", "Supplier Type"],
+//         ["contactPerson", "Contact Person"],
+//         ["phone", "Phone"],
+//         ["alternatePhone", "Alternate Phone"],
+//         ["email", "Email"],
+//         ["gstNo", "GST Number"],
+//         ["panNo", "PAN Number"],
+//         ["billingAddress", "Billing Address"],
+//         ["shippingAddress", "Shipping Address"],
+//         ["city", "City"],
+//         ["state", "State"],
+//         ["pincode", "Pincode"],
+//         ["country", "Country"],
+//         ["paymentTerms", "Payment Terms"],
+//         ["creditLimit", "Credit Limit"],
+//         ["creditDays", "Credit Days"],
+//         ["openingBalance", "Opening Balance"],
+//         ["openingBalanceType", "Opening Balance Type"],
+//         ["payableBalance", "Payable Balance"],
+//         ["status", "Status"],
+//       ];
+
+//       const csv = [
+//         exportColumns.map(([, label]) => escapeCsv(label)).join(","),
+//         ...rows.map((row) =>
+//           exportColumns.map(([key]) => escapeCsv(row[key])).join(","),
+//         ),
+//       ].join("\n");
+
+//       await saveCsvFile("suppliers-export.csv", csv);
+
+//       toast.success(`Exported ${rows.length} suppliers`, { id: toastId });
+//     } catch (error) {
+//       console.error("Supplier export failed:", error);
+//       toast.error(getErrorMessage(error), { id: toastId });
+//     }
+//   }, [buildParams]);
+
+//   /* ---------------------------------------------------------------- */
+//   /* Table configuration                                               */
+//   /* ---------------------------------------------------------------- */
+
 //   const columns = useMemo(
 //     () => [
-//       {
-//         key: "supplierCode",
-//         label: "Code",
-//         sortable: true,
-//       },
-
+//       { key: "supplierCode", label: "Code", sortable: true },
 //       {
 //         key: "supplierName",
 //         label: "Supplier",
 //         sortable: true,
-
 //         render: (value, row) => (
 //           <div className="dl-customer">
 //             <strong>{value}</strong>
-
 //             <span>{row.supplierType || "Business"}</span>
 //           </div>
 //         ),
 //       },
-
 //       {
 //         key: "contactPerson",
 //         label: "Contact Person",
 //         sortable: true,
-
-//         render: (value) => value || <span className="dl-muted-value">N/A</span>,
+//         render: renderOptionalText,
 //       },
-
 //       {
 //         key: "phone",
 //         label: "Phone",
 //         sortable: true,
-
-//         render: (value) => value || <span className="dl-muted-value">N/A</span>,
+//         render: renderOptionalText,
 //       },
-
 //       {
 //         key: "email",
 //         label: "Email",
 //         sortable: true,
-
-//         render: (value) => value || <span className="dl-muted-value">N/A</span>,
+//         render: renderOptionalText,
 //       },
-
 //       {
 //         key: "gstNo",
 //         label: "GST Number",
 //         sortable: true,
-
-//         render: (value) => value || <span className="dl-muted-value">N/A</span>,
+//         render: renderOptionalText,
 //       },
-
 //       {
 //         key: "city",
 //         label: "City",
 //         sortable: true,
-
-//         render: (value) => value || <span className="dl-muted-value">N/A</span>,
+//         render: renderOptionalText,
 //       },
-
 //       {
 //         key: "state",
 //         label: "State",
 //         sortable: true,
-
-//         render: (value) => value || <span className="dl-muted-value">N/A</span>,
+//         render: renderOptionalText,
 //       },
-
-//       {
-//         key: "paymentTerms",
-//         label: "Payment Terms",
-//         sortable: true,
-//       },
-
+//       { key: "paymentTerms", label: "Payment Terms", sortable: true },
 //       {
 //         key: "creditLimit",
 //         label: "Credit Limit",
 //         type: "currency",
 //         sortable: true,
 //       },
-
 //       {
 //         key: "creditDays",
 //         label: "Credit Days",
 //         type: "number",
 //         sortable: true,
 //       },
-
 //       {
 //         key: "payableBalance",
 //         label: "Payable Balance",
 //         type: "currency",
 //         sortable: true,
 //       },
-
 //       {
 //         key: "status",
 //         label: "Status",
 //         sortable: true,
-
 //         render: (value) => <StatusField value={value} />,
 //       },
 //     ],
 //     [],
 //   );
 
-//   const filters = [
-//     {
-//       key: "supplierType",
-//       label: "Supplier Type",
-//       type: "select",
-//       options: ["Business", "Individual"],
-//     },
+//   const tableFilters = useMemo(
+//     () => [
+//       {
+//         key: "supplierType",
+//         label: "Supplier Type",
+//         type: "select",
+//         options: ["Business", "Individual"],
+//       },
+//       {
+//         key: "status",
+//         label: "Status",
+//         type: "select",
+//         options: ["Active", "Inactive"],
+//       },
+//       {
+//         // select (not free text) so a request is not sent on every keystroke
+//         key: "state",
+//         label: "State",
+//         type: "select",
+//         options: STATE_OPTIONS,
+//       },
+//     ],
+//     [],
+//   );
 
-//     {
-//       key: "status",
-//       label: "Status",
-//       type: "select",
-//       options: ["Active", "Inactive"],
-//     },
+//   // Counts come from /suppliers/stats, not from the current page
+//   const quickFilters = useMemo(
+//     () => [
+//       { key: "status", value: "", label: "All", count: stats.all },
+//       { key: "status", value: "Active", label: "Active", count: stats.active },
+//       {
+//         key: "status",
+//         value: "Inactive",
+//         label: "Inactive",
+//         count: stats.inactive,
+//       },
+//       {
+//         key: "supplierType",
+//         value: "Business",
+//         label: "Business",
+//         count: stats.business,
+//       },
+//       {
+//         key: "supplierType",
+//         value: "Individual",
+//         label: "Individual",
+//         count: stats.individual,
+//       },
+//     ],
+//     [stats],
+//   );
 
-//     {
-//       key: "state",
-//       label: "State",
-//       type: "text",
-//     },
-//   ];
-
-//   const quickFilters = [
-//     {
-//       key: "status",
-//       value: "",
-//       label: "All",
-//     },
-
-//     {
-//       key: "status",
-//       value: "Active",
-//       label: "Active",
-//     },
-
-//     {
-//       key: "status",
-//       value: "Inactive",
-//       label: "Inactive",
-//     },
-
-//     {
-//       key: "supplierType",
-//       value: "Business",
-//       label: "Business",
-//     },
-
-//     {
-//       key: "supplierType",
-//       value: "Individual",
-//       label: "Individual",
-//     },
-//   ];
+//   /* ---------------------------------------------------------------- */
+//   /* Confirm modal                                                     */
+//   /* ---------------------------------------------------------------- */
 
 //   const closeConfirmModal = () => {
-//     if (confirmLoading) {
-//       return;
-//     }
-
-//     setConfirmState({
-//       open: false,
-//       type: "danger",
-//       title: "",
-//       message: "",
-//       confirmText: "Delete",
-//       onConfirm: null,
-//     });
+//     if (confirmLoading) return;
+//     setConfirmState(INITIAL_CONFIRM_STATE);
 //   };
 
 //   const openConfirmModal = ({
@@ -365,14 +535,7 @@
 //     confirmText = "Confirm",
 //     onConfirm,
 //   }) => {
-//     setConfirmState({
-//       open: true,
-//       type,
-//       title,
-//       message,
-//       confirmText,
-//       onConfirm,
-//     });
+//     setConfirmState({ open: true, type, title, message, confirmText, onConfirm });
 //   };
 
 //   const handleConfirmAction = async () => {
@@ -382,23 +545,19 @@
 
 //     try {
 //       setConfirmLoading(true);
-
 //       await confirmState.onConfirm();
-
-//       setConfirmState({
-//         open: false,
-//         type: "danger",
-//         title: "",
-//         message: "",
-//         confirmText: "Delete",
-//         onConfirm: null,
-//       });
+//       setConfirmState(INITIAL_CONFIRM_STATE);
+//     } catch (error) {
+//       // The action shows its own toast. Keep the dialog open to retry.
+//       console.error("Supplier confirmation action failed:", error);
 //     } finally {
 //       setConfirmLoading(false);
 //     }
 //   };
 
-//   /* ---------- Create / Edit modal ---------- */
+//   /* ---------------------------------------------------------------- */
+//   /* Create / Edit modal                                               */
+//   /* ---------------------------------------------------------------- */
 
 //   const handleOpenCreate = () => {
 //     setEditingSupplier(null);
@@ -415,10 +574,8 @@
 //     const toastId = toast.loading("Loading supplier...");
 
 //     try {
-//       // Fetch the full record so every form field is populated even if the
-//       // list endpoint returns only summary fields.
+//       // The list omits some fields (e.g. notes), so fetch the full record
 //       const response = await api.suppliers.getByCode(row.supplierCode);
-
 //       const fullSupplier = getSingleSupplier(response);
 
 //       if (!fullSupplier?._id) {
@@ -431,7 +588,6 @@
 //       setShowSupplierModal(true);
 //     } catch (error) {
 //       console.error("Unable to load supplier for editing:", error);
-
 //       toast.error(getErrorMessage(error), { id: toastId });
 //     } finally {
 //       editLoadingRef.current = false;
@@ -443,159 +599,108 @@
 //     setEditingSupplier(null);
 //   };
 
-//   // Called by SupplierRegistration after a successful create OR update.
-//   const handleSupplierSaved = (savedSupplier) => {
-//     if (!savedSupplier?._id) {
-//       return;
-//     }
-
-//     setSuppliers((previous) => {
-//       const exists = previous.some(
-//         (supplier) => supplier._id === savedSupplier._id,
-//       );
-
-//       // Update: merge into the existing row so list-only fields
-//       // (e.g. payableBalance) are kept if the response omits them.
-//       if (exists) {
-//         return previous.map((supplier) =>
-//           supplier._id === savedSupplier._id
-//             ? { ...supplier, ...savedSupplier }
-//             : supplier,
-//         );
-//       }
-
-//       // Create: show the new supplier at the top.
-//       return [savedSupplier, ...previous];
-//     });
+//   // Called after a successful create OR update. The page only holds one
+//   // slice of the data, so re-query instead of patching local state.
+//   const handleSupplierSaved = () => {
+//     refreshAll();
 //   };
 
-//   /* ---------- Delete ---------- */
+//   /* ---------------------------------------------------------------- */
+//   /* Delete + bulk actions                                             */
+//   /* ---------------------------------------------------------------- */
 
 //   const handleDelete = (row) => {
 //     openConfirmModal({
 //       type: "danger",
 //       title: "Delete supplier?",
-//       message: `Are you sure you want to delete "${row.supplierName}" (${row.supplierCode})? This action cannot be undone.`,
+//       message: `Are you sure you want to delete "${row.supplierName}" (${row.supplierCode})? The supplier will be marked as deleted and its linked ledger will be deactivated.`,
 //       confirmText: "Delete Supplier",
 
 //       onConfirm: async () => {
 //         try {
 //           await api.suppliers.delete(row.supplierCode);
-
-//           setSuppliers((previous) =>
-//             previous.filter((supplier) => supplier._id !== row._id),
-//           );
-
 //           toast.success(`${row.supplierName} deleted successfully`);
+//           refreshAll();
 //         } catch (error) {
 //           console.error("Unable to delete supplier:", error);
-
 //           toast.error(getErrorMessage(error));
-
 //           throw error;
 //         }
 //       },
 //     });
 //   };
 
-//   /* ---------- Bulk actions ---------- */
-
 //   const handleBulkStatusUpdate = async (rows, status) => {
-//     if (!rows.length) {
-//       return;
-//     }
+//     if (!rows.length) return;
 
 //     try {
-//       await Promise.all(
-//         rows.map((row) =>
-//           api.suppliers.update(row.supplierCode, {
-//             status,
-//           }),
-//         ),
+//       const results = await Promise.allSettled(
+//         rows.map((row) => api.suppliers.update(row.supplierCode, { status })),
 //       );
 
-//       const selectedIds = rows.map((row) => row._id);
+//       const successCount = results.filter((r) => r.status === "fulfilled").length;
+//       const failures = results.filter((r) => r.status === "rejected");
 
-//       setSuppliers((previous) =>
-//         previous.map((supplier) =>
-//           selectedIds.includes(supplier._id)
-//             ? {
-//                 ...supplier,
-//                 status,
-//               }
-//             : supplier,
-//         ),
-//       );
+//       if (successCount) {
+//         toast.success(
+//           `${successCount} supplier${successCount > 1 ? "s" : ""} ${
+//             status === "Active" ? "activated" : "deactivated"
+//           } successfully`,
+//         );
+//       }
 
-//       toast.success(
-//         `${rows.length} supplier${rows.length > 1 ? "s" : ""} ${
-//           status === "Active" ? "activated" : "deactivated"
-//         } successfully`,
-//       );
+//       if (failures.length) {
+//         toast.error(
+//           `${failures.length} update${
+//             failures.length > 1 ? "s" : ""
+//           } failed: ${getErrorMessage(failures[0].reason)}`,
+//         );
+//       }
 //     } catch (error) {
-//       console.error("Unable to update suppliers:", error);
-
 //       toast.error(getErrorMessage(error));
-
-//       await loadSuppliers();
+//     } finally {
+//       refreshAll();
 //     }
 //   };
 
 //   const handleBulkDelete = (rows) => {
-//     if (!rows.length) {
-//       return;
-//     }
+//     if (!rows.length) return;
 
 //     openConfirmModal({
 //       type: "danger",
 //       title: "Delete selected suppliers?",
-//       message: `You are about to delete ${rows.length} selected supplier${
+//       message: `Delete ${rows.length} selected supplier${
 //         rows.length > 1 ? "s" : ""
-//       }. This action cannot be undone.`,
-//       confirmText: `Delete ${rows.length} Supplier${
-//         rows.length > 1 ? "s" : ""
-//       }`,
+//       }? These suppliers will be marked as deleted and their linked ledgers will be deactivated.`,
+//       confirmText: `Delete ${rows.length} Supplier${rows.length > 1 ? "s" : ""}`,
 
 //       onConfirm: async () => {
-//         try {
-//           await Promise.all(
-//             rows.map((row) => api.suppliers.delete(row.supplierCode)),
-//           );
+//         const results = await Promise.allSettled(
+//           rows.map((row) => api.suppliers.delete(row.supplierCode)),
+//         );
 
-//           const selectedIds = rows.map((row) => row._id);
+//         const successCount = results.filter((r) => r.status === "fulfilled").length;
+//         const failures = results.filter((r) => r.status === "rejected");
 
-//           setSuppliers((previous) =>
-//             previous.filter((supplier) => !selectedIds.includes(supplier._id)),
-//           );
-
+//         if (successCount) {
 //           toast.success(
-//             `${rows.length} supplier${
-//               rows.length > 1 ? "s" : ""
+//             `${successCount} supplier${
+//               successCount > 1 ? "s" : ""
 //             } deleted successfully`,
 //           );
-//         } catch (error) {
-//           console.error("Unable to delete suppliers:", error);
-
-//           toast.error(getErrorMessage(error));
-
-//           await loadSuppliers();
-
-//           throw error;
 //         }
+
+//         if (failures.length) {
+//           toast.error(
+//             `${failures.length} deletion${
+//               failures.length > 1 ? "s" : ""
+//             } failed: ${getErrorMessage(failures[0].reason)}`,
+//           );
+//         }
+
+//         refreshAll();
 //       },
 //     });
-//   };
-
-//   const handleBulkActivate = async (rows) => {
-//     await handleBulkStatusUpdate(rows, "Active");
-//   };
-
-//   const handleBulkDeactivate = async (rows) => {
-//     await handleBulkStatusUpdate(rows, "Inactive");
-//   };
-
-//   const handleRefresh = async () => {
-//     await loadSuppliers();
 //   };
 
 //   return (
@@ -614,12 +719,24 @@
 //         selectable
 //         columnVisibility
 //         pagination
-//         filters={filters}
+//         filters={tableFilters}
 //         quickFilters={quickFilters}
-//         onRefresh={handleRefresh}
-//         importConfig={supplierImportConfig}
 //         storageKey="trustiq-suppliers"
 //         searchPlaceholder="Search code, supplier, contact, phone, email, GST, city..."
+//         /* server-side mode */
+//         serverMode
+//         total={total}
+//         page={page}
+//         pageSize={pageSize}
+//         pageSizeOptions={PAGE_SIZE_OPTIONS}
+//         onPageChange={handlePageChange}
+//         onPageSizeChange={handlePageSizeChange}
+//         onSearch={handleSearch}
+//         onSort={handleSort}
+//         onFilterChange={handleFilterChange}
+//         onExport={handleExport}
+//         onRefresh={refreshAll}
+//         importConfig={supplierImportConfig}
 //         actions={{
 //           edit: handleEdit,
 //           delete: handleDelete,
@@ -628,15 +745,13 @@
 //           {
 //             key: "activate",
 //             label: "Activate",
-//             action: handleBulkActivate,
+//             action: (rows) => handleBulkStatusUpdate(rows, "Active"),
 //           },
-
 //           {
 //             key: "deactivate",
 //             label: "Deactivate",
-//             action: handleBulkDeactivate,
+//             action: (rows) => handleBulkStatusUpdate(rows, "Inactive"),
 //           },
-
 //           {
 //             key: "delete",
 //             label: "Delete",
@@ -651,7 +766,6 @@
 //             onClick={handleOpenCreate}
 //           >
 //             <Plus size={16} />
-
 //             <span>New Supplier</span>
 //           </button>
 //         }
@@ -724,7 +838,8 @@ const EMPTY_STATS = {
   individual: 0,
 };
 
-const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+const PAGE_SIZE_OPTIONS = [20, 50, 100];
+const SEARCH_DEBOUNCE_MS = 400;
 const EXPORT_BATCH = 100;
 
 const STATE_OPTIONS = [
@@ -825,7 +940,6 @@ function SuppliersList() {
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState(EMPTY_STATS);
 
-  // Server-side query state
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [search, setSearch] = useState("");
@@ -833,7 +947,6 @@ function SuppliersList() {
   const [filters, setFilters] = useState({});
 
   const [showSupplierModal, setShowSupplierModal] = useState(false);
-  // null => create mode, object => edit mode
   const [editingSupplier, setEditingSupplier] = useState(null);
   const editLoadingRef = useRef(false);
 
@@ -841,10 +954,7 @@ function SuppliersList() {
   const [confirmLoading, setConfirmLoading] = useState(false);
 
   const requestIdRef = useRef(0);
-
-  /* ---------------------------------------------------------------- */
-  /* Data loading                                                      */
-  /* ---------------------------------------------------------------- */
+  const bulkLoadingRef = useRef(false);
 
   const buildParams = useCallback(
     (extra = {}) => {
@@ -876,7 +986,6 @@ function SuppliersList() {
         buildParams({ page, limit: pageSize }),
       );
 
-      // Ignore stale responses (user typed / paged quickly)
       if (requestId !== requestIdRef.current) return;
 
       const list = getSupplierList(response);
@@ -909,7 +1018,6 @@ function SuppliersList() {
 
       throw new Error("Unexpected stats response");
     } catch (statsError) {
-      // Fallback: ask the list endpoint for 1 row and read pagination.total
       console.warn("Stats endpoint unavailable, using fallback:", statsError);
 
       try {
@@ -922,14 +1030,15 @@ function SuppliersList() {
           return getTotal(res, 0);
         };
 
-        const [all, active, inactive, business, individual] =
-          await Promise.all([
+        const [all, active, inactive, business, individual] = await Promise.all(
+          [
             count(),
             count({ status: "Active" }),
             count({ status: "Inactive" }),
             count({ supplierType: "Business" }),
             count({ supplierType: "Individual" }),
-          ]);
+          ],
+        );
 
         setStats({ all, active, inactive, business, individual });
       } catch (fallbackError) {
@@ -951,9 +1060,14 @@ function SuppliersList() {
     loadStats();
   }, [loadSuppliers, loadStats]);
 
-  /* ---------------------------------------------------------------- */
-  /* Stable callbacks for DataList (server mode)                       */
-  /* ---------------------------------------------------------------- */
+  // Debounced search: avoids a request per keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const handleSearch = useCallback((value) => setSearch(value), []);
 
@@ -962,7 +1076,10 @@ function SuppliersList() {
     setPage(1);
   }, []);
 
-  const handleFilterChange = useCallback((next) => setFilters(next), []);
+  const handleFilterChange = useCallback((next) => {
+    setFilters(next);
+    setPage(1);
+  }, []);
 
   const handlePageChange = useCallback((nextPage) => setPage(nextPage), []);
 
@@ -970,10 +1087,6 @@ function SuppliersList() {
     setPageSize(size);
     setPage(1);
   }, []);
-
-  /* ---------------------------------------------------------------- */
-  /* Import                                                            */
-  /* ---------------------------------------------------------------- */
 
   const csvImport = useCsvImport({
     entityName: "supplier",
@@ -1007,10 +1120,6 @@ function SuppliersList() {
     onError: (message) => toast.error(message),
   };
 
-  /* ---------------------------------------------------------------- */
-  /* Export (all rows matching current search + filters)               */
-  /* ---------------------------------------------------------------- */
-
   const handleExport = useCallback(async () => {
     const toastId = toast.loading("Preparing export...");
 
@@ -1032,11 +1141,15 @@ function SuppliersList() {
           remaining
             .slice(i, i + 5)
             .map((p) =>
-              api.suppliers.getAll(buildParams({ page: p, limit: EXPORT_BATCH })),
+              api.suppliers.getAll(
+                buildParams({ page: p, limit: EXPORT_BATCH }),
+              ),
             ),
         );
 
-        responses.forEach((response) => rows.push(...getSupplierList(response)));
+        responses.forEach((response) =>
+          rows.push(...getSupplierList(response)),
+        );
       }
 
       const exportColumns = [
@@ -1079,10 +1192,6 @@ function SuppliersList() {
       toast.error(getErrorMessage(error), { id: toastId });
     }
   }, [buildParams]);
-
-  /* ---------------------------------------------------------------- */
-  /* Table configuration                                               */
-  /* ---------------------------------------------------------------- */
 
   const columns = useMemo(
     () => [
@@ -1178,7 +1287,6 @@ function SuppliersList() {
         options: ["Active", "Inactive"],
       },
       {
-        // select (not free text) so a request is not sent on every keystroke
         key: "state",
         label: "State",
         type: "select",
@@ -1188,7 +1296,6 @@ function SuppliersList() {
     [],
   );
 
-  // Counts come from /suppliers/stats, not from the current page
   const quickFilters = useMemo(
     () => [
       { key: "status", value: "", label: "All", count: stats.all },
@@ -1215,10 +1322,6 @@ function SuppliersList() {
     [stats],
   );
 
-  /* ---------------------------------------------------------------- */
-  /* Confirm modal                                                     */
-  /* ---------------------------------------------------------------- */
-
   const closeConfirmModal = () => {
     if (confirmLoading) return;
     setConfirmState(INITIAL_CONFIRM_STATE);
@@ -1231,7 +1334,14 @@ function SuppliersList() {
     confirmText = "Confirm",
     onConfirm,
   }) => {
-    setConfirmState({ open: true, type, title, message, confirmText, onConfirm });
+    setConfirmState({
+      open: true,
+      type,
+      title,
+      message,
+      confirmText,
+      onConfirm,
+    });
   };
 
   const handleConfirmAction = async () => {
@@ -1244,16 +1354,11 @@ function SuppliersList() {
       await confirmState.onConfirm();
       setConfirmState(INITIAL_CONFIRM_STATE);
     } catch (error) {
-      // The action shows its own toast. Keep the dialog open to retry.
       console.error("Supplier confirmation action failed:", error);
     } finally {
       setConfirmLoading(false);
     }
   };
-
-  /* ---------------------------------------------------------------- */
-  /* Create / Edit modal                                               */
-  /* ---------------------------------------------------------------- */
 
   const handleOpenCreate = () => {
     setEditingSupplier(null);
@@ -1270,7 +1375,6 @@ function SuppliersList() {
     const toastId = toast.loading("Loading supplier...");
 
     try {
-      // The list omits some fields (e.g. notes), so fetch the full record
       const response = await api.suppliers.getByCode(row.supplierCode);
       const fullSupplier = getSingleSupplier(response);
 
@@ -1295,15 +1399,9 @@ function SuppliersList() {
     setEditingSupplier(null);
   };
 
-  // Called after a successful create OR update. The page only holds one
-  // slice of the data, so re-query instead of patching local state.
   const handleSupplierSaved = () => {
     refreshAll();
   };
-
-  /* ---------------------------------------------------------------- */
-  /* Delete + bulk actions                                             */
-  /* ---------------------------------------------------------------- */
 
   const handleDelete = (row) => {
     openConfirmModal({
@@ -1326,37 +1424,61 @@ function SuppliersList() {
     });
   };
 
-  const handleBulkStatusUpdate = async (rows, status) => {
+  // One bulk request instead of one update per row
+  const handleBulkStatusUpdate = (rows, status) => {
     if (!rows.length) return;
 
-    try {
-      const results = await Promise.allSettled(
-        rows.map((row) => api.suppliers.update(row.supplierCode, { status })),
-      );
+    const ids = rows.map((row) => row._id).filter(Boolean);
 
-      const successCount = results.filter((r) => r.status === "fulfilled").length;
-      const failures = results.filter((r) => r.status === "rejected");
-
-      if (successCount) {
-        toast.success(
-          `${successCount} supplier${successCount > 1 ? "s" : ""} ${
-            status === "Active" ? "activated" : "deactivated"
-          } successfully`,
-        );
-      }
-
-      if (failures.length) {
-        toast.error(
-          `${failures.length} update${
-            failures.length > 1 ? "s" : ""
-          } failed: ${getErrorMessage(failures[0].reason)}`,
-        );
-      }
-    } catch (error) {
-      toast.error(getErrorMessage(error));
-    } finally {
-      refreshAll();
+    if (!ids.length) {
+      toast.error("Select suppliers before changing status.");
+      return;
     }
+
+    const isActivate = status === "Active";
+
+    openConfirmModal({
+      type: isActivate ? "info" : "warning",
+      title: isActivate ? "Activate suppliers?" : "Deactivate suppliers?",
+      message: `Are you sure you want to ${
+        isActivate ? "activate" : "deactivate"
+      } ${rows.length} selected supplier${
+        rows.length > 1 ? "s" : ""
+      }? Their linked ledgers will also be ${
+        isActivate ? "reactivated" : "deactivated"
+      }.`,
+      confirmText: isActivate
+        ? `Activate ${rows.length} Supplier${rows.length > 1 ? "s" : ""}`
+        : `Deactivate ${rows.length} Supplier${rows.length > 1 ? "s" : ""}`,
+
+      onConfirm: async () => {
+        if (bulkLoadingRef.current) return;
+        bulkLoadingRef.current = true;
+
+        try {
+          const response = await api.suppliers.bulkStatus(ids, status);
+          const result = response?.data || {};
+          const changed = Number(result.updated ?? result.modifiedCount) || 0;
+
+          if (changed) {
+            toast.success(
+              `${changed} supplier${changed === 1 ? "" : "s"} ${
+                isActivate ? "activated" : "deactivated"
+              } successfully`,
+            );
+          } else {
+            toast("No suppliers needed a status change");
+          }
+        } catch (error) {
+          console.error("Bulk status update failed:", error);
+          toast.error(getErrorMessage(error), { duration: 7000 });
+          throw error;
+        } finally {
+          bulkLoadingRef.current = false;
+          refreshAll();
+        }
+      },
+    });
   };
 
   const handleBulkDelete = (rows) => {
@@ -1375,7 +1497,9 @@ function SuppliersList() {
           rows.map((row) => api.suppliers.delete(row.supplierCode)),
         );
 
-        const successCount = results.filter((r) => r.status === "fulfilled").length;
+        const successCount = results.filter(
+          (r) => r.status === "fulfilled",
+        ).length;
         const failures = results.filter((r) => r.status === "rejected");
 
         if (successCount) {
@@ -1419,7 +1543,6 @@ function SuppliersList() {
         quickFilters={quickFilters}
         storageKey="trustiq-suppliers"
         searchPlaceholder="Search code, supplier, contact, phone, email, GST, city..."
-        /* server-side mode */
         serverMode
         total={total}
         page={page}

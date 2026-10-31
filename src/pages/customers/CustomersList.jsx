@@ -1,15 +1,17 @@
 // import { Plus } from "lucide-react";
-// import { useCallback, useEffect, useMemo, useState } from "react";
+// import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 // import { useNavigate } from "react-router-dom";
 // import toast from "react-hot-toast";
 
 // import DataList from "../../components/common/DataList/DataList";
 // import StatusField from "../../components/common/StatusField/StatusField";
 // import ConfirmModal from "../../components/common/ConfirmModal/ConfirmModal";
+// import ImportPreviewModal from "../../components/common/DataList/ImportPreviewModal";
+// import { saveCsvFile } from "../../components/common/DataList/fileDownload";
 // import useCsvImport from "../../hooks/useCsvImport";
 // import api from "../../services/api";
 // import routes, { buildRoute } from "../../config/routes";
-// import ImportPreviewModal from "../../components/common/DataList/ImportPreviewModal";
+
 // const CUSTOMER_ROUTES = {
 //   create: routes.customers.create,
 
@@ -23,6 +25,7 @@
 //       id: encodeURIComponent(customerCode),
 //     }),
 // };
+
 // const INITIAL_CONFIRM_STATE = {
 //   open: false,
 //   type: "danger",
@@ -31,6 +34,17 @@
 //   confirmText: "Delete",
 //   onConfirm: null,
 // };
+
+// const EMPTY_STATS = {
+//   all: 0,
+//   active: 0,
+//   inactive: 0,
+//   business: 0,
+//   individual: 0,
+// };
+
+// const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+// const EXPORT_BATCH = 100;
 
 // const getErrorMessage = (error) => {
 //   const responseData = error?.response?.data;
@@ -57,23 +71,22 @@
 // };
 
 // const getCustomerList = (response) => {
-//   if (Array.isArray(response?.data?.data)) {
-//     return response.data.data;
-//   }
-
-//   if (Array.isArray(response?.data?.customers)) {
-//     return response.data.customers;
-//   }
-
-//   if (Array.isArray(response?.data)) {
-//     return response.data;
-//   }
-
+//   if (Array.isArray(response?.data?.data)) return response.data.data;
+//   if (Array.isArray(response?.data?.customers)) return response.data.customers;
+//   if (Array.isArray(response?.data)) return response.data;
 //   return [];
+// };
+
+// const getTotal = (response, fallback) => {
+//   const p = response?.data?.pagination;
+//   return Number(p?.total ?? p?.totalRecords ?? p?.totalItems ?? fallback) || 0;
 // };
 
 // const renderOptionalText = (value) =>
 //   value || <span className="dl-muted-value">N/A</span>;
+
+// const escapeCsv = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+
 // const validateCustomerRow = (row) => {
 //   const errors = [];
 //   const isNum = (v) => v === "" || v == null || !Number.isNaN(Number(v));
@@ -121,125 +134,244 @@
 
 //   return errors;
 // };
+
 // function CustomersList() {
 //   const navigate = useNavigate();
 
 //   const [loading, setLoading] = useState(true);
 //   const [customers, setCustomers] = useState([]);
+//   const [total, setTotal] = useState(0);
+//   const [stats, setStats] = useState(EMPTY_STATS);
+
+//   // Server-side query state
+//   const [page, setPage] = useState(1);
+//   const [pageSize, setPageSize] = useState(20);
+//   const [search, setSearch] = useState("");
+//   const [sort, setSort] = useState({ key: "", direction: "" });
+//   const [filters, setFilters] = useState({});
 
 //   const [confirmState, setConfirmState] = useState(INITIAL_CONFIRM_STATE);
 //   const [confirmLoading, setConfirmLoading] = useState(false);
 
-//   // const loadCustomers = useCallback(async () => {
-//   //   try {
-//   //     setLoading(true);
+//   const requestIdRef = useRef(0);
 
-//   //     // Your backend currently caps each request at 100 records.
-//   //     // Fetch every page so local DataList filtering/export is not
-//   //     // restricted to the first 100 customers.
-//   //     const firstResponse = await api.customers.getAll({
-//   //       page: 1,
-//   //       limit: 100,
-//   //     });
+//   /* ---------------------------------------------------------------- */
+//   /* Data loading                                                      */
+//   /* ---------------------------------------------------------------- */
 
-//   //     const customerList = [...getCustomerList(firstResponse)];
+//   const buildParams = useCallback(
+//     (extra = {}) => {
+//       const params = { ...extra };
 
-//   //     const totalPages = Math.max(
-//   //       1,
-//   //       Number(firstResponse?.data?.pagination?.totalPages) || 1,
-//   //     );
+//       if (search.trim()) params.search = search.trim();
 
-//   //     for (let page = 2; page <= totalPages; page += 1) {
-//   //       const response = await api.customers.getAll({
-//   //         page,
-//   //         limit: 100,
-//   //       });
+//       if (sort.key && sort.direction) {
+//         params.sortBy = sort.key;
+//         params.sortOrder = sort.direction;
+//       }
 
-//   //       customerList.push(...getCustomerList(response));
-//   //     }
+//       Object.entries(filters).forEach(([key, value]) => {
+//         if (value) params[key] = value;
+//       });
 
-//   //     const uniqueCustomers = Array.from(
-//   //       new Map(
-//   //         customerList.map((customer) => [
-//   //           customer._id || customer.customerCode,
-//   //           customer,
-//   //         ]),
-//   //       ).values(),
-//   //     );
+//       return params;
+//     },
+//     [search, sort, filters],
+//   );
 
-//   //     setCustomers(uniqueCustomers);
-//   //   } catch (error) {
-//   //     console.error("Unable to load customers:", error);
-//   //     toast.error(getErrorMessage(error));
-//   //   } finally {
-//   //     setLoading(false);
-//   //   }
-//   // }, []);
 //   const loadCustomers = useCallback(async () => {
+//     const requestId = ++requestIdRef.current;
+
 //     try {
 //       setLoading(true);
 
-//       const firstResponse = await api.customers.getAll({ page: 1, limit: 100 });
-
-//       const customerList = [...getCustomerList(firstResponse)];
-
-//       const totalPages = Math.max(
-//         1,
-//         Number(firstResponse?.data?.pagination?.totalPages) || 1,
+//       const response = await api.customers.getAll(
+//         buildParams({ page, limit: pageSize }),
 //       );
 
-//       const remainingPages = Array.from(
-//         { length: totalPages - 1 },
-//         (_, i) => i + 2,
-//       );
+//       // Ignore stale responses (user typed / paged quickly)
+//       if (requestId !== requestIdRef.current) return;
 
-//       // 5 pages at a time to avoid flooding the server
-//       for (let i = 0; i < remainingPages.length; i += 5) {
-//         const responses = await Promise.all(
-//           remainingPages
-//             .slice(i, i + 5)
-//             .map((page) => api.customers.getAll({ page, limit: 100 })),
-//         );
+//       const list = getCustomerList(response);
 
-//         responses.forEach((response) =>
-//           customerList.push(...getCustomerList(response)),
-//         );
-//       }
-
-//       const uniqueCustomers = Array.from(
-//         new Map(
-//           customerList.map((customer) => [
-//             customer._id || customer.customerCode,
-//             customer,
-//           ]),
-//         ).values(),
-//       );
-
-//       setCustomers(uniqueCustomers);
+//       setCustomers(list);
+//       setTotal(getTotal(response, list.length));
 //     } catch (error) {
+//       if (requestId !== requestIdRef.current) return;
+
 //       console.error("Unable to load customers:", error);
 //       toast.error(getErrorMessage(error));
 //     } finally {
-//       setLoading(false);
+//       if (requestId === requestIdRef.current) {
+//         setLoading(false);
+//       }
 //     }
-//   }, []);
+//   }, [buildParams, page, pageSize]);
+
+// const loadStats = useCallback(async () => {
+//   try {
+//     const response = await api.customers.getStats();
+//     const data = response?.data?.data || response?.data?.stats;
+
+//     if (data && typeof data.all === "number") {
+//       setStats({ ...EMPTY_STATS, ...data });
+//       return;
+//     }
+//     throw new Error("Unexpected stats response");
+//   } catch (statsError) {
+//     console.warn("Stats endpoint unavailable, using fallback:", statsError);
+
+//     try {
+//       const count = async (extra = {}) => {
+//         const res = await api.customers.getAll({ page: 1, limit: 1, ...extra });
+//         return getTotal(res, 0);
+//       };
+
+//       const [all, active, inactive, business, individual] = await Promise.all([
+//         count(),
+//         count({ status: "Active" }),
+//         count({ status: "Inactive" }),
+//         count({ customerType: "Business" }),
+//         count({ customerType: "Individual" }),
+//       ]);
+
+//       setStats({ all, active, inactive, business, individual });
+//     } catch (fallbackError) {
+//       console.error("Unable to load customer counts:", fallbackError);
+//     }
+//   }
+// }, []);
+
 //   useEffect(() => {
 //     loadCustomers();
 //   }, [loadCustomers]);
+
+//   useEffect(() => {
+//     loadStats();
+//   }, [loadStats]);
+
+//   const refreshAll = useCallback(() => {
+//     loadCustomers();
+//     loadStats();
+//   }, [loadCustomers, loadStats]);
+
+//   /* ---------------------------------------------------------------- */
+//   /* Stable callbacks for DataList (server mode)                       */
+//   /* ---------------------------------------------------------------- */
+
+//   const handleSearch = useCallback((value) => {
+//     setSearch(value);
+//   }, []);
+
+//   const handleSort = useCallback((next) => {
+//     setSort(next);
+//     setPage(1);
+//   }, []);
+
+//   const handleFilterChange = useCallback((next) => {
+//     setFilters(next);
+//   }, []);
+
+//   const handlePageChange = useCallback((nextPage) => {
+//     setPage(nextPage);
+//   }, []);
+
+//   const handlePageSizeChange = useCallback((size) => {
+//     setPageSize(size);
+//     setPage(1);
+//   }, []);
+
+//   /* ---------------------------------------------------------------- */
+//   /* Import                                                            */
+//   /* ---------------------------------------------------------------- */
 
 //   const csvImport = useCsvImport({
 //     entityName: "customer",
 //     validateRow: validateCustomerRow,
 //     upload: (payload) => api.customers.bulkImport(payload),
-//     onDone: loadCustomers,
+//     onDone: refreshAll,
 //   });
+
+//   /* ---------------------------------------------------------------- */
+//   /* Export (all rows matching current search + filters)               */
+//   /* ---------------------------------------------------------------- */
+
+//   const handleExport = useCallback(async () => {
+//     const toastId = toast.loading("Preparing export...");
+
+//     try {
+//       const first = await api.customers.getAll(
+//         buildParams({ page: 1, limit: EXPORT_BATCH }),
+//       );
+
+//       const rows = [...getCustomerList(first)];
+//       const totalPages = Math.max(
+//         1,
+//         Number(first?.data?.pagination?.totalPages) || 1,
+//       );
+
+//       const remaining = Array.from({ length: totalPages - 1 }, (_, i) => i + 2);
+
+//       for (let i = 0; i < remaining.length; i += 5) {
+//         const responses = await Promise.all(
+//           remaining
+//             .slice(i, i + 5)
+//             .map((p) =>
+//               api.customers.getAll(buildParams({ page: p, limit: EXPORT_BATCH })),
+//             ),
+//         );
+
+//         responses.forEach((response) => rows.push(...getCustomerList(response)));
+//       }
+
+//       const exportColumns = [
+//         ["customerCode", "Code"],
+//         ["customerName", "Customer"],
+//         ["customerType", "Customer Type"],
+//         ["contactPerson", "Contact Person"],
+//         ["phone", "Phone"],
+//         ["alternatePhone", "Alternate Phone"],
+//         ["email", "Email"],
+//         ["gstNo", "GST Number"],
+//         ["panNo", "PAN Number"],
+//         ["billingAddress", "Billing Address"],
+//         ["shippingAddress", "Shipping Address"],
+//         ["city", "City"],
+//         ["state", "State"],
+//         ["pincode", "Pincode"],
+//         ["country", "Country"],
+//         ["paymentTerms", "Payment Terms"],
+//         ["creditLimit", "Credit Limit"],
+//         ["creditDays", "Credit Days"],
+//         ["openingBalance", "Opening Balance"],
+//         ["openingBalanceType", "Opening Balance Type"],
+//         ["priceList", "Price List"],
+//         ["status", "Status"],
+//       ];
+
+//       const csv = [
+//         exportColumns.map(([, label]) => escapeCsv(label)).join(","),
+//         ...rows.map((row) =>
+//           exportColumns.map(([key]) => escapeCsv(row[key])).join(","),
+//         ),
+//       ].join("\n");
+
+//       await saveCsvFile("customers-export.csv", csv);
+
+//       toast.success(`Exported ${rows.length} customers`, { id: toastId });
+//     } catch (error) {
+//       console.error("Customer export failed:", error);
+//       toast.error(getErrorMessage(error), { id: toastId });
+//     }
+//   }, [buildParams]);
+
+//   /* ---------------------------------------------------------------- */
+//   /* Table configuration                                               */
+//   /* ---------------------------------------------------------------- */
+
 //   const columns = useMemo(
 //     () => [
-//       {
-//         key: "customerCode",
-//         label: "Code",
-//         sortable: true,
-//       },
+//       { key: "customerCode", label: "Code", sortable: true },
 //       {
 //         key: "customerName",
 //         label: "Customer",
@@ -388,68 +520,66 @@
 //     [],
 //   );
 
-//   const filters = [
-//     {
-//       key: "customerType",
-//       label: "Customer Type",
-//       type: "select",
-//       options: ["Business", "Individual"],
-//     },
-//     {
-//       key: "status",
-//       label: "Status",
-//       type: "select",
-//       options: ["Active", "Inactive"],
-//     },
-//     {
-//       key: "openingBalanceType",
-//       label: "Opening Balance Type",
-//       type: "select",
-//       options: ["DEBIT", "CREDIT"],
-//     },
-//   ];
+//   const tableFilters = useMemo(
+//     () => [
+//       {
+//         key: "customerType",
+//         label: "Customer Type",
+//         type: "select",
+//         options: ["Business", "Individual"],
+//       },
+//       {
+//         key: "status",
+//         label: "Status",
+//         type: "select",
+//         options: ["Active", "Inactive"],
+//       },
+//       {
+//         key: "openingBalanceType",
+//         label: "Opening Balance Type",
+//         type: "select",
+//         options: ["DEBIT", "CREDIT"],
+//       },
+//     ],
+//     [],
+//   );
 
-//   const quickFilters = [
-//     {
-//       key: "status",
-//       value: "",
-//       label: "All",
-//     },
-//     {
-//       key: "status",
-//       value: "Active",
-//       label: "Active",
-//     },
-//     {
-//       key: "status",
-//       value: "Inactive",
-//       label: "Inactive",
-//     },
-//     {
-//       key: "customerType",
-//       value: "Business",
-//       label: "Business",
-//     },
-//     {
-//       key: "customerType",
-//       value: "Individual",
-//       label: "Individual",
-//     },
-//   ];
+//   // Counts come from /customers/stats, not from the current page
+//   const quickFilters = useMemo(
+//     () => [
+//       { key: "status", value: "", label: "All", count: stats.all },
+//       { key: "status", value: "Active", label: "Active", count: stats.active },
+//       {
+//         key: "status",
+//         value: "Inactive",
+//         label: "Inactive",
+//         count: stats.inactive,
+//       },
+//       {
+//         key: "customerType",
+//         value: "Business",
+//         label: "Business",
+//         count: stats.business,
+//       },
+//       {
+//         key: "customerType",
+//         value: "Individual",
+//         label: "Individual",
+//         count: stats.individual,
+//       },
+//     ],
+//     [stats],
+//   );
 
-//   const handleView = (row) => {
-//     navigate(CUSTOMER_ROUTES.view(row.customerCode));
-//   };
+//   /* ---------------------------------------------------------------- */
+//   /* Row actions                                                       */
+//   /* ---------------------------------------------------------------- */
 
-//   const handleEdit = (row) => {
-//     navigate(CUSTOMER_ROUTES.edit(row.customerCode));
-//   };
+//   const handleView = (row) => navigate(CUSTOMER_ROUTES.view(row.customerCode));
+//   const handleEdit = (row) => navigate(CUSTOMER_ROUTES.edit(row.customerCode));
 
 //   const closeConfirmModal = () => {
-//     if (confirmLoading) {
-//       return;
-//     }
-
+//     if (confirmLoading) return;
 //     setConfirmState(INITIAL_CONFIRM_STATE);
 //   };
 
@@ -460,14 +590,7 @@
 //     confirmText = "Confirm",
 //     onConfirm,
 //   }) => {
-//     setConfirmState({
-//       open: true,
-//       type,
-//       title,
-//       message,
-//       confirmText,
-//       onConfirm,
-//     });
+//     setConfirmState({ open: true, type, title, message, confirmText, onConfirm });
 //   };
 
 //   const handleConfirmAction = async () => {
@@ -477,13 +600,10 @@
 
 //     try {
 //       setConfirmLoading(true);
-
 //       await confirmState.onConfirm();
-
 //       setConfirmState(INITIAL_CONFIRM_STATE);
 //     } catch (error) {
-//       // The action displays its error toast.
-//       // Keep the confirmation open so the user can retry or cancel.
+//       // The action shows its own error toast. Keep the dialog open to retry.
 //       console.error("Customer confirmation action failed:", error);
 //     } finally {
 //       setConfirmLoading(false);
@@ -499,12 +619,8 @@
 //       onConfirm: async () => {
 //         try {
 //           await api.customers.delete(row.customerCode);
-
-//           setCustomers((previous) =>
-//             previous.filter((customer) => customer._id !== row._id),
-//           );
-
 //           toast.success(`${row.customerName} deleted successfully`);
+//           refreshAll();
 //         } catch (error) {
 //           toast.error(getErrorMessage(error));
 //           throw error;
@@ -514,29 +630,15 @@
 //   };
 
 //   const handleBulkStatusUpdate = async (rows, status) => {
-//     if (!rows.length) {
-//       return;
-//     }
+//     if (!rows.length) return;
 
 //     try {
 //       const results = await Promise.allSettled(
 //         rows.map((row) => api.customers.update(row.customerCode, { status })),
 //       );
 
-//       const successfulIds = new Set(
-//         rows
-//           .filter((_, index) => results[index].status === "fulfilled")
-//           .map((row) => row._id),
-//       );
-
-//       setCustomers((previous) =>
-//         previous.map((customer) =>
-//           successfulIds.has(customer._id) ? { ...customer, status } : customer,
-//         ),
-//       );
-
-//       const successCount = successfulIds.size;
-//       const failures = results.filter((result) => result.status === "rejected");
+//       const successCount = results.filter((r) => r.status === "fulfilled").length;
+//       const failures = results.filter((r) => r.status === "rejected");
 
 //       if (successCount) {
 //         toast.success(
@@ -552,48 +654,31 @@
 //             failures.length > 1 ? "s" : ""
 //           } failed: ${getErrorMessage(failures[0].reason)}`,
 //         );
-
-//         await loadCustomers();
 //       }
 //     } catch (error) {
 //       toast.error(getErrorMessage(error));
-//       await loadCustomers();
+//     } finally {
+//       refreshAll();
 //     }
 //   };
 
 //   const handleBulkDelete = (rows) => {
-//     if (!rows.length) {
-//       return;
-//     }
+//     if (!rows.length) return;
 
 //     openConfirmModal({
 //       title: "Delete selected customers?",
 //       message: `Delete ${rows.length} selected customer${
 //         rows.length > 1 ? "s" : ""
 //       }? These customers will be marked as deleted and their linked ledgers will be deactivated.`,
-//       confirmText: `Delete ${rows.length} Customer${
-//         rows.length > 1 ? "s" : ""
-//       }`,
+//       confirmText: `Delete ${rows.length} Customer${rows.length > 1 ? "s" : ""}`,
 
 //       onConfirm: async () => {
 //         const results = await Promise.allSettled(
 //           rows.map((row) => api.customers.delete(row.customerCode)),
 //         );
 
-//         const successfulIds = new Set(
-//           rows
-//             .filter((_, index) => results[index].status === "fulfilled")
-//             .map((row) => row._id),
-//         );
-
-//         setCustomers((previous) =>
-//           previous.filter((customer) => !successfulIds.has(customer._id)),
-//         );
-
-//         const successCount = successfulIds.size;
-//         const failures = results.filter(
-//           (result) => result.status === "rejected",
-//         );
+//         const successCount = results.filter((r) => r.status === "fulfilled").length;
+//         const failures = results.filter((r) => r.status === "rejected");
 
 //         if (successCount) {
 //           toast.success(
@@ -609,12 +694,16 @@
 //               failures.length > 1 ? "s" : ""
 //             } failed: ${getErrorMessage(failures[0].reason)}`,
 //           );
-
-//           await loadCustomers();
 //         }
+
+//         refreshAll();
 //       },
 //     });
 //   };
+
+//   /* ---------------------------------------------------------------- */
+//   /* Import template config                                            */
+//   /* ---------------------------------------------------------------- */
 
 //   const customerImportConfig = {
 //     templateFileName: "customers-import-template.csv",
@@ -645,7 +734,6 @@
 //     ],
 
 //     onUpload: csvImport.handleFile,
-
 //     onError: (message) => toast.error(message),
 //   };
 
@@ -665,10 +753,22 @@
 //         selectable
 //         columnVisibility
 //         pagination
-//         filters={filters}
+//         filters={tableFilters}
 //         quickFilters={quickFilters}
 //         storageKey="trustiq-customers"
 //         searchPlaceholder="Search code, customer, contact, phone, email, GST, city..."
+//         /* server-side mode */
+//         serverMode
+//         total={total}
+//         page={page}
+//         pageSize={pageSize}
+//         pageSizeOptions={PAGE_SIZE_OPTIONS}
+//         onPageChange={handlePageChange}
+//         onPageSizeChange={handlePageSizeChange}
+//         onSearch={handleSearch}
+//         onSort={handleSort}
+//         onFilterChange={handleFilterChange}
+//         onExport={handleExport}
 //         actions={{
 //           view: handleView,
 //           edit: handleEdit,
@@ -692,7 +792,7 @@
 //             action: handleBulkDelete,
 //           },
 //         ]}
-//         onRefresh={loadCustomers}
+//         onRefresh={refreshAll}
 //         importConfig={customerImportConfig}
 //         addButton={
 //           <button
@@ -717,6 +817,7 @@
 //         onCancel={closeConfirmModal}
 //         onConfirm={handleConfirmAction}
 //       />
+
 //       <ImportPreviewModal
 //         isOpen={Boolean(csvImport.preview)}
 //         entityName="customer"
@@ -752,12 +853,10 @@ import routes, { buildRoute } from "../../config/routes";
 
 const CUSTOMER_ROUTES = {
   create: routes.customers.create,
-
   view: (customerCode) =>
     buildRoute(routes.customers.edit, {
       id: encodeURIComponent(customerCode),
     }),
-
   edit: (customerCode) =>
     buildRoute(routes.customers.edit, {
       id: encodeURIComponent(customerCode),
@@ -783,6 +882,7 @@ const EMPTY_STATS = {
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 const EXPORT_BATCH = 100;
+const SEARCH_DEBOUNCE_MS = 400;
 
 const getErrorMessage = (error) => {
   const responseData = error?.response?.data;
@@ -792,7 +892,7 @@ const getErrorMessage = (error) => {
       .map((item) =>
         typeof item === "string"
           ? item
-          : item?.message || item?.msg || String(item),
+          : item?.message || item?.msg || String(item)
       )
       .join(", ");
   }
@@ -823,7 +923,8 @@ const getTotal = (response, fallback) => {
 const renderOptionalText = (value) =>
   value || <span className="dl-muted-value">N/A</span>;
 
-const escapeCsv = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+const escapeCsv = (value) =>
+  `"${String(value ?? "").replace(/"/g, '""')}"`;
 
 const validateCustomerRow = (row) => {
   const errors = [];
@@ -881,7 +982,6 @@ function CustomersList() {
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState(EMPTY_STATS);
 
-  // Server-side query state
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [search, setSearch] = useState("");
@@ -892,6 +992,7 @@ function CustomersList() {
   const [confirmLoading, setConfirmLoading] = useState(false);
 
   const requestIdRef = useRef(0);
+  const bulkLoadingRef = useRef(false);
 
   /* ---------------------------------------------------------------- */
   /* Data loading                                                      */
@@ -914,7 +1015,7 @@ function CustomersList() {
 
       return params;
     },
-    [search, sort, filters],
+    [search, sort, filters]
   );
 
   const loadCustomers = useCallback(async () => {
@@ -924,10 +1025,9 @@ function CustomersList() {
       setLoading(true);
 
       const response = await api.customers.getAll(
-        buildParams({ page, limit: pageSize }),
+        buildParams({ page, limit: pageSize })
       );
 
-      // Ignore stale responses (user typed / paged quickly)
       if (requestId !== requestIdRef.current) return;
 
       const list = getCustomerList(response);
@@ -946,39 +1046,44 @@ function CustomersList() {
     }
   }, [buildParams, page, pageSize]);
 
-const loadStats = useCallback(async () => {
-  try {
-    const response = await api.customers.getStats();
-    const data = response?.data?.data || response?.data?.stats;
-
-    if (data && typeof data.all === "number") {
-      setStats({ ...EMPTY_STATS, ...data });
-      return;
-    }
-    throw new Error("Unexpected stats response");
-  } catch (statsError) {
-    console.warn("Stats endpoint unavailable, using fallback:", statsError);
-
+  const loadStats = useCallback(async () => {
     try {
-      const count = async (extra = {}) => {
-        const res = await api.customers.getAll({ page: 1, limit: 1, ...extra });
-        return getTotal(res, 0);
-      };
+      const response = await api.customers.getStats();
+      const data = response?.data?.data || response?.data?.stats;
 
-      const [all, active, inactive, business, individual] = await Promise.all([
-        count(),
-        count({ status: "Active" }),
-        count({ status: "Inactive" }),
-        count({ customerType: "Business" }),
-        count({ customerType: "Individual" }),
-      ]);
+      if (data && typeof data.all === "number") {
+        setStats({ ...EMPTY_STATS, ...data });
+        return;
+      }
+      throw new Error("Unexpected stats response");
+    } catch (statsError) {
+      console.warn("Stats endpoint unavailable, using fallback:", statsError);
 
-      setStats({ all, active, inactive, business, individual });
-    } catch (fallbackError) {
-      console.error("Unable to load customer counts:", fallbackError);
+      try {
+        const count = async (extra = {}) => {
+          const res = await api.customers.getAll({
+            page: 1,
+            limit: 1,
+            ...extra,
+          });
+          return getTotal(res, 0);
+        };
+
+        const [all, active, inactive, business, individual] =
+          await Promise.all([
+            count(),
+            count({ status: "Active" }),
+            count({ status: "Inactive" }),
+            count({ customerType: "Business" }),
+            count({ customerType: "Individual" }),
+          ]);
+
+        setStats({ all, active, inactive, business, individual });
+      } catch (fallbackError) {
+        console.error("Unable to load customer counts:", fallbackError);
+      }
     }
-  }
-}, []);
+  }, []);
 
   useEffect(() => {
     loadCustomers();
@@ -993,13 +1098,20 @@ const loadStats = useCallback(async () => {
     loadStats();
   }, [loadCustomers, loadStats]);
 
+  // Debounced search: resets to page 1 after the user stops typing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
   /* ---------------------------------------------------------------- */
   /* Stable callbacks for DataList (server mode)                       */
   /* ---------------------------------------------------------------- */
 
-  const handleSearch = useCallback((value) => {
-    setSearch(value);
-  }, []);
+  const handleSearch = useCallback((value) => setSearch(value), []);
 
   const handleSort = useCallback((next) => {
     setSort(next);
@@ -1008,11 +1120,10 @@ const loadStats = useCallback(async () => {
 
   const handleFilterChange = useCallback((next) => {
     setFilters(next);
+    setPage(1);
   }, []);
 
-  const handlePageChange = useCallback((nextPage) => {
-    setPage(nextPage);
-  }, []);
+  const handlePageChange = useCallback((nextPage) => setPage(nextPage), []);
 
   const handlePageSizeChange = useCallback((size) => {
     setPageSize(size);
@@ -1031,7 +1142,7 @@ const loadStats = useCallback(async () => {
   });
 
   /* ---------------------------------------------------------------- */
-  /* Export (all rows matching current search + filters)               */
+  /* Export                                                            */
   /* ---------------------------------------------------------------- */
 
   const handleExport = useCallback(async () => {
@@ -1039,27 +1150,34 @@ const loadStats = useCallback(async () => {
 
     try {
       const first = await api.customers.getAll(
-        buildParams({ page: 1, limit: EXPORT_BATCH }),
+        buildParams({ page: 1, limit: EXPORT_BATCH })
       );
 
       const rows = [...getCustomerList(first)];
       const totalPages = Math.max(
         1,
-        Number(first?.data?.pagination?.totalPages) || 1,
+        Number(first?.data?.pagination?.totalPages) || 1
       );
 
-      const remaining = Array.from({ length: totalPages - 1 }, (_, i) => i + 2);
+      const remaining = Array.from(
+        { length: totalPages - 1 },
+        (_, i) => i + 2
+      );
 
       for (let i = 0; i < remaining.length; i += 5) {
         const responses = await Promise.all(
           remaining
             .slice(i, i + 5)
             .map((p) =>
-              api.customers.getAll(buildParams({ page: p, limit: EXPORT_BATCH })),
-            ),
+              api.customers.getAll(
+                buildParams({ page: p, limit: EXPORT_BATCH })
+              )
+            )
         );
 
-        responses.forEach((response) => rows.push(...getCustomerList(response)));
+        responses.forEach((response) =>
+          rows.push(...getCustomerList(response))
+        );
       }
 
       const exportColumns = [
@@ -1084,13 +1202,14 @@ const loadStats = useCallback(async () => {
         ["openingBalance", "Opening Balance"],
         ["openingBalanceType", "Opening Balance Type"],
         ["priceList", "Price List"],
+        ["receivableBalance", "Receivable Balance"],
         ["status", "Status"],
       ];
 
       const csv = [
         exportColumns.map(([, label]) => escapeCsv(label)).join(","),
         ...rows.map((row) =>
-          exportColumns.map(([key]) => escapeCsv(row[key])).join(","),
+          exportColumns.map(([key]) => escapeCsv(row[key])).join(",")
         ),
       ].join("\n");
 
@@ -1177,6 +1296,12 @@ const loadStats = useCallback(async () => {
         render: (value) => Number(value || 0),
       },
       {
+        key: "receivableBalance",
+        label: "Receivable Balance",
+        type: "currency",
+        sortable: true,
+      },
+      {
         key: "status",
         label: "Status",
         sortable: true,
@@ -1226,7 +1351,6 @@ const loadStats = useCallback(async () => {
         label: "Country",
         sortable: true,
         visible: false,
-        render: renderOptionalText,
       },
       {
         key: "openingBalance",
@@ -1255,7 +1379,7 @@ const loadStats = useCallback(async () => {
         render: renderOptionalText,
       },
     ],
-    [],
+    []
   );
 
   const tableFilters = useMemo(
@@ -1279,10 +1403,9 @@ const loadStats = useCallback(async () => {
         options: ["DEBIT", "CREDIT"],
       },
     ],
-    [],
+    []
   );
 
-  // Counts come from /customers/stats, not from the current page
   const quickFilters = useMemo(
     () => [
       { key: "status", value: "", label: "All", count: stats.all },
@@ -1306,7 +1429,7 @@ const loadStats = useCallback(async () => {
         count: stats.individual,
       },
     ],
-    [stats],
+    [stats]
   );
 
   /* ---------------------------------------------------------------- */
@@ -1328,7 +1451,14 @@ const loadStats = useCallback(async () => {
     confirmText = "Confirm",
     onConfirm,
   }) => {
-    setConfirmState({ open: true, type, title, message, confirmText, onConfirm });
+    setConfirmState({
+      open: true,
+      type,
+      title,
+      message,
+      confirmText,
+      onConfirm,
+    });
   };
 
   const handleConfirmAction = async () => {
@@ -1341,7 +1471,6 @@ const loadStats = useCallback(async () => {
       await confirmState.onConfirm();
       setConfirmState(INITIAL_CONFIRM_STATE);
     } catch (error) {
-      // The action shows its own error toast. Keep the dialog open to retry.
       console.error("Customer confirmation action failed:", error);
     } finally {
       setConfirmLoading(false);
@@ -1367,37 +1496,67 @@ const loadStats = useCallback(async () => {
     });
   };
 
-  const handleBulkStatusUpdate = async (rows, status) => {
+  /* ---------------------------------------------------------------- */
+  /* Bulk status update (single request + confirmation modal)          */
+  /* ---------------------------------------------------------------- */
+
+  const handleBulkStatusUpdate = (rows, status) => {
     if (!rows.length) return;
 
-    try {
-      const results = await Promise.allSettled(
-        rows.map((row) => api.customers.update(row.customerCode, { status })),
-      );
+    const ids = rows.map((row) => row._id).filter(Boolean);
 
-      const successCount = results.filter((r) => r.status === "fulfilled").length;
-      const failures = results.filter((r) => r.status === "rejected");
-
-      if (successCount) {
-        toast.success(
-          `${successCount} customer${successCount > 1 ? "s" : ""} ${
-            status === "Active" ? "activated" : "deactivated"
-          } successfully`,
-        );
-      }
-
-      if (failures.length) {
-        toast.error(
-          `${failures.length} customer update${
-            failures.length > 1 ? "s" : ""
-          } failed: ${getErrorMessage(failures[0].reason)}`,
-        );
-      }
-    } catch (error) {
-      toast.error(getErrorMessage(error));
-    } finally {
-      refreshAll();
+    if (!ids.length) {
+      toast.error("Select customers before changing status.");
+      return;
     }
+
+    const isActivate = status === "Active";
+
+    openConfirmModal({
+      type: isActivate ? "info" : "warning",
+      title: isActivate ? "Activate customers?" : "Deactivate customers?",
+      message: `Are you sure you want to ${
+        isActivate ? "activate" : "deactivate"
+      } ${rows.length} selected customer${
+        rows.length > 1 ? "s" : ""
+      }? Their linked ledgers will also be ${
+        isActivate ? "reactivated" : "deactivated"
+      }.`,
+      confirmText: isActivate
+        ? `Activate ${rows.length} Customer${rows.length > 1 ? "s" : ""}`
+        : `Deactivate ${rows.length} Customer${rows.length > 1 ? "s" : ""}`,
+
+      onConfirm: async () => {
+        if (bulkLoadingRef.current) return;
+        bulkLoadingRef.current = true;
+
+        try {
+          const response = await api.customers.bulkStatus(ids, status);
+          const result = response?.data || {};
+          const changed = Number(result.updated ?? result.modifiedCount) || 0;
+          const skipped = Number(result.skippedCount) || 0;
+
+          if (changed) {
+            toast.success(
+              `${changed} customer${changed === 1 ? "" : "s"} ${
+                isActivate ? "activated" : "deactivated"
+              } successfully`
+            );
+          }
+
+          if (skipped) {
+            toast(`${skipped} skipped (already ${status.toLowerCase()})`);
+          }
+        } catch (error) {
+          console.error("Bulk status update failed:", error);
+          toast.error(getErrorMessage(error), { duration: 7000 });
+          throw error;
+        } finally {
+          bulkLoadingRef.current = false;
+          refreshAll();
+        }
+      },
+    });
   };
 
   const handleBulkDelete = (rows) => {
@@ -1412,17 +1571,19 @@ const loadStats = useCallback(async () => {
 
       onConfirm: async () => {
         const results = await Promise.allSettled(
-          rows.map((row) => api.customers.delete(row.customerCode)),
+          rows.map((row) => api.customers.delete(row.customerCode))
         );
 
-        const successCount = results.filter((r) => r.status === "fulfilled").length;
+        const successCount = results.filter(
+          (r) => r.status === "fulfilled"
+        ).length;
         const failures = results.filter((r) => r.status === "rejected");
 
         if (successCount) {
           toast.success(
             `${successCount} customer${
               successCount > 1 ? "s" : ""
-            } deleted successfully`,
+            } deleted successfully`
           );
         }
 
@@ -1430,7 +1591,7 @@ const loadStats = useCallback(async () => {
           toast.error(
             `${failures.length} deletion${
               failures.length > 1 ? "s" : ""
-            } failed: ${getErrorMessage(failures[0].reason)}`,
+            } failed: ${getErrorMessage(failures[0].reason)}`
           );
         }
 
@@ -1495,7 +1656,6 @@ const loadStats = useCallback(async () => {
         quickFilters={quickFilters}
         storageKey="trustiq-customers"
         searchPlaceholder="Search code, customer, contact, phone, email, GST, city..."
-        /* server-side mode */
         serverMode
         total={total}
         page={page}
@@ -1507,6 +1667,8 @@ const loadStats = useCallback(async () => {
         onSort={handleSort}
         onFilterChange={handleFilterChange}
         onExport={handleExport}
+        onRefresh={refreshAll}
+        importConfig={customerImportConfig}
         actions={{
           view: handleView,
           edit: handleEdit,
@@ -1530,8 +1692,6 @@ const loadStats = useCallback(async () => {
             action: handleBulkDelete,
           },
         ]}
-        onRefresh={refreshAll}
-        importConfig={customerImportConfig}
         addButton={
           <button
             type="button"
