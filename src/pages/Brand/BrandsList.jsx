@@ -76,17 +76,12 @@ function BrandsList() {
   const [loadError, setLoadError] = useState("");
 
   const [modalState, setModalState] = useState(INITIAL_MODAL);
-
   const [confirmState, setConfirmState] = useState(INITIAL_CONFIRM);
-
   const [confirmLoading, setConfirmLoading] = useState(false);
 
   const [importPreview, setImportPreview] = useState(null);
-
   const [importLoading, setImportLoading] = useState(false);
-
   const [importMessage, setImportMessage] = useState("");
-
   const [importUncertain, setImportUncertain] = useState(false);
 
   const loadIdRef = useRef(0);
@@ -189,33 +184,32 @@ function BrandsList() {
 
   const columns = useMemo(
     () => [
-   {
-  key: "name",
-  label: "Brand",
-  sortable: true,
+      {
+        key: "name",
+        label: "Brand",
+        sortable: true,
 
-  render: (value, row) => (
-    <button
-      type="button"
-      className="doc-link-button"
-      aria-label={`View brand ${value || ""}`}
-      onClick={(event) => {
-        event.stopPropagation();
-        openBrand(row, "view");
-      }}
-    >
-      {value || "N/A"}
-    </button>
-  ),
-},
-{
-  key: "description",
-  label: "Description",
-  sortable: true,
+        render: (value, row) => (
+          <button
+            type="button"
+            className="doc-link-button"
+            aria-label={`View brand ${value || ""}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              openBrand(row, "view");
+            }}
+          >
+            {value || "N/A"}
+          </button>
+        ),
+      },
+      {
+        key: "description",
+        label: "Description",
+        sortable: true,
 
-  render: (value) =>
-    value || "No description",
-},
+        render: (value) => value || "No description",
+      },
       {
         key: "status",
         label: "Status",
@@ -241,55 +235,67 @@ function BrandsList() {
   );
 
   const updateStatuses = async (rows, status) => {
-    let successCount = 0;
-    const failures = [];
-
     const uniqueRows = Array.from(
-      new Map(rows.map((row) => [row._id, row])).values(),
+      new Map(rows.map((row) => [String(row._id), row])).values(),
     );
 
-    for (const row of uniqueRows) {
-      try {
-        const current = extractBrand(await productBrandApi.getById(row._id));
-
-        if (current.status === status) {
-          upsertBrand(current);
-          successCount += 1;
-          continue;
-        }
-
-        if (!Number.isSafeInteger(current.__v) || current.__v < 0) {
-          throw new Error("Brand version is missing.");
-        }
-
-        const response = await productBrandApi.update(current._id, {
-          version: current.__v,
-          status,
-        });
-
-        upsertBrand(extractBrand(response));
-
-        successCount += 1;
-      } catch (error) {
-        failures.push({
-          name: row.name,
-          message: getErrorMessage(error),
-        });
-      }
+    if (!uniqueRows.length) {
+      return;
     }
 
-    if (successCount) {
-      toast.success(
-        `${successCount} brand${successCount === 1 ? "" : "s"} ${status === "ACTIVE" ? "active" : "inactive"}`,
+    const brandIds = [];
+    const versions = {};
+
+    for (const row of uniqueRows) {
+      const id = String(row._id || "");
+
+      if (!/^[a-f\d]{24}$/i.test(id)) {
+        throw new Error("A selected brand has an invalid ID. Refresh the list.");
+      }
+
+      if (!Number.isSafeInteger(row.__v) || row.__v < 0) {
+        throw new Error(
+          `Version is missing for ${row.name || "a selected brand"}. Refresh the list.`,
+        );
+      }
+
+      brandIds.push(id);
+      versions[id] = row.__v;
+    }
+
+    const response = await productBrandApi.bulkAction({
+      brandIds,
+      status,
+      versions,
+    });
+
+    const result = response?.data?.data;
+
+    if (
+      !response?.data?.success ||
+      !result ||
+      !Number.isSafeInteger(result.affectedCount) ||
+      !Number.isSafeInteger(result.unchangedCount)
+    ) {
+      throw new Error(
+        response?.data?.message ||
+          "The bulk status update could not be confirmed.",
       );
     }
 
-    if (failures.length) {
-      toast.error(
-        `${failures.length} operation${failures.length === 1 ? "" : "s"} could not be confirmed. ${failures[0].name}: ${failures[0].message}`,
-        {
-          duration: 7000,
-        },
+    if (result.affectedCount > 0) {
+      toast.success(
+        `${result.affectedCount} brand${
+          result.affectedCount === 1 ? "" : "s"
+        } ${status === "ACTIVE" ? "activated" : "deactivated"} successfully`,
+      );
+    }
+
+    if (result.unchangedCount > 0) {
+      toast.success(
+        `${result.unchangedCount} brand${
+          result.unchangedCount === 1 ? "" : "s"
+        } already had this status`,
       );
     }
 
@@ -338,6 +344,10 @@ function BrandsList() {
       setConfirmState(INITIAL_CONFIRM);
     } catch (error) {
       toast.error(getErrorMessage(error));
+
+      if (error?.response?.status === 409) {
+        await loadBrands();
+      }
     } finally {
       mutationLockRef.current = false;
       setConfirmLoading(false);
@@ -367,7 +377,8 @@ function BrandsList() {
           .trim()
           .toLowerCase(),
 
-      transform: (value) => (typeof value === "string" ? value.trim() : value),
+      transform: (value) =>
+        typeof value === "string" ? value.trim() : value,
 
       complete: (result) => {
         if (parseId !== parseIdRef.current) {
@@ -379,7 +390,8 @@ function BrandsList() {
           Object.keys(result.meta.renamedHeaders || {}).length
         ) {
           toast.error(
-            result.errors[0]?.message || "The CSV contains duplicate headers.",
+            result.errors[0]?.message ||
+              "The CSV contains duplicate headers.",
           );
 
           return;
@@ -390,13 +402,11 @@ function BrandsList() {
 
         if (!columns.includes("name")) {
           toast.error("CSV requires a name header.");
-
           return;
         }
 
         if (!rows.length || rows.length > 5000) {
           toast.error("Provide between 1 and 5000 brand rows.");
-
           return;
         }
 
@@ -458,6 +468,21 @@ function BrandsList() {
   };
 
   const finishImport = async (body) => {
+    if (body.requiresVerification) {
+      setImportUncertain(true);
+      setImportMessage(
+        body.message ||
+          "The import outcome is uncertain. Review the brand list before retrying.",
+      );
+      setImportPreview(null);
+
+      toast.error("Import outcome uncertain. Do not resubmit the file.");
+
+      await loadBrands();
+
+      return true;
+    }
+
     const created =
       body.createdCount ?? body.successCount ?? body.importedCount;
 
@@ -481,7 +506,9 @@ function BrandsList() {
     const firstError = body.errors?.[0];
 
     const detail =
-      typeof firstError === "string" ? firstError : firstError?.message || "";
+      typeof firstError === "string"
+        ? firstError
+        : firstError?.message || "";
 
     const message =
       failed > 0
@@ -497,6 +524,7 @@ function BrandsList() {
     }
 
     setImportPreview(null);
+
     await loadBrands();
 
     return true;
@@ -509,7 +537,6 @@ function BrandsList() {
 
     if (Object.keys(importPreview.rowErrors).length) {
       toast.error("Correct the highlighted errors and upload the file again.");
-
       return;
     }
 
@@ -517,38 +544,44 @@ function BrandsList() {
     setImportLoading(true);
 
     try {
-      const csv = Papa.unparse({
-        fields: importPreview.columns,
+      const payload = {
+        rows: importPreview.rows.map((row) => ({
+          name: String(row.name ?? "")
+            .trim()
+            .replace(/\s+/g, " "),
+          description: String(row.description ?? "").trim(),
+          status: String(row.status || "ACTIVE")
+            .trim()
+            .toUpperCase(),
+        })),
+      };
 
-        data: importPreview.rows.map((row) =>
-          importPreview.columns.map((field) => row[field] ?? ""),
-        ),
-      });
+      const response = await productBrandApi.import(payload);
 
-      const formData = new FormData();
+      const body = response?.data || {};
 
-      formData.append(
-        "file",
-        new File([csv], importPreview.file.name, {
-          type: "text/csv",
-        }),
-      );
+      const handled = await finishImport(body);
 
-      const response = await productBrandApi.import(formData);
-
-      if (!(await finishImport(response?.data || {}))) {
+      if (!handled) {
         throw new Error("The import result was not confirmed.");
       }
     } catch (error) {
       const status = error?.response?.status;
+      const responseBody = error?.response?.data || {};
+
+      if (responseBody.requiresVerification) {
+        await finishImport(responseBody);
+        return;
+      }
 
       if (status && status < 500 && status !== 408) {
-        if (await finishImport(error.response?.data || {})) {
+        const handled = await finishImport(responseBody);
+
+        if (handled) {
           return;
         }
 
         toast.error(getErrorMessage(error));
-
         return;
       }
 
@@ -634,27 +667,23 @@ function BrandsList() {
         ]}
         actions={{
           view: (row) => openBrand(row, "view"),
-
           edit: (row) => openBrand(row, "edit"),
         }}
         bulkActions={[
           {
             key: "activate",
             label: "Activate",
-
             action: (rows) => confirmStatus(rows, "ACTIVE"),
           },
           {
             key: "deactivate",
             label: "Deactivate",
-
             action: (rows) => confirmStatus(rows, "INACTIVE"),
           },
         ]}
         onRefresh={loadBrands}
         importConfig={{
           templateFileName: "brands-import-template.csv",
-
           columns: [
             {
               key: "name",
@@ -669,9 +698,7 @@ function BrandsList() {
               example: "ACTIVE",
             },
           ],
-
           onUpload: handleCsvUpload,
-
           onError: (message) => toast.error(message),
         }}
         addButton={

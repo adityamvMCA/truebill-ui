@@ -7,9 +7,7 @@ const productBrandApi = {
     }),
 
   getById: (brandId) =>
-    apiClient.get(
-      `/product-brands/${encodeURIComponent(brandId)}`,
-    ),
+    apiClient.get(`/product-brands/${encodeURIComponent(brandId)}`),
 
   create: (data) =>
     apiClient.post("/product-brands", data),
@@ -20,11 +18,11 @@ const productBrandApi = {
       data,
     ),
 
-  import: (formData) =>
-    apiClient.post(
-      "/product-brands/import",
-      formData,
-    ),
+  bulkAction: (payload) =>
+    apiClient.post("/product-brands/bulk-status", payload),
+
+  import: (payload) =>
+    apiClient.post("/product-brands/import", payload),
 };
 
 export default productBrandApi;

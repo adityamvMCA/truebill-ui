@@ -15,8 +15,8 @@ const productCategoryApi = {
       data,
     ),
 
-  bulkStatus: (payload) =>
-    apiClient.post("/product-categories/bulk-status", payload),
+  bulkUpdateStatus: (payload) =>
+  apiClient.post("/product-categories/bulk-status", payload),
 
   import: (formData) => apiClient.post("/product-categories/import", formData),
 };
