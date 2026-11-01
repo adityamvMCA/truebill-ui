@@ -46,7 +46,7 @@ const DataRow = memo(function DataRow({ row, columns }) {
 
 /**
  * Reusable voucher / report list page.
- * Everything that differs between pages is passed as props (see JournalVouchers.jsx).
+ * Everything that differs between pages is passed as props.
  */
 export default function VoucherListPage({
   title,
@@ -61,13 +61,18 @@ export default function VoucherListPage({
   typeOptions, // select options [{ value, label }]
   chipTypes, // chips [{ value, label }]
   getTypeLabel = (v) => v || "All",
+  typeLabel = "Voucher Type", // label for the select + chips
+  dateMode = "range", // "range" (From + To) | "asOf" (single "As of Date" = endDate)
+  showTypeSelect = true, // hide the select when chips are enough
   searchPlaceholder = "Search...",
   pageSize = 50,
   initialFilters,
   exportConfig, // { fileName(filters), columns: [{ header, value(row) }] }
   footerText,
+  footerNote = "Balanced · Paise-safe",
   emptyText = "No records for this period.",
   getRowKey = (r) => r._id,
+  useList = useServerList, // lets a page supply its own list hook (module-level, stable)
 }) {
   const navigate = useNavigate();
 
@@ -87,7 +92,7 @@ export default function VoucherListPage({
     summaryFetching,
     error,
     refresh,
-  } = useServerList({
+  } = useList({
     namespace,
     fetchList,
     fetchSummary,
@@ -126,6 +131,11 @@ export default function VoucherListPage({
     // });
   };
 
+  const rangeText =
+    dateMode === "asOf"
+      ? `As of ${filters.endDate}`
+      : `${filters.startDate} to ${filters.endDate}`;
+
   return (
     <main className="jv-page">
       <header className="jv-header">
@@ -141,8 +151,7 @@ export default function VoucherListPage({
           <div className="jv-title">
             <h1>{title}</h1>
             <p>
-              {filters.startDate} to {filters.endDate} ·{" "}
-              {getTypeLabel(filters.type)} · {total ?? "…"} entries
+              {rangeText} · {getTypeLabel(filters.type)} · {total ?? "…"} entries
             </p>
           </div>
         </div>
@@ -208,40 +217,47 @@ export default function VoucherListPage({
             onChange={(e) => setSearchInput(e.target.value)}
           />
         </div>
+
+        {dateMode !== "asOf" && (
+          <label className="jv-date">
+            <span>From</span>
+            <input
+              type="date"
+              value={filters.startDate}
+              max={filters.endDate || undefined}
+              onChange={(e) => updateFilter({ startDate: e.target.value })}
+            />
+          </label>
+        )}
+
         <label className="jv-date">
-          <span>From</span>
-          <input
-            type="date"
-            value={filters.startDate}
-            max={filters.endDate || undefined}
-            onChange={(e) => updateFilter({ startDate: e.target.value })}
-          />
-        </label>
-        <label className="jv-date">
-          <span>To</span>
+          <span>{dateMode === "asOf" ? "As of Date" : "To"}</span>
           <input
             type="date"
             value={filters.endDate}
-            min={filters.startDate || undefined}
+            min={dateMode === "asOf" ? undefined : filters.startDate || undefined}
             onChange={(e) => updateFilter({ endDate: e.target.value })}
           />
         </label>
-        <label className="jv-select">
-          <span>Voucher Type</span>
-          <select
-            value={filters.type}
-            onChange={(e) => updateFilter({ type: e.target.value })}
-          >
-            {typeOptions.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </label>
+
+        {showTypeSelect && (
+          <label className="jv-select">
+            <span>{typeLabel}</span>
+            <select
+              value={filters.type}
+              onChange={(e) => updateFilter({ type: e.target.value })}
+            >
+              {typeOptions.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </section>
 
-      <div className="jv-chips" role="tablist" aria-label="Voucher type">
+      <div className="jv-chips" role="tablist" aria-label={typeLabel}>
         {chipTypes.map((c) => (
           <button
             key={c.value}
@@ -349,7 +365,7 @@ export default function VoucherListPage({
       {footerText && total !== null && (
         <footer className="jv-footer">
           <span>{footerText({ total, filters })}</span>
-          <span>Balanced · Paise-safe</span>
+          <span>{footerNote}</span>
         </footer>
       )}
     </main>

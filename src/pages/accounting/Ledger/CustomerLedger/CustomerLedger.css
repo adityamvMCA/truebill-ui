@@ -167,3 +167,29 @@
   .cl-page .cl-date { min-height: 48px; }
 }
 @media (prefers-reduced-motion: reduce) { .cl-page .cl-spin { animation: none; } }
+
+
+.cl-combo { position: relative; min-width: 320px; max-width: 460px; flex: 1; }
+.cl-combo-trigger {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 9px 12px; border: 1px solid var(--cl-border, #d9dee7); border-radius: 8px;
+  background: var(--cl-surface, #fff); cursor: pointer; font: inherit; text-align: left;
+}
+.cl-combo-panel {
+  position: absolute; z-index: 30; top: calc(100% + 4px); left: 0; right: 0;
+  background: var(--cl-surface, #fff); border: 1px solid var(--cl-border, #d9dee7);
+  border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.12); overflow: hidden;
+}
+.cl-combo-input { width: 100%; padding: 10px 12px; border: 0; border-bottom: 1px solid var(--cl-border, #e5e8ee); outline: none; font: inherit; }
+.cl-combo-list { list-style: none; margin: 0; padding: 4px; max-height: 280px; overflow-y: auto; }
+.cl-combo-item { display: flex; flex-direction: column; padding: 8px 10px; border-radius: 6px; cursor: pointer; }
+.cl-combo-item:hover, .cl-combo-item[aria-selected="true"] { background: rgba(0,0,0,.05); }
+.cl-combo-item small { color: #6b7280; }
+.cl-combo-note { padding: 10px; color: #6b7280; font-size: 13px; }
+.cl-combo-hint { padding: 6px 12px; font-size: 12px; color: #6b7280; border-top: 1px solid var(--cl-border, #e5e8ee); }
+
+.cl-pagination { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--cl-border, #e5e8ee); flex-wrap: wrap; }
+.cl-pager { display: flex; gap: 4px; }
+.cl-pager button { min-width: 34px; padding: 6px 10px; border: 1px solid var(--cl-border, #d9dee7); border-radius: 6px; background: var(--cl-surface, #fff); cursor: pointer; }
+.cl-pager button.is-active { background: var(--cl-primary, #2563eb); color: #fff; border-color: transparent; }
+.cl-pager button:disabled { opacity: .5; cursor: not-allowed; }

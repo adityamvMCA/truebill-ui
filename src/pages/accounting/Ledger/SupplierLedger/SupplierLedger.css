@@ -90,3 +90,12 @@
 @media (max-width: 768px) { .sl-page { padding: 12px; } .sl-page .sl-cards { grid-template-columns: repeat(2, minmax(0,1fr)); } .sl-page .sl-filters { grid-template-columns: repeat(2, minmax(0,1fr)); } .sl-page .sl-search, .sl-page .sl-opening-chip { grid-column: 1 / -1; } }
 @media (max-width: 600px) { .sl-page { padding: 10px; } .sl-page .sl-header { flex-direction: column; align-items: stretch; } .sl-page .sl-actions { justify-content: flex-end; } .sl-page .sl-cards { gap: 9px; } .sl-page .sl-filters { padding: 10px; gap: 8px; } .sl-page .sl-button { min-height: 40px; } .sl-page .sl-back { width: 40px; height: 40px; flex-basis: 40px; } .sl-page .sl-search input, .sl-page .sl-date input, .sl-page .sl-picker select { font-size: 16px; } .sl-page .sl-search input::placeholder { font-size: 13px; } .sl-page .sl-date { min-height: 48px; } }
 @media (prefers-reduced-motion: reduce) { .sl-page .sl-spin { animation: none; } }
+
+
+.sl-picker .esp-wrapper { min-width: 320px; max-width: 460px; flex: 1; }
+
+.sl-pagination { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--sl-border, #e5e8ee); flex-wrap: wrap; }
+.sl-pager { display: flex; gap: 4px; }
+.sl-pager button { min-width: 34px; padding: 6px 10px; border: 1px solid var(--sl-border, #d9dee7); border-radius: 6px; background: var(--sl-surface, #fff); cursor: pointer; }
+.sl-pager button.is-active { background: var(--sl-primary, #2563eb); color: #fff; border-color: transparent; }
+.sl-pager button:disabled { opacity: .5; cursor: not-allowed; }

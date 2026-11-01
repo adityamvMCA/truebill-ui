@@ -1,0 +1,121 @@
+.dn-create-page {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.dn-create-page .doc-main,
+.dn-create-page .doc-panel,
+.dn-create-page .doc-cell-item,
+.dn-create-page .esp-wrapper {
+  min-width: 0;
+}
+
+.dn-create-page .dn-party-card {
+  margin-top: 14px;
+}
+
+.dn-create-page .doc-party-copy {
+  min-width: 0;
+}
+
+.dn-create-page .doc-party-copy h3,
+.dn-create-page .doc-party-copy p {
+  overflow-wrap: anywhere;
+}
+
+.dn-create-page .doc-title {
+  min-width: 0;
+}
+
+.dn-create-page .doc-title span {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.dn-create-page .dn-address-fields {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.dn-create-page .dn-items-table {
+  width: 100%;
+  min-width: 1050px;
+}
+
+.dn-create-page .dn-items-table th:nth-child(2) {
+  min-width: 300px;
+}
+
+.dn-create-page .dn-success {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.dn-create-page .dn-success > svg {
+  flex-shrink: 0;
+}
+
+.dn-create-page.is-keyboard-open
+  .doc-mobile-bar,
+.dn-create-page .doc-mobile-bar[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 600px) {
+  .dn-create-page .doc-fields-grid,
+  .dn-create-page .dn-transport-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .dn-create-page .dn-items-table {
+    min-width: 0;
+  }
+
+  .dn-create-page .form-input,
+  .dn-create-page .form-select,
+  .dn-create-page .form-textarea {
+    font-size: 16px;
+  }
+
+  .dn-create-page .doc-title {
+    font-size: 14px;
+    line-height: 21px;
+  }
+
+  .dn-create-page
+    .dn-items-table
+    td[data-label="Specification"],
+  .dn-create-page
+    .dn-items-table
+    td[data-label="Item Notes"] {
+    grid-column: 1 / -1;
+  }
+
+  .dn-create-page .doc-mobile-actions {
+    display: grid;
+    grid-template-columns: repeat(
+      2,
+      minmax(0, 1fr)
+    );
+    gap: 8px;
+  }
+
+  .dn-create-page
+    .doc-mobile-actions
+    .form-button {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    white-space: normal;
+  }
+}
+
+@media (max-width: 350px) {
+  .dn-create-page .doc-mobile-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

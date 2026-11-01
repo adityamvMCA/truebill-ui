@@ -1,32 +1,31 @@
 import apiClient from "../apiClient";
 
-const base = "/outstanding";
+const BASE = "/outstanding"; // <- change to your real mount path
 
 const outstandingApi = {
-  // Existing: ledger-based balance per party
-  getCustomers: (params = {}) =>
-    apiClient.get(`${base}/customers`, { params }),
+  /* ---------- new: paged + bucketed ---------- */
+  getCustomerOutstanding: (params = {}, { signal } = {}) =>
+    apiClient.get(`${BASE}/customers`, { params, signal }),
 
-  getSuppliers: (params = {}) =>
-    apiClient.get(`${base}/suppliers`, { params }),
+  getCustomerOutstandingSummary: (params = {}, { signal } = {}) =>
+    apiClient.get(`${BASE}/customers/summary`, { params, signal }),
 
-  // New: bill-wise ageing, grouped by supplier
-  getPayables: (params = {}) =>
-    apiClient.get(`${base}/payables`, { params }),
+  getSupplierOutstanding: (params = {}, { signal } = {}) =>
+    apiClient.get(`${BASE}/suppliers`, { params, signal }),
+
+  getSupplierOutstandingSummary: (params = {}, { signal } = {}) =>
+    apiClient.get(`${BASE}/suppliers/summary`, { params, signal }),
+
+  /* ---------- old (kept for other pages) ---------- */
+  getPayables: (params = {}) => apiClient.get(`${BASE}/payables`, { params }),
 
   getPayableParty: (partyId, params = {}) =>
-    apiClient.get(`${base}/payables/${encodeURIComponent(partyId)}`, {
-      params,
-    }),
+    apiClient.get(`${BASE}/payables/${encodeURIComponent(partyId)}`, { params }),
 
-  // New: invoice-wise ageing, grouped by customer
-  getReceivables: (params = {}) =>
-    apiClient.get(`${base}/receivables`, { params }),
+  getReceivables: (params = {}) => apiClient.get(`${BASE}/receivables`, { params }),
 
   getReceivableParty: (partyId, params = {}) =>
-    apiClient.get(`${base}/receivables/${encodeURIComponent(partyId)}`, {
-      params,
-    }),
+    apiClient.get(`${BASE}/receivables/${encodeURIComponent(partyId)}`, { params }),
 };
 
 export default outstandingApi;

@@ -1,0 +1,23 @@
+.oa-modal-backdrop {
+  position: fixed; inset: 0; z-index: 1000; background: rgba(15, 23, 42, .45);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.oa-modal {
+  position: relative; width: min(960px, 100%); max-height: 86vh; display: flex; flex-direction: column;
+  background: var(--oa-surface, #fff); border-radius: 12px; box-shadow: 0 20px 50px rgba(0, 0, 0, .25); overflow: hidden;
+}
+.oa-modal-head {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+  padding: 14px 16px; border-bottom: 1px solid var(--oa-border, #e5e8ee);
+}
+.oa-modal-head h2 { margin: 0; font-size: 16px; }
+.oa-modal-head small { color: #6b7280; }
+.oa-modal-close { border: 0; background: transparent; cursor: pointer; padding: 6px; border-radius: 6px; }
+.oa-modal-close:hover { background: rgba(0, 0, 0, .06); }
+.oa-modal .oa-scroll { overflow: auto; flex: 1; }
+.oa-modal-pager {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 10px 16px; border-top: 1px solid var(--oa-border, #e5e8ee);
+}
+.oa-modal-pager > div { display: flex; gap: 6px; }
+.oa-modal-spinner { position: absolute; right: 56px; top: 18px; }

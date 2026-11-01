@@ -1,6 +1,2267 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+// import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+// import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+
+// import {
+//   ArrowLeft,
+//   ChevronDown,
+//   FileText,
+//   Plus,
+//   Save,
+//   Send,
+//   StickyNote,
+//   Trash2,
+// } from "lucide-react";
+
+// import toast from "react-hot-toast";
+
+// import ConfirmModal from "../../../components/common/ConfirmModal/ConfirmModal";
+
+// import api from "../../../services/api";
+// import salesInvoiceApi from "../../../services/modules/salesInvoiceApi";
+
+// import Input from "../../../components/common/Form/Input";
+// import Select from "../../../components/common/Form/Select";
+// import Textarea from "../../../components/common/Form/Textarea";
+// import Button from "../../../components/common/Form/Button";
+// import StatusField from "../../../components/common/StatusField/StatusField";
+// import EwayBillPanel from "./EwayBillPanel";
+// import {
+//   SALES_PATHS,
+//   GST_RATES,
+//   TAX_OPTIONS,
+//   EMPTY_TOTALS,
+//   addDays,
+//   calculatePreview,
+//   formatDate,
+//   formatPaise,
+//   getErrors,
+//   inputDate,
+//   itemSnapshot,
+//   loadAllPages,
+//   localDate,
+//   useTenantRevision,
+// } from "./salesInvoiceUtils";
+
+// import "../../../styles/invoice-common1.css";
+// import AsyncSearchSelect from "../../../components/common/Search/AsyncSearchSelect";
+
+// const customerApi = api.customers || api.customer;
+// const productApi = api.products || api.product;
+// const salesOrderApi = api.salesOrder || api.salesOrders;
+
+// const ELIGIBLE_ORDER_STATUSES = ["CONFIRMED", "IN_PROGRESS", "COMPLETED"];
+
+// const NO_ORDER = "__NO_ORDER__";
+
+// const CUSTOMER_PICKER_LIMIT = 20;
+
+// const NUMBER_COLUMNS = [
+//   {
+//     field: "quantity",
+//     label: "Quantity",
+//     min: "0.001",
+//     max: "1000000",
+//     step: "0.001",
+//   },
+//   {
+//     field: "unitRate",
+//     label: "Price/Item (₹)",
+//     min: "0",
+//     max: "1000000000",
+//     step: "0.01",
+//   },
+//   {
+//     field: "discountPercent",
+//     label: "Discount %",
+//     min: "0",
+//     max: "100",
+//     step: "0.01",
+//   },
+// ];
+
+// let rowCounter = 0;
+
+// const newItem = () => ({
+//   rowId: `sales-item-${++rowCounter}`,
+//   productId: "",
+//   quantity: "1",
+//   unitRate: "0",
+//   discountPercent: "0",
+//   gstRate: 0,
+// });
+
+// const initialForm = () => {
+//   const today = localDate();
+
+//   return {
+//     customerId: "",
+//     invoiceDate: today,
+//     dueDate: today,
+//     paymentTerms: "Due on Receipt",
+//     taxMode: "NONE",
+//     updateStock: false,
+//     notes: "",
+//   };
+// };
+
+// const validDate = (value) => {
+//   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+//     return false;
+//   }
+
+//   const date = new Date(`${value}T00:00:00.000Z`);
+
+//   return (
+//     !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
+//   );
+// };
+
+// const snapshot = (form, items) =>
+//   JSON.stringify({
+//     form,
+//     items: itemSnapshot(items),
+//   });
+
+// const savedTotals = (record) => ({
+//   gross: record.grossAmountPaise,
+//   discount: record.discountAmountPaise,
+//   taxable: record.taxableAmountPaise,
+//   cgst: record.cgstAmountPaise,
+//   sgst: record.sgstAmountPaise,
+//   igst: record.igstAmountPaise,
+//   total: record.totalAmountPaise,
+// });
+
+// const toFormItems = (record) =>
+//   record.items.map((item) => ({
+//     ...newItem(),
+//     productId: String(item.productId),
+//     quantity: String(item.quantity),
+//     unitRate: String(item.unitRatePaise / 100),
+//     discountPercent: String(item.discountPercent),
+//     gstRate: item.gstRate,
+//   }));
+
+// const toInvoiceForm = (record) => ({
+//   customerId: String(record.customerId),
+//   invoiceDate: inputDate(record.invoiceDate),
+//   dueDate: inputDate(record.dueDate),
+//   paymentTerms: record.paymentTerms || "Due on Receipt",
+//   taxMode: record.taxMode,
+//   updateStock: Boolean(record.updateStock),
+//   notes: record.notes || "",
+// });
+
+// const extractInvoice = (response) => {
+//   const record = response?.data?.invoice;
+
+//   if (
+//     response?.data?.success !== true ||
+//     !record?._id ||
+//     !record.invoiceNumber ||
+//     !Array.isArray(record.items)
+//   ) {
+//     throw new Error(
+//       response?.data?.message || "The server did not return a valid invoice.",
+//     );
+//   }
+
+//   return record;
+// };
+
+// /* ==========================================
+//    CUSTOMER SEARCH HELPERS
+//    ========================================== */
+
+// // List endpoints return slightly different shapes between modules
+// const extractList = (response) => {
+//   const body = response?.data;
+
+//   if (Array.isArray(body?.data)) return body.data;
+//   if (Array.isArray(body?.customers)) return body.customers;
+//   if (Array.isArray(body)) return body;
+
+//   return [];
+// };
+
+// /*
+//  * Server-side customer search used by the picker. Only one small page of
+//  * active customers is requested each time, so it stays fast with any number
+//  * of customers. Module-level so its identity never changes.
+//  */
+// const fetchCustomerOptions = async (query) => {
+//   if (typeof customerApi?.getAll !== "function") {
+//     throw new Error("Configure the customers getAll API.");
+//   }
+
+//   const params = {
+//     page: 1,
+//     limit: CUSTOMER_PICKER_LIMIT,
+//     status: "Active",
+//     sortBy: "customerName",
+//     sortOrder: "asc",
+//   };
+
+//   if (query) {
+//     params.search = query;
+//   }
+
+//   const response = await customerApi.getAll(params);
+
+//   return extractList(response)
+//     .filter(
+//       (customer) =>
+//         customer?._id && !customer.isDeleted && customer.status === "Active",
+//     )
+//     .map((customer) => ({
+//       value: String(customer._id),
+//       label: `${customer.customerName} (${customer.customerCode})`,
+//       sublabel: [customer.city, customer.phone].filter(Boolean).join(" · "),
+//       data: customer,
+//     }));
+// };
+
+// // Loads one customer (edit mode). A missing customer returns null.
+// const fetchCustomerByCode = async (customerCode) => {
+//   if (typeof customerApi?.getByCode !== "function") {
+//     throw new Error("Configure the customers getByCode API.");
+//   }
+
+//   try {
+//     const response = await customerApi.getByCode(customerCode);
+
+//     return (
+//       response?.data?.customer ||
+//       response?.data?.data ||
+//       (response?.data?._id ? response.data : null)
+//     );
+//   } catch (error) {
+//     if (error?.response?.status === 404) {
+//       return null;
+//     }
+
+//     throw error;
+//   }
+// };
+
+// /*
+//  * Loads every Sales Order header page by page. The response shape is read
+//  * defensively because list endpoints differ between modules.
+//  */
+// const fetchAllOrders = async () => {
+//   if (typeof salesOrderApi?.getOrders !== "function") {
+//     throw new Error("Configure the Sales Order getOrders API.");
+//   }
+
+//   const rows = [];
+//   let page = 1;
+//   let totalPages = 1;
+
+//   do {
+//     const response = await salesOrderApi.getOrders({ page, limit: 100 });
+//     const body = response?.data;
+
+//     const batch = Array.isArray(body?.data)
+//       ? body.data
+//       : Array.isArray(body?.orders)
+//         ? body.orders
+//         : Array.isArray(body)
+//           ? body
+//           : [];
+
+//     rows.push(...batch);
+
+//     totalPages = Number(body?.pagination?.totalPages) || 1;
+//     page += 1;
+//   } while (page <= totalPages && page <= 50);
+
+//   return rows;
+// };
+
+// function SalesInvoiceForm({
+//   mode,
+//   invoiceNumber,
+//   sourceOrderNumber: initialOrderNumber,
+// }) {
+//   const navigate = useNavigate();
+
+//   const viewing = mode === "view";
+//   const editing = mode === "edit";
+//   const creating = mode === "create";
+
+//   const [activeOrderNumber, setActiveOrderNumber] = useState(
+//     creating ? initialOrderNumber : "",
+//   );
+//   const [pendingOrderNumber, setPendingOrderNumber] = useState("");
+
+//   const fromOrder = creating && Boolean(activeOrderNumber);
+
+//   const [form, setForm] = useState(initialForm);
+//   const [items, setItems] = useState(() => [newItem()]);
+
+//   const [invoice, setInvoice] = useState(null);
+//   const [sourceOrder, setSourceOrder] = useState(null);
+
+//   // The customer chosen in the picker (full record, not a list of all)
+//   const [selectedCustomerRecord, setSelectedCustomerRecord] = useState(null);
+//   const [products, setProducts] = useState([]);
+
+//   const [eligibleOrders, setEligibleOrders] = useState([]);
+//   const [ordersLoading, setOrdersLoading] = useState(false);
+//   const [ordersFailed, setOrdersFailed] = useState(false);
+//   const [ordersReloadKey, setOrdersReloadKey] = useState(0);
+
+//   const [loading, setLoading] = useState(true);
+//   const [loadFailed, setLoadFailed] = useState(false);
+//   const [reloadKey, setReloadKey] = useState(0);
+
+//   const [errors, setErrors] = useState([]);
+//   const [showNotes, setShowNotes] = useState(false);
+
+//   const [savingAction, setSavingAction] = useState("");
+//   const [confirmation, setConfirmation] = useState("");
+
+//   const [uncertainResult, setUncertainResult] = useState(false);
+//   const [savedInvoice, setSavedInvoice] = useState(null);
+
+//   const submitLock = useRef(false);
+//   const alive = useRef(false);
+//   const savedRef = useRef(false);
+//   const initialSnapshot = useRef("");
+
+//   const saving = Boolean(savingAction);
+
+//   const transactionLocked =
+//     loading || loadFailed || saving || uncertainResult || Boolean(savedInvoice);
+
+//   const formDisabled = transactionLocked || viewing || Boolean(confirmation);
+
+//   const orderFieldsLocked = formDisabled || fromOrder;
+
+//   const orderPickerDisabled =
+//     saving || uncertainResult || Boolean(savedInvoice) || Boolean(confirmation);
+
+//   const displayRecord = invoice || sourceOrder;
+//   const fixedLines = viewing || fromOrder;
+
+//   const applyInvoice = useCallback((record) => {
+//     const nextForm = toInvoiceForm(record);
+//     const nextItems = toFormItems(record);
+
+//     setInvoice(record);
+//     setForm(nextForm);
+//     setItems(nextItems);
+//     setShowNotes(Boolean(nextForm.notes));
+
+//     initialSnapshot.current = snapshot(nextForm, nextItems);
+//   }, []);
+
+//   useEffect(() => {
+//     alive.current = true;
+
+//     return () => {
+//       alive.current = false;
+//     };
+//   }, []);
+
+//   /* ==========================================
+//      ELIGIBLE SALES ORDERS (create mode only)
+//      ========================================== */
+
+//   useEffect(() => {
+//     if (!creating) return undefined;
+
+//     let cancelled = false;
+
+//     const loadOrders = async () => {
+//       setOrdersLoading(true);
+//       setOrdersFailed(false);
+
+//       try {
+//         const orderRows = await fetchAllOrders();
+
+//         // Hide orders that already have an active invoice. If the invoice
+//         // list cannot be read, the backend still blocks duplicates.
+//         const invoiced = new Set();
+
+//         try {
+//           const invoiceRows = await loadAllPages(salesInvoiceApi, "invoices");
+
+//           invoiceRows.forEach((row) => {
+//             if (row.status !== "CANCELLED" && row.sourceSalesOrderNumber) {
+//               invoiced.add(String(row.sourceSalesOrderNumber).toUpperCase());
+//             }
+//           });
+//         } catch {
+//           // Ignore: backend validation remains authoritative.
+//         }
+
+//         if (cancelled) return;
+
+//         setEligibleOrders(
+//           orderRows.filter(
+//             (order) =>
+//               order?.orderNumber &&
+//               !order.isDeleted &&
+//               ELIGIBLE_ORDER_STATUSES.includes(order.status) &&
+//               !invoiced.has(String(order.orderNumber).toUpperCase()),
+//           ),
+//         );
+//       } catch (error) {
+//         if (cancelled) return;
+
+//         setEligibleOrders([]);
+//         setOrdersFailed(true);
+//         toast.error(getErrors(error)[0]);
+//       } finally {
+//         if (!cancelled) setOrdersLoading(false);
+//       }
+//     };
+
+//     void loadOrders();
+
+//     return () => {
+//       cancelled = true;
+//     };
+//   }, [creating, ordersReloadKey]);
+
+//   /* ==========================================
+//      MAIN LOAD
+//      ========================================== */
+
+//   useEffect(() => {
+//     let cancelled = false;
+
+//     const load = async () => {
+//       setLoading(true);
+//       setLoadFailed(false);
+//       setErrors([]);
+
+//       try {
+//         if (!["create", "edit", "view"].includes(mode)) {
+//           throw new Error("Invalid invoice page mode.");
+//         }
+
+//         let loadedInvoice = null;
+//         let loadedOrder = null;
+//         let customerRecord = null;
+//         let productRecords = [];
+
+//         if (viewing || editing) {
+//           if (!invoiceNumber) {
+//             throw new Error("Invoice number is missing.");
+//           }
+
+//           const response = await salesInvoiceApi.getByNumber(invoiceNumber);
+
+//           loadedInvoice = extractInvoice(response);
+
+//           if (editing && loadedInvoice.status !== "CREATED") {
+//             throw new Error("Only created sales invoices can be edited.");
+//           }
+
+//           if (editing && loadedInvoice.sourceSalesOrderId) {
+//             throw new Error(
+//               "Order-linked invoices cannot be edited directly. Delete the created invoice and recreate it from the Sales Order.",
+//             );
+//           }
+
+//           if (editing) {
+//             // Only the invoice's own customer is loaded, not every customer.
+//             [customerRecord, productRecords] = await Promise.all([
+//               fetchCustomerByCode(loadedInvoice.customerCode),
+//               loadAllPages(productApi, "products"),
+//             ]);
+//           }
+//         } else if (fromOrder) {
+//           if (typeof salesOrderApi?.getOrder !== "function") {
+//             throw new Error("Configure the Sales Order getOrder API.");
+//           }
+
+//           const response = await salesOrderApi.getOrder(activeOrderNumber);
+
+//           loadedOrder = response?.data?.data;
+
+//           if (
+//             response?.data?.success !== true ||
+//             !loadedOrder?._id ||
+//             !Array.isArray(loadedOrder.items) ||
+//             !loadedOrder.items.length
+//           ) {
+//             throw new Error(
+//               response?.data?.message || "Unable to load the Sales Order.",
+//             );
+//           }
+
+//           if (!ELIGIBLE_ORDER_STATUSES.includes(loadedOrder.status)) {
+//             throw new Error(
+//               "Confirm the Sales Order before creating an invoice.",
+//             );
+//           }
+
+//           if (!Number.isSafeInteger(loadedOrder.__v) || loadedOrder.__v < 0) {
+//             throw new Error(
+//               "Sales Order version is missing. Refresh the order.",
+//             );
+//           }
+//         } else {
+//           // Direct invoice: customers are searched on demand by the picker.
+//           productRecords = await loadAllPages(productApi, "products");
+//         }
+
+//         if (cancelled) return;
+
+//         setSelectedCustomerRecord(customerRecord);
+
+//         setProducts(
+//           productRecords.filter(
+//             (product) => product.status === "ACTIVE" && !product.isDeleted,
+//           ),
+//         );
+
+//         setSourceOrder(loadedOrder);
+
+//         if (loadedInvoice) {
+//           applyInvoice(loadedInvoice);
+
+//           if (loadedInvoice.status === "POSTED") {
+//             setUncertainResult(false);
+//           }
+//         } else {
+//           const today = localDate();
+
+//           const sourceDate = loadedOrder
+//             ? inputDate(loadedOrder.orderDate)
+//             : "";
+
+//           const invoiceDate = sourceDate > today ? sourceDate : today;
+
+//           const nextForm = loadedOrder
+//             ? {
+//                 customerId: String(loadedOrder.customerId),
+//                 invoiceDate,
+//                 dueDate: invoiceDate,
+//                 paymentTerms: loadedOrder.paymentTerms || "Due on Receipt",
+//                 taxMode: loadedOrder.taxMode,
+//                 updateStock: false,
+//                 notes: loadedOrder.notes || "",
+//               }
+//             : initialForm();
+
+//           const nextItems = loadedOrder
+//             ? toFormItems(loadedOrder)
+//             : [newItem()];
+
+//           setInvoice(null);
+//           setForm(nextForm);
+//           setItems(nextItems);
+//           setShowNotes(Boolean(nextForm.notes));
+
+//           initialSnapshot.current = snapshot(nextForm, nextItems);
+//         }
+//       } catch (error) {
+//         if (cancelled) return;
+
+//         const messages = getErrors(error);
+
+//         setErrors(messages);
+//         setLoadFailed(true);
+//         toast.error(messages[0]);
+//       } finally {
+//         if (!cancelled) {
+//           setLoading(false);
+//         }
+//       }
+//     };
+
+//     void load();
+
+//     return () => {
+//       cancelled = true;
+//     };
+//   }, [
+//     mode,
+//     viewing,
+//     editing,
+//     fromOrder,
+//     invoiceNumber,
+//     activeOrderNumber,
+//     reloadKey,
+//     applyInvoice,
+//   ]);
+
+//   const selectedCustomer = useMemo(() => {
+//     if (fixedLines && displayRecord) {
+//       return {
+//         _id: String(displayRecord.customerId),
+//         customerName: displayRecord.customerName,
+//         customerCode: displayRecord.customerCode,
+//         gstNo: displayRecord.customerGstNo,
+//         billingAddress: displayRecord.billingAddress,
+//         shippingAddress: displayRecord.shippingAddress,
+//       };
+//     }
+
+//     if (selectedCustomerRecord) {
+//       return selectedCustomerRecord;
+//     }
+
+//     // Edit mode, customer no longer exists: show the invoice's saved details
+//     if (invoice && form.customerId === String(invoice.customerId)) {
+//       return {
+//         _id: String(invoice.customerId),
+//         customerName: invoice.customerName,
+//         customerCode: invoice.customerCode,
+//         gstNo: invoice.customerGstNo,
+//         billingAddress: invoice.billingAddress,
+//         shippingAddress: invoice.shippingAddress,
+//         status: "UNAVAILABLE",
+//       };
+//     }
+
+//     return null;
+//   }, [
+//     fixedLines,
+//     displayRecord,
+//     selectedCustomerRecord,
+//     invoice,
+//     form.customerId,
+//   ]);
+
+//   // Read-only customer option (view mode / created from a Sales Order)
+//   const fixedCustomerOptions = useMemo(
+//     () =>
+//       selectedCustomer
+//         ? [
+//             {
+//               value: String(selectedCustomer._id),
+//               label:
+//                 `${selectedCustomer.customerName} ` +
+//                 `(${selectedCustomer.customerCode})`,
+//             },
+//           ]
+//         : [],
+//     [selectedCustomer],
+//   );
+
+//   const customerPickerLabel = selectedCustomer
+//     ? `${selectedCustomer.customerName} (${selectedCustomer.customerCode})` +
+//       (selectedCustomer.status && selectedCustomer.status !== "Active"
+//         ? " — unavailable"
+//         : "")
+//     : "";
+
+//   const orderOptions = useMemo(() => {
+//     const options = eligibleOrders.map((order) => ({
+//       value: String(order.orderNumber),
+//       label:
+//         `${order.orderNumber}` +
+//         `${order.customerName ? ` · ${order.customerName}` : ""}` +
+//         `${
+//           Number.isSafeInteger(order.totalAmountPaise)
+//             ? ` · ${formatPaise(order.totalAmountPaise)}`
+//             : ""
+//         }`,
+//     }));
+
+//     // Keep the active order visible even if it is not in the eligible list.
+//     if (
+//       activeOrderNumber &&
+//       !options.some((option) => option.value === activeOrderNumber)
+//     ) {
+//       options.unshift({
+//         value: activeOrderNumber,
+//         label: activeOrderNumber,
+//       });
+//     }
+
+//     return [
+//       { value: NO_ORDER, label: "No Sales Order (direct invoice)" },
+//       ...options,
+//     ];
+//   }, [eligibleOrders, activeOrderNumber]);
+
+//   const productMap = useMemo(
+//     () => new Map(products.map((product) => [String(product._id), product])),
+//     [products],
+//   );
+
+//   const previews = useMemo(
+//     () =>
+//       items.map((item, index) => {
+//         if (fixedLines && displayRecord?.items[index]) {
+//           return {
+//             valid: true,
+//             ...savedTotals(displayRecord.items[index]),
+//           };
+//         }
+
+//         return calculatePreview(item, form.taxMode);
+//       }),
+//     [items, form.taxMode, fixedLines, displayRecord],
+//   );
+
+//   const totals = useMemo(() => {
+//     if (fixedLines && displayRecord) {
+//       return savedTotals(displayRecord);
+//     }
+
+//     return previews.reduce(
+//       (result, preview) => {
+//         const next = { ...result };
+
+//         for (const key of Object.keys(EMPTY_TOTALS)) {
+//           next[key] += preview[key];
+//         }
+
+//         return next;
+//       },
+//       { ...EMPTY_TOTALS },
+//     );
+//   }, [previews, fixedLines, displayRecord]);
+
+//   const isDirty =
+//     !loading &&
+//     !viewing &&
+//     Boolean(initialSnapshot.current) &&
+//     snapshot(form, items) !== initialSnapshot.current;
+
+//   useEffect(() => {
+//     const beforeUnload = (event) => {
+//       if (savedRef.current) return;
+
+//       if (!isDirty && !saving && !uncertainResult) {
+//         return;
+//       }
+
+//       event.preventDefault();
+//       event.returnValue = "";
+//     };
+
+//     window.addEventListener("beforeunload", beforeUnload);
+
+//     return () => {
+//       window.removeEventListener("beforeunload", beforeUnload);
+//     };
+//   }, [isDirty, saving, uncertainResult]);
+
+//   /* ==========================================
+//      SALES ORDER PICKER
+//      ========================================== */
+
+//   const applyOrderSelection = (orderNumber) => {
+//     setActiveOrderNumber(orderNumber);
+//     setSourceOrder(null);
+//     setInvoice(null);
+//     setSelectedCustomerRecord(null);
+//     setErrors([]);
+//     setPendingOrderNumber("");
+//   };
+
+//   const handleOrderChange = (event) => {
+//     if (orderPickerDisabled) return;
+
+//     const value = event.target.value === NO_ORDER ? "" : event.target.value;
+
+//     if (value === activeOrderNumber) return;
+
+//     if (isDirty) {
+//       setPendingOrderNumber(value);
+//       setConfirmation("switch");
+//       return;
+//     }
+
+//     applyOrderSelection(value);
+//   };
+
+//   const handleFieldChange = (event) => {
+//     const { name, value } = event.target;
+
+//     if (formDisabled) return;
+
+//     if (fromOrder && !["invoiceDate", "dueDate"].includes(name)) {
+//       return;
+//     }
+
+//     setForm((previous) => ({
+//       ...previous,
+//       [name]: value,
+//     }));
+
+//     setErrors([]);
+//   };
+
+//   // Called by the customer picker with the chosen option
+//   const handleCustomerSelect = (option) => {
+//     if (formDisabled || fromOrder) return;
+
+//     const customer = option?.data || null;
+
+//     setSelectedCustomerRecord(customer);
+
+//     setForm((previous) => ({
+//       ...previous,
+
+//       customerId: customer ? String(customer._id) : "",
+
+//       paymentTerms: customer?.paymentTerms || "Due on Receipt",
+
+//       dueDate: addDays(previous.invoiceDate, customer?.creditDays || 0),
+//     }));
+
+//     setErrors([]);
+//   };
+
+//   const handleTaxModeChange = (event) => {
+//     if (formDisabled || fromOrder) return;
+
+//     const taxMode = event.target.value;
+
+//     setForm((previous) => ({
+//       ...previous,
+//       taxMode,
+//     }));
+
+//     setItems((previous) =>
+//       previous.map((item) => ({
+//         ...item,
+
+//         gstRate:
+//           taxMode === "NONE"
+//             ? 0
+//             : (productMap.get(item.productId)?.gstRate ?? 0),
+//       })),
+//     );
+
+//     setErrors([]);
+//   };
+
+//   const updateItem = (rowId, field, value) => {
+//     if (formDisabled || fixedLines) return;
+
+//     setItems((previous) =>
+//       previous.map((item) =>
+//         item.rowId === rowId ? { ...item, [field]: value } : item,
+//       ),
+//     );
+
+//     setErrors([]);
+//   };
+
+//   const selectProduct = (rowId, productId) => {
+//     if (formDisabled || fixedLines) return;
+
+//     const product = productMap.get(productId);
+
+//     setItems((previous) =>
+//       previous.map((item) =>
+//         item.rowId === rowId
+//           ? {
+//               ...item,
+//               productId,
+//               unitRate: String(product?.salePrice ?? 0),
+
+//               gstRate: form.taxMode === "NONE" ? 0 : (product?.gstRate ?? 0),
+//             }
+//           : item,
+//       ),
+//     );
+
+//     setErrors([]);
+//   };
+
+//   const validateForm = (action) => {
+//     const messages = [];
+
+//     if (!validDate(form.invoiceDate) || !validDate(form.dueDate)) {
+//       messages.push("Valid invoice and due dates are required.");
+//     } else if (form.dueDate < form.invoiceDate) {
+//       messages.push("Due date cannot be before invoice date.");
+//     }
+
+//     if (fromOrder) {
+//       if (
+//         !sourceOrder?._id ||
+//         !Number.isSafeInteger(sourceOrder.__v) ||
+//         sourceOrder.__v < 0
+//       ) {
+//         messages.push("Reload the Sales Order before creating the invoice.");
+//       }
+
+//       if (sourceOrder && form.invoiceDate < inputDate(sourceOrder.orderDate)) {
+//         messages.push("Invoice date cannot be before the Sales Order date.");
+//       }
+
+//       if (action !== "SAVE_CREATED") {
+//         messages.push("Create the invoice first, then post it separately.");
+//       }
+
+//       return messages;
+//     }
+
+//     if (
+//       !selectedCustomer ||
+//       String(selectedCustomer._id) !== form.customerId ||
+//       selectedCustomer.status !== "Active" ||
+//       selectedCustomer.isDeleted
+//     ) {
+//       messages.push("Select an active customer.");
+//     }
+
+//     if (!form.paymentTerms.trim()) {
+//       messages.push("Payment terms are required.");
+//     }
+
+//     if (
+//       form.paymentTerms.trim().length > 100 ||
+//       form.notes.trim().length > 1000
+//     ) {
+//       messages.push("Payment terms or notes exceed the allowed length.");
+//     }
+
+//     if (!TAX_OPTIONS.some((option) => option.value === form.taxMode)) {
+//       messages.push("Select a valid tax treatment.");
+//     }
+
+//     if (!items.length || items.length > 200) {
+//       messages.push("Add between 1 and 200 items.");
+//     }
+
+//     const ids = items.map((item) => item.productId).filter(Boolean);
+
+//     if (new Set(ids).size !== ids.length) {
+//       messages.push("A product can appear only once in a direct invoice.");
+//     }
+
+//     items.forEach((item, index) => {
+//       if (!productMap.has(item.productId)) {
+//         messages.push(`Select an active product for item ${index + 1}.`);
+//       } else if (!previews[index]?.valid) {
+//         messages.push(
+//           `Check quantity, rate, discount, and GST for item ${index + 1}.`,
+//         );
+//       }
+//     });
+
+//     if (
+//       Object.values(totals).some(
+//         (amount) => !Number.isSafeInteger(amount) || amount < 0,
+//       )
+//     ) {
+//       messages.push("Invoice amounts exceed the supported range.");
+//     }
+
+//     if (action === "SAVE_AND_POST" && totals.total <= 0) {
+//       messages.push("A posted invoice must have a positive total.");
+//     }
+
+//     return messages;
+//   };
+
+//   const saveInvoice = async (action, postingConfirmed = false) => {
+//     if (
+//       transactionLocked ||
+//       viewing ||
+//       submitLock.current ||
+//       savedRef.current ||
+//       (confirmation && !postingConfirmed)
+//     ) {
+//       return;
+//     }
+
+//     const messages = validateForm(action);
+
+//     if (messages.length) {
+//       setErrors(messages);
+//       toast.error(messages[0]);
+//       setConfirmation("");
+//       return;
+//     }
+
+//     if (action === "SAVE_AND_POST" && !postingConfirmed) {
+//       setConfirmation("post");
+//       return;
+//     }
+
+//     submitLock.current = true;
+//     setSavingAction(action);
+//     setErrors([]);
+
+//     let writeStarted = false;
+
+//     try {
+//       let response;
+
+//       if (fromOrder) {
+//         const latestResponse = await salesOrderApi.getOrder(
+//           sourceOrder.orderNumber,
+//         );
+
+//         const latest = latestResponse?.data?.data;
+
+//         if (latestResponse?.data?.success !== true || !latest?._id) {
+//           throw new Error("Unable to verify the Sales Order.");
+//         }
+
+//         if (
+//           latest.__v !== sourceOrder.__v ||
+//           latest.status !== sourceOrder.status
+//         ) {
+//           throw new Error(
+//             "The Sales Order changed. Reload it and review before creating the invoice.",
+//           );
+//         }
+
+//         writeStarted = true;
+
+//         response = await salesInvoiceApi.createFromSalesOrder(
+//           sourceOrder.orderNumber,
+//           {
+//             version: sourceOrder.__v,
+//             invoiceDate: form.invoiceDate,
+//             dueDate: form.dueDate,
+//           },
+//         );
+//       } else {
+//         const payload = {
+//           customerId: form.customerId,
+//           invoiceDate: form.invoiceDate,
+//           dueDate: form.dueDate,
+//           paymentTerms: form.paymentTerms.trim(),
+//           taxMode: form.taxMode,
+//           updateStock: form.updateStock,
+
+//           items: items.map((item) => ({
+//             productId: item.productId,
+//             quantity: Number(item.quantity),
+//             unitRate: Number(item.unitRate),
+//             discountPercent: Number(item.discountPercent),
+
+//             gstRate: form.taxMode === "NONE" ? 0 : Number(item.gstRate),
+//           })),
+
+//           notes: form.notes.trim(),
+//         };
+
+//         writeStarted = true;
+
+//         response = editing
+//           ? await salesInvoiceApi.update(invoiceNumber, payload)
+//           : await salesInvoiceApi.create({
+//               ...payload,
+//               action,
+//             });
+//       }
+
+//       let saved;
+
+//       try {
+//         saved = extractInvoice(response);
+//       } catch (error) {
+//         error.uncertain = true;
+//         throw error;
+//       }
+
+//       savedRef.current = true;
+
+//       if (!alive.current) return;
+
+//       setSavedInvoice(saved);
+//       setConfirmation("");
+
+//       toast.success(
+//         saved.status === "POSTED"
+//           ? `${saved.invoiceNumber} created and posted successfully`
+//           : editing
+//             ? `${saved.invoiceNumber} updated successfully`
+//             : `${saved.invoiceNumber} created successfully`,
+//       );
+
+//       navigate(SALES_PATHS.view(saved.invoiceNumber), { replace: true });
+//     } catch (error) {
+//       if (!alive.current) return;
+
+//       const status = error?.response?.status;
+
+//       if (
+//         !savedRef.current &&
+//         writeStarted &&
+//         (error.uncertain || !status || status >= 500 || status === 408)
+//       ) {
+//         setUncertainResult(true);
+//       }
+
+//       const messages = getErrors(error);
+
+//       setErrors(messages);
+//       setConfirmation("");
+//       toast.error(messages[0]);
+//     } finally {
+//       submitLock.current = false;
+
+//       if (alive.current) {
+//         setSavingAction("");
+//       }
+//     }
+//   };
+
+//   /* ==========================================
+//      POST AN EXISTING CREATED INVOICE
+//      ========================================== */
+
+//   const postExistingInvoice = async () => {
+//     if (
+//       submitLock.current ||
+//       saving ||
+//       uncertainResult ||
+//       !viewing ||
+//       invoice?.status !== "CREATED"
+//     ) {
+//       return;
+//     }
+
+//     const original = invoice;
+
+//     submitLock.current = true;
+//     setSavingAction("POST_EXISTING");
+//     setErrors([]);
+
+//     let postStarted = false;
+
+//     try {
+//       /*
+//        * Check that the invoice being reviewed has not
+//        * changed before sending the posting request.
+//        * Backend validation remains authoritative.
+//        */
+//       const latestResponse = await salesInvoiceApi.getByNumber(
+//         original.invoiceNumber,
+//       );
+
+//       const latest = extractInvoice(latestResponse);
+
+//       if (!alive.current) return;
+
+//       if (latest.status === "POSTED") {
+//         applyInvoice(latest);
+//         setConfirmation("");
+
+//         toast.success(`${latest.invoiceNumber} is already posted.`);
+
+//         return;
+//       }
+
+//       if (latest.status !== "CREATED") {
+//         applyInvoice(latest);
+
+//         throw new Error("This invoice is no longer available for posting.");
+//       }
+
+//       if (latest.__v !== original.__v) {
+//         applyInvoice(latest);
+
+//         throw new Error(
+//           "This invoice changed. Review the refreshed details before posting.",
+//         );
+//       }
+
+//       postStarted = true;
+
+//       const response = await salesInvoiceApi.post(original.invoiceNumber);
+
+//       let posted;
+
+//       try {
+//         posted = extractInvoice(response);
+
+//         if (posted.status !== "POSTED") {
+//           throw new Error("The server did not return a posted invoice.");
+//         }
+//       } catch (error) {
+//         error.uncertain = true;
+//         throw error;
+//       }
+
+//       if (!alive.current) return;
+
+//       applyInvoice(posted);
+//       setConfirmation("");
+//       setUncertainResult(false);
+
+//       toast.success(
+//         response.data.message || `${posted.invoiceNumber} posted successfully`,
+//       );
+//     } catch (error) {
+//       if (!alive.current) return;
+
+//       const status = error?.response?.status;
+
+//       const unknownResult =
+//         postStarted &&
+//         (error.uncertain || !status || status >= 500 || status === 408);
+
+//       setConfirmation("");
+
+//       if (postStarted) {
+//         try {
+//           const response = await salesInvoiceApi.getByNumber(
+//             original.invoiceNumber,
+//           );
+
+//           const latest = extractInvoice(response);
+
+//           if (!alive.current) return;
+
+//           applyInvoice(latest);
+
+//           if (latest.status === "POSTED") {
+//             setErrors([]);
+//             setUncertainResult(false);
+
+//             toast.success(`${latest.invoiceNumber} is posted.`);
+
+//             return;
+//           }
+//         } catch {
+//           // Preserve the original posting error.
+//         }
+//       }
+
+//       if (!alive.current) return;
+
+//       setUncertainResult(Boolean(unknownResult));
+
+//       const messages = getErrors(error);
+
+//       setErrors(messages);
+//       toast.error(messages[0]);
+//     } finally {
+//       submitLock.current = false;
+
+//       if (alive.current) {
+//         setSavingAction("");
+//         setConfirmation("");
+//       }
+//     }
+//   };
+
+//   const exitPage = () => {
+//     if (saving || submitLock.current) {
+//       return;
+//     }
+
+//     if (savedRef.current) {
+//       navigate(SALES_PATHS.list);
+//       return;
+//     }
+
+//     if (isDirty || uncertainResult) {
+//       setConfirmation("exit");
+//       return;
+//     }
+
+//     navigate(SALES_PATHS.list);
+//   };
+
+//   const closeConfirmation = useCallback(() => {
+//     if (submitLock.current) return;
+
+//     setConfirmation("");
+//     setPendingOrderNumber("");
+//   }, []);
+
+//   const handleConfirmation = () => {
+//     if (saving || submitLock.current) return;
+
+//     if (confirmation === "post-existing") {
+//       void postExistingInvoice();
+//       return;
+//     }
+
+//     if (confirmation === "post") {
+//       void saveInvoice("SAVE_AND_POST", true);
+
+//       return;
+//     }
+
+//     if (confirmation === "switch") {
+//       setConfirmation("");
+//       applyOrderSelection(pendingOrderNumber);
+//       return;
+//     }
+
+//     if (confirmation === "exit") {
+//       setConfirmation("");
+//       navigate(SALES_PATHS.list);
+//     }
+//   };
+
+//   /* ==========================================
+//      HEADER / MOBILE ACTIONS
+//      ========================================== */
+
+//   const actionButtons = viewing ? (
+//     invoice?.status === "CREATED" ? (
+//       <>
+//         {!invoice.sourceSalesOrderId && (
+//           <Button
+//             type="button"
+//             variant="secondary"
+//             icon={Save}
+//             disabled={
+//               loading ||
+//               loadFailed ||
+//               saving ||
+//               uncertainResult ||
+//               Boolean(confirmation)
+//             }
+//             onClick={() => navigate(SALES_PATHS.edit(invoice.invoiceNumber))}
+//           >
+//             Edit Invoice
+//           </Button>
+//         )}
+
+//         <Button
+//           type="button"
+//           icon={Send}
+//           disabled={
+//             loading ||
+//             loadFailed ||
+//             saving ||
+//             uncertainResult ||
+//             Boolean(confirmation)
+//           }
+//           loading={savingAction === "POST_EXISTING"}
+//           onClick={() => {
+//             setErrors([]);
+//             setConfirmation("post-existing");
+//           }}
+//         >
+//           Post Invoice
+//         </Button>
+//       </>
+//     ) : null
+//   ) : (
+//     <>
+//       <Button
+//         type="button"
+//         variant="secondary"
+//         icon={Save}
+//         disabled={formDisabled}
+//         loading={savingAction === "SAVE_CREATED"}
+//         onClick={() => void saveInvoice("SAVE_CREATED")}
+//       >
+//         {editing ? "Save Changes" : "Create Invoice"}
+//       </Button>
+
+//       {!editing && !fromOrder && (
+//         <Button
+//           type="button"
+//           icon={Send}
+//           disabled={formDisabled}
+//           loading={savingAction === "SAVE_AND_POST"}
+//           onClick={() => void saveInvoice("SAVE_AND_POST")}
+//         >
+//           Create & Post
+//         </Button>
+//       )}
+//     </>
+//   );
+
+//   const address = selectedCustomer
+//     ? fixedLines
+//       ? selectedCustomer.billingAddress || ""
+//       : [
+//           selectedCustomer.billingAddress,
+//           selectedCustomer.city,
+//           selectedCustomer.state,
+//           selectedCustomer.pincode,
+//           selectedCustomer.country,
+//         ]
+//           .filter((value) => typeof value === "string" && value.trim())
+//           .join(", ")
+//     : "";
+
+//   const sourceNumber =
+//     sourceOrder?.orderNumber || invoice?.sourceSalesOrderNumber || "";
+
+//   const isPostingConfirmation =
+//     confirmation === "post" || confirmation === "post-existing";
+
+//   const isSwitchConfirmation = confirmation === "switch";
+
+//   const postingUpdatesStock =
+//     confirmation === "post-existing"
+//       ? Boolean(invoice?.updateStock)
+//       : Boolean(form.updateStock);
+
+//   const confirmationTitle = isPostingConfirmation
+//     ? "Post sales invoice?"
+//     : isSwitchConfirmation
+//       ? "Change Sales Order?"
+//       : uncertainResult
+//         ? "Check invoice status?"
+//         : "Discard invoice changes?";
+
+//   const confirmationMessage = isPostingConfirmation
+//     ? postingUpdatesStock
+//       ? "This creates accounting entries and deducts inventory-tracked goods. Do not continue if the same goods have already been deducted through a Delivery Note."
+//       : "This creates accounting entries without deducting stock. The invoice becomes Posted and can no longer be edited or deleted."
+//     : isSwitchConfirmation
+//       ? "Your unsaved changes will be replaced by the details of the selected option. Continue?"
+//       : uncertainResult
+//         ? "The previous request may already have completed. Open Sales Invoices and verify the result before trying again."
+//         : "Your unsaved changes will be lost. Leave this page?";
+
+//   const confirmationConfirmText = isPostingConfirmation
+//     ? "Post Invoice"
+//     : isSwitchConfirmation
+//       ? "Change & Replace"
+//       : uncertainResult
+//         ? "Open Invoice List"
+//         : "Discard & Leave";
+
+//   return (
+//     <div className="doc-page">
+//       <form noValidate onSubmit={(event) => event.preventDefault()}>
+//         <header className="doc-header">
+//           <div className="doc-header-left">
+//             <Button
+//               type="button"
+//               variant="secondary"
+//               icon={ArrowLeft}
+//               disabled={saving || Boolean(confirmation)}
+//               onClick={exitPage}
+//             >
+//               Exit
+//             </Button>
+
+//             <div className="doc-title">
+//               <FileText size={18} />
+
+//               <span>
+//                 {viewing
+//                   ? `Sales Invoice ${invoiceNumber}`
+//                   : editing
+//                     ? `Edit Sales Invoice ${invoiceNumber}`
+//                     : fromOrder
+//                       ? `Create Invoice · ${activeOrderNumber}`
+//                       : "Create Sales Invoice"}
+//               </span>
+//             </div>
+//           </div>
+
+//           <div className="doc-header-actions">{actionButtons}</div>
+//         </header>
+
+//         {(loading || errors.length > 0 || uncertainResult || savedInvoice) && (
+//           <div className="doc-alerts">
+//             {loading && (
+//               <div className="doc-alert" role="status">
+//                 {fromOrder
+//                   ? "Loading Sales Order..."
+//                   : viewing
+//                     ? "Loading sales invoice..."
+//                     : "Loading invoice details and options..."}
+//               </div>
+//             )}
+
+//             {errors.length > 0 && (
+//               <div className="doc-alert doc-alert-error" role="alert">
+//                 <strong>Please review the following</strong>
+
+//                 <ul>
+//                   {errors.map((message, index) => (
+//                     <li key={`${index}-${message}`}>{message}</li>
+//                   ))}
+//                 </ul>
+
+//                 {loadFailed && (
+//                   <Button
+//                     type="button"
+//                     variant="secondary"
+//                     disabled={saving}
+//                     onClick={() => setReloadKey((value) => value + 1)}
+//                   >
+//                     Retry Loading
+//                   </Button>
+//                 )}
+
+//                 {fromOrder &&
+//                   !loadFailed &&
+//                   !uncertainResult &&
+//                   !savedInvoice && (
+//                     <Button
+//                       type="button"
+//                       variant="secondary"
+//                       disabled={saving}
+//                       onClick={() => setReloadKey((value) => value + 1)}
+//                     >
+//                       Reload Sales Order
+//                     </Button>
+//                   )}
+//               </div>
+//             )}
+
+//             {uncertainResult && (
+//               <div className="doc-alert" role="alert">
+//                 <p>
+//                   The request result is uncertain. Further submission is locked.
+//                   Check the invoice list before trying again.
+//                 </p>
+
+//                 <Button
+//                   type="button"
+//                   variant="secondary"
+//                   disabled={saving || Boolean(confirmation)}
+//                   onClick={exitPage}
+//                 >
+//                   Check Sales Invoices
+//                 </Button>
+//               </div>
+//             )}
+
+//             {savedInvoice && (
+//               <div className="doc-alert" role="status">
+//                 <p>{savedInvoice.invoiceNumber} was saved successfully.</p>
+
+//                 <Button
+//                   type="button"
+//                   variant="secondary"
+//                   onClick={() =>
+//                     navigate(SALES_PATHS.view(savedInvoice.invoiceNumber), {
+//                       replace: true,
+//                     })
+//                   }
+//                 >
+//                   Open Invoice
+//                 </Button>
+//               </div>
+//             )}
+//           </div>
+//         )}
+
+//         {/* CREATE FROM SALES ORDER */}
+//         {creating && (
+//           <div className="doc-alerts">
+//             <div className="doc-panel">
+//               <h2 className="doc-panel-title">Create From Sales Order</h2>
+
+//               <Select
+//                 label="Sales Order (optional)"
+//                 name="sourceOrder"
+//                 value={activeOrderNumber || NO_ORDER}
+//                 options={orderOptions}
+//                 disabled={orderPickerDisabled}
+//                 onChange={handleOrderChange}
+//               />
+
+//               {ordersLoading && (
+//                 <p className="doc-note" role="status">
+//                   Loading Sales Orders...
+//                 </p>
+//               )}
+
+//               {ordersFailed && !ordersLoading && (
+//                 <p className="doc-note" role="alert">
+//                   Unable to load Sales Orders.{" "}
+//                   <button
+//                     type="button"
+//                     className="doc-link-button"
+//                     onClick={() => setOrdersReloadKey((value) => value + 1)}
+//                   >
+//                     Retry
+//                   </button>
+//                 </p>
+//               )}
+
+//               {!ordersLoading &&
+//                 !ordersFailed &&
+//                 eligibleOrders.length === 0 && (
+//                   <p className="doc-note">
+//                     No confirmed Sales Orders are waiting to be invoiced. You
+//                     can still create a direct invoice.
+//                   </p>
+//                 )}
+
+//               {!fromOrder && !ordersLoading && eligibleOrders.length > 0 && (
+//                 <p className="doc-note">
+//                   Select a Sales Order to fill the customer, items, taxes and
+//                   totals automatically.
+//                 </p>
+//               )}
+
+//               {fromOrder && sourceOrder && (
+//                 <div
+//                   style={{
+//                     display: "flex",
+//                     flexWrap: "wrap",
+//                     alignItems: "center",
+//                     gap: "10px",
+//                     marginTop: "12px",
+//                   }}
+//                 >
+//                   <strong>{sourceOrder.orderNumber}</strong>
+
+//                   <StatusField value={sourceOrder.status} />
+
+//                   <strong>{formatPaise(sourceOrder.totalAmountPaise)}</strong>
+//                 </div>
+//               )}
+//             </div>
+//           </div>
+//         )}
+
+//         {(invoice || sourceNumber) && (
+//           <div className="doc-alerts">
+//             <div className="doc-alert">
+//               {invoice && <StatusField value={invoice.status} />}
+
+//               {invoice?.status === "POSTED" && (
+//                 <>
+//                   {" "}
+//                   <StatusField value={invoice.paymentStatus} />
+//                 </>
+//               )}
+
+//               {viewing && invoice?.status === "CREATED" && (
+//                 <p>
+//                   This invoice is created but not posted. Use Post Invoice to
+//                   create its accounting entry.
+//                 </p>
+//               )}
+//             </div>
+//           </div>
+//         )}
+
+//         <fieldset className="doc-fieldset" disabled={formDisabled}>
+//           <main className="doc-main">
+//             <section className="doc-top">
+//               <div className="doc-panel doc-party-panel">
+//                 <h2 className="doc-panel-title">Bill To</h2>
+
+//                 {fixedLines ? (
+//                   <Select
+//                     label="Customer"
+//                     name="customerId"
+//                     value={form.customerId}
+//                     placeholder="Select customer"
+//                     options={fixedCustomerOptions}
+//                     disabled
+//                     onChange={() => {}}
+//                     required
+//                   />
+//                 ) : (
+//                   <AsyncSearchSelect
+//                     label="Customer"
+//                     name="customerId"
+//                     value={form.customerId}
+//                     selectedLabel={customerPickerLabel}
+//                     placeholder="Search customer by name, code or phone"
+//                     fetchOptions={fetchCustomerOptions}
+//                     limit={CUSTOMER_PICKER_LIMIT}
+//                     disabled={orderFieldsLocked}
+//                     onSelect={handleCustomerSelect}
+//                     emptyMessage="No active customers found"
+//                     required
+//                   />
+//                 )}
+
+//                 {selectedCustomer && (
+//                   <div className="doc-party-card">
+//                     <div className="doc-avatar">
+//                       {selectedCustomer.customerName?.charAt(0).toUpperCase() ||
+//                         "C"}
+//                     </div>
+
+//                     <div className="doc-party-copy">
+//                       <h3>{selectedCustomer.customerName}</h3>
+
+//                       <p>{selectedCustomer.customerCode}</p>
+
+//                       <p>
+//                         <span>Address:</span> {address || "Not provided"}
+//                       </p>
+
+//                       {fixedLines && selectedCustomer.shippingAddress && (
+//                         <p>
+//                           <span>Shipping:</span>{" "}
+//                           {selectedCustomer.shippingAddress}
+//                         </p>
+//                       )}
+
+//                       <p>
+//                         <span>GSTIN:</span>{" "}
+//                         {selectedCustomer.gstNo || "Not provided"}
+//                       </p>
+
+//                       {!fixedLines && (
+//                         <p>
+//                           <span>Phone:</span>{" "}
+//                           {selectedCustomer.phone || "Not provided"}
+//                         </p>
+//                       )}
+//                     </div>
+//                   </div>
+//                 )}
+//               </div>
+
+//               <div className="doc-panel">
+//                 <h2 className="doc-panel-title">Invoice Details</h2>
+
+//                 <div className="doc-fields-grid">
+//                   <Input
+//                     label="Invoice Number"
+//                     name="invoiceNumber"
+//                     value={invoice?.invoiceNumber || "Generated after saving"}
+//                     readOnly
+//                   />
+
+//                   {sourceNumber && (
+//                     <Input
+//                       label="Sales Order"
+//                       name="sourceSalesOrderNumber"
+//                       value={sourceNumber}
+//                       readOnly
+//                     />
+//                   )}
+
+//                   <Input
+//                     label="Invoice Date"
+//                     name="invoiceDate"
+//                     type="date"
+//                     value={form.invoiceDate}
+//                     min={
+//                       fromOrder && sourceOrder
+//                         ? inputDate(sourceOrder.orderDate)
+//                         : undefined
+//                     }
+//                     onChange={handleFieldChange}
+//                     required
+//                   />
+
+//                   <Input
+//                     label="Due Date"
+//                     name="dueDate"
+//                     type="date"
+//                     value={form.dueDate}
+//                     min={form.invoiceDate}
+//                     onChange={handleFieldChange}
+//                     required
+//                   />
+
+//                   <Input
+//                     label="Payment Terms"
+//                     name="paymentTerms"
+//                     value={form.paymentTerms}
+//                     readOnly={fromOrder}
+//                     onChange={handleFieldChange}
+//                     maxLength={100}
+//                     required
+//                   />
+
+//                   <Select
+//                     label="Tax Treatment"
+//                     name="taxMode"
+//                     value={form.taxMode}
+//                     options={TAX_OPTIONS}
+//                     disabled={orderFieldsLocked}
+//                     onChange={handleTaxModeChange}
+//                   />
+//                 </div>
+
+//                 {fromOrder || invoice?.sourceSalesOrderId ? (
+//                   <p className="doc-note">
+//                     This invoice does not deduct stock. Record goods dispatch
+//                     through Delivery Notes.
+//                   </p>
+//                 ) : (
+//                   <label className="doc-check">
+//                     <input
+//                       type="checkbox"
+//                       checked={form.updateStock}
+//                       onChange={(event) => {
+//                         const checked = event.target.checked;
+
+//                         setForm((previous) => ({
+//                           ...previous,
+//                           updateStock: checked,
+//                         }));
+//                       }}
+//                     />
+
+//                     <span>
+//                       Deduct inventory-tracked goods when posting
+//                       <small>
+//                         Do not select this if the same goods have already been
+//                         deducted through a Delivery Note.
+//                       </small>
+//                     </span>
+//                   </label>
+//                 )}
+//               </div>
+//             </section>
+
+//             <section className="doc-items">
+//               <div className="doc-table-wrap">
+//                 <table className="doc-table">
+//                   <thead>
+//                     <tr>
+//                       <th>No</th>
+//                       <th>Items</th>
+//                       <th>HSN / SAC</th>
+//                       <th>Qty</th>
+//                       <th>Price/Item (₹)</th>
+//                       <th>Discount %</th>
+//                       <th>GST</th>
+//                       <th>Amount</th>
+//                       <th>
+//                         <span className="doc-sr-only">Remove</span>
+//                       </th>
+//                     </tr>
+//                   </thead>
+
+//                   <tbody>
+//                     {items.map((item, index) => {
+//                       const savedItem = fixedLines
+//                         ? displayRecord?.items[index]
+//                         : null;
+
+//                       const product = productMap.get(item.productId);
+
+//                       const options = products
+//                         .filter(
+//                           (record) =>
+//                             String(record._id) === item.productId ||
+//                             !items.some(
+//                               (other) => other.productId === String(record._id),
+//                             ),
+//                         )
+//                         .map((record) => ({
+//                           value: String(record._id),
+//                           label: `${record.name} ` + `(${record.productCode})`,
+//                         }));
+
+//                       if (
+//                         !fixedLines &&
+//                         item.productId &&
+//                         !options.some(
+//                           (option) => option.value === item.productId,
+//                         )
+//                       ) {
+//                         const original = invoice?.items.find(
+//                           (record) =>
+//                             String(record.productId) === item.productId,
+//                         );
+
+//                         options.unshift({
+//                           value: item.productId,
+//                           label: original
+//                             ? `${original.productName} (unavailable)`
+//                             : "Unavailable product",
+//                         });
+//                       }
+
+//                       return (
+//                         <tr key={item.rowId}>
+//                           <td data-label="No." className="doc-cell-no">
+//                             {index + 1}
+//                           </td>
+
+//                           <td data-label="Item" className="doc-cell-item">
+//                             {fixedLines ? (
+//                               <div>
+//                                 <strong>{savedItem?.productName}</strong>
+
+//                                 <small className="doc-item-meta">
+//                                   {savedItem?.productCode}
+//                                   {" · "}
+//                                   {savedItem?.unit}
+//                                 </small>
+
+//                                 {savedItem?.specification && (
+//                                   <p className="doc-note">
+//                                     {savedItem.specification}
+//                                   </p>
+//                                 )}
+//                               </div>
+//                             ) : (
+//                               <>
+//                                 <Select
+//                                   name={`product-${item.rowId}`}
+//                                   aria-label={`Product ${index + 1}`}
+//                                   value={item.productId}
+//                                   placeholder="Select product"
+//                                   options={options}
+//                                   onChange={(event) =>
+//                                     selectProduct(
+//                                       item.rowId,
+//                                       event.target.value,
+//                                     )
+//                                   }
+//                                 />
+
+//                                 {product && (
+//                                   <small className="doc-item-meta">
+//                                     {product.unit}
+//                                     {" · "}
+//                                     {product.type}
+//                                     {product.trackInventory
+//                                       ? " · Stock tracked"
+//                                       : ""}
+//                                   </small>
+//                                 )}
+//                               </>
+//                             )}
+//                           </td>
+
+//                           <td data-label="HSN / SAC" className="doc-cell-hsn">
+//                             {savedItem?.hsnSacCode ||
+//                               product?.hsnSacCode ||
+//                               "—"}
+//                           </td>
+
+//                           {NUMBER_COLUMNS.map((column) => (
+//                             <td key={column.field} data-label={column.label}>
+//                               {fixedLines ? (
+//                                 column.field === "unitRate" ? (
+//                                   formatPaise(savedItem?.unitRatePaise)
+//                                 ) : (
+//                                   item[column.field]
+//                                 )
+//                               ) : (
+//                                 <Input
+//                                   name={`${column.field}-${item.rowId}`}
+//                                   aria-label={`${column.label} ${index + 1}`}
+//                                   type="number"
+//                                   inputMode="decimal"
+//                                   min={column.min}
+//                                   max={column.max}
+//                                   step={column.step}
+//                                   value={item[column.field]}
+//                                   onChange={(event) =>
+//                                     updateItem(
+//                                       item.rowId,
+//                                       column.field,
+//                                       event.target.value,
+//                                     )
+//                                   }
+//                                 />
+//                               )}
+//                             </td>
+//                           ))}
+
+//                           <td data-label="GST">
+//                             {fixedLines ? (
+//                               `${item.gstRate}%`
+//                             ) : (
+//                               <Select
+//                                 name={`gst-${item.rowId}`}
+//                                 aria-label={`GST ${index + 1}`}
+//                                 value={item.gstRate}
+//                                 disabled={
+//                                   formDisabled || form.taxMode === "NONE"
+//                                 }
+//                                 options={GST_RATES.map((rate) => ({
+//                                   value: rate,
+//                                   label: `${rate}%`,
+//                                 }))}
+//                                 onChange={(event) =>
+//                                   updateItem(
+//                                     item.rowId,
+//                                     "gstRate",
+//                                     Number(event.target.value),
+//                                   )
+//                                 }
+//                               />
+//                             )}
+//                           </td>
+
+//                           <td data-label="Amount" className="doc-cell-amount">
+//                             {previews[index]?.valid
+//                               ? formatPaise(previews[index].total)
+//                               : "—"}
+//                           </td>
+
+//                           <td data-label="Remove" className="doc-cell-action">
+//                             {!fixedLines && (
+//                               <button
+//                                 type="button"
+//                                 className="doc-remove-button"
+//                                 aria-label={`Remove item ${index + 1}`}
+//                                 disabled={items.length === 1}
+//                                 onClick={() => {
+//                                   setItems((previous) =>
+//                                     previous.filter(
+//                                       (record) => record.rowId !== item.rowId,
+//                                     ),
+//                                   );
+
+//                                   setErrors([]);
+//                                 }}
+//                               >
+//                                 <Trash2 size={16} />
+//                               </button>
+//                             )}
+//                           </td>
+//                         </tr>
+//                       );
+//                     })}
+//                   </tbody>
+
+//                   <tfoot>
+//                     <tr>
+//                       <td colSpan={5} className="doc-subtotal-label">
+//                         Subtotal
+//                       </td>
+
+//                       <td className="doc-subtotal-value">
+//                         {formatPaise(totals.discount)}
+//                       </td>
+
+//                       <td className="doc-subtotal-value">
+//                         {formatPaise(totals.cgst + totals.sgst + totals.igst)}
+//                       </td>
+
+//                       <td className="doc-subtotal-value">
+//                         {formatPaise(totals.total)}
+//                       </td>
+
+//                       <td />
+//                     </tr>
+//                   </tfoot>
+//                 </table>
+//               </div>
+
+//               {!fixedLines && (
+//                 <div className="doc-add-item-row">
+//                   <button
+//                     type="button"
+//                     className="doc-dashed-line"
+//                     disabled={items.length >= 200}
+//                     onClick={() => {
+//                       setItems((previous) => [...previous, newItem()]);
+
+//                       setErrors([]);
+//                     }}
+//                   >
+//                     <Plus size={15} />
+//                     Add Item
+//                   </button>
+//                 </div>
+//               )}
+//             </section>
+
+//             <section className="doc-bottom">
+//               <div className="doc-extras">
+//                 {fixedLines ? (
+//                   <div className="doc-panel">
+//                     <h2 className="doc-panel-title">Notes</h2>
+
+//                     <p style={{ whiteSpace: "pre-wrap" }}>
+//                       {form.notes || "No notes added."}
+//                     </p>
+
+//                     {displayRecord?.deliveryTerms && (
+//                       <>
+//                         <h3>Delivery Terms</h3>
+
+//                         <p style={{ whiteSpace: "pre-wrap" }}>
+//                           {displayRecord.deliveryTerms}
+//                         </p>
+//                       </>
+//                     )}
+
+//                     {displayRecord?.termsAndConditions && (
+//                       <>
+//                         <h3>Terms and Conditions</h3>
+
+//                         <p style={{ whiteSpace: "pre-wrap" }}>
+//                           {displayRecord.termsAndConditions}
+//                         </p>
+//                       </>
+//                     )}
+//                   </div>
+//                 ) : (
+//                   <>
+//                     <button
+//                       type="button"
+//                       className={`doc-extra-row ${showNotes ? "is-open" : ""}`}
+//                       aria-expanded={showNotes}
+//                       onClick={() => setShowNotes((previous) => !previous)}
+//                     >
+//                       <StickyNote size={16} />
+//                       <span>Add Notes</span>
+//                       <ChevronDown size={16} />
+//                     </button>
+
+//                     {showNotes && (
+//                       <div className="doc-extra-content">
+//                         <Textarea
+//                           name="notes"
+//                           value={form.notes}
+//                           onChange={handleFieldChange}
+//                           maxLength={1000}
+//                           rows={4}
+//                           placeholder="Customer instructions or sales notes..."
+//                         />
+//                       </div>
+//                     )}
+//                   </>
+//                 )}
+
+//                 <p className="doc-note">
+//                   Payments are recorded separately through Customer Receipts.
+//                   Creating or posting an invoice does not mark it as paid.
+//                 </p>
+
+//                 {(fromOrder || editing) && (
+//                   <p className="doc-note">
+//                     Save the invoice with status Created, then open it and click
+//                     Post Invoice.
+//                   </p>
+//                 )}
+//               </div>
+
+//               <div className="doc-summary">
+//                 {[
+//                   ["Gross Amount", totals.gross],
+//                   ["Line Discounts", -totals.discount],
+//                   ["Taxable Amount", totals.taxable],
+
+//                   ...(form.taxMode === "INTRA_STATE"
+//                     ? [
+//                         ["CGST", totals.cgst],
+//                         ["SGST", totals.sgst],
+//                       ]
+//                     : []),
+
+//                   ...(form.taxMode === "INTER_STATE"
+//                     ? [["IGST", totals.igst]]
+//                     : []),
+//                 ].map(([label, amount]) => (
+//                   <div className="doc-summary-row" key={label}>
+//                     <span>{label}</span>
+
+//                     <strong>{formatPaise(amount)}</strong>
+//                   </div>
+//                 ))}
+
+//                 <div className="doc-summary-total">
+//                   <span>Total Amount:</span>
+
+//                   <strong>{formatPaise(totals.total)}</strong>
+//                 </div>
+
+//                 {viewing && invoice?.status === "POSTED" && (
+//                   <>
+//                     <div className="doc-summary-row">
+//                       <span>Paid Amount</span>
+
+//                       <strong>{formatPaise(invoice.paidAmountPaise)}</strong>
+//                     </div>
+
+//                     <div className="doc-summary-row">
+//                       <span>Outstanding Amount</span>
+
+//                       <strong>
+//                         {formatPaise(invoice.outstandingAmountPaise)}
+//                       </strong>
+//                     </div>
+//                   </>
+//                 )}
+
+//                 <p className="doc-note">
+//                   {viewing
+//                     ? "Amounts shown are the saved invoice totals."
+//                     : fromOrder
+//                       ? "Amounts come from the saved Sales Order. The backend verifies them before creating the invoice."
+//                       : "Preview only. The server calculates final totals."}
+//                 </p>
+//               </div>
+//             </section>
+//           </main>
+//         </fieldset>
+
+//         {viewing && invoice && (
+//           <EwayBillPanel
+//             invoice={invoice}
+//             disabled={saving || uncertainResult || Boolean(confirmation)}
+//             onUpdated={applyInvoice}
+//           />
+//         )}
+
+//         <div className="doc-mobile-bar">
+//           <div className="doc-mobile-total">
+//             <span>Total</span>
+
+//             <strong>{formatPaise(totals.total)}</strong>
+//           </div>
+
+//           <div className="doc-mobile-actions">{actionButtons}</div>
+//         </div>
+//       </form>
+
+//       <ConfirmModal
+//         open={Boolean(confirmation)}
+//         type={isPostingConfirmation ? "info" : "warning"}
+//         icon={isPostingConfirmation ? Send : undefined}
+//         title={confirmationTitle}
+//         message={confirmationMessage}
+//         confirmText={confirmationConfirmText}
+//         cancelText={isPostingConfirmation ? "Back" : "Stay on Page"}
+//         loading={saving}
+//         closeOnBackdrop={!saving}
+//         closeOnEscape={!saving}
+//         onCancel={closeConfirmation}
+//         onConfirm={handleConfirmation}
+//       />
+//     </div>
+//   );
+// }
+
+// export default function SalesInvoiceCreate({ mode = "create" }) {
+//   const params = useParams();
+//   const [searchParams] = useSearchParams();
+
+//   const tenantRevision = useTenantRevision();
+
+//   const invoiceNumber = params.invoiceNumber || params.id || "";
+
+//   const sourceOrderNumber =
+//     mode === "create" ? (searchParams.get("orderNumber") || "").trim() : "";
+
+//   return (
+//     <SalesInvoiceForm
+//       key={
+//         `${tenantRevision}-` +
+//         `${mode}-` +
+//         `${invoiceNumber}-` +
+//         sourceOrderNumber
+//       }
+//       mode={mode}
+//       invoiceNumber={invoiceNumber}
+//       sourceOrderNumber={sourceOrderNumber}
+//     />
+//   );
+// }
+
+
+
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
+import {
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 
 import {
   ArrowLeft,
@@ -17,15 +2278,19 @@ import toast from "react-hot-toast";
 
 import ConfirmModal from "../../../components/common/ConfirmModal/ConfirmModal";
 
-import api from "../../../services/api";
-import salesInvoiceApi from "../../../services/modules/salesInvoiceApi";
+import EntitySearchPicker from "../../../components/common/EntitySearchPicker/EntitySearchPicker";
+import useKeyboardOpen from "../../../hooks/useKeyboardOpen";
 
 import Input from "../../../components/common/Form/Input";
-import Select from "../../../components/common/Form/Select";
 import Textarea from "../../../components/common/Form/Textarea";
 import Button from "../../../components/common/Form/Button";
 import StatusField from "../../../components/common/StatusField/StatusField";
+
+import api from "../../../services/api";
+import salesInvoiceApi from "../../../services/modules/salesInvoiceApi";
+
 import EwayBillPanel from "./EwayBillPanel";
+
 import {
   SALES_PATHS,
   GST_RATES,
@@ -33,28 +2298,31 @@ import {
   EMPTY_TOTALS,
   addDays,
   calculatePreview,
-  formatDate,
   formatPaise,
   getErrors,
   inputDate,
   itemSnapshot,
-  loadAllPages,
   localDate,
   useTenantRevision,
 } from "./salesInvoiceUtils";
 
 import "../../../styles/invoice-common1.css";
-import AsyncSearchSelect from "../../../components/common/Search/AsyncSearchSelect";
+
+/* ------------------------------------------------------------------ */
+/* API references                                                      */
+/* ------------------------------------------------------------------ */
 
 const customerApi = api.customers || api.customer;
 const productApi = api.products || api.product;
 const salesOrderApi = api.salesOrder || api.salesOrders;
 
-const ELIGIBLE_ORDER_STATUSES = ["CONFIRMED", "IN_PROGRESS", "COMPLETED"];
+const ELIGIBLE_ORDER_STATUSES = [
+  "CONFIRMED",
+  "IN_PROGRESS",
+  "COMPLETED",
+];
 
 const NO_ORDER = "__NO_ORDER__";
-
-const CUSTOMER_PICKER_LIMIT = 20;
 
 const NUMBER_COLUMNS = [
   {
@@ -80,11 +2348,59 @@ const NUMBER_COLUMNS = [
   },
 ];
 
+/* ------------------------------------------------------------------ */
+/* Helpers                                                             */
+/* ------------------------------------------------------------------ */
+
+const normalizeId = (value) => {
+  if (!value) return "";
+
+  if (typeof value === "object") {
+    return String(value._id || value.id || "");
+  }
+
+  return String(value);
+};
+
+const errorMessages = (error) => {
+  const messages = getErrors(error);
+
+  return Array.isArray(messages) && messages.length
+    ? messages
+    : [
+        error?.message ||
+          "Unable to complete the request.",
+      ];
+};
+
+const validDate = (value) => {
+  if (
+    typeof value !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(value)
+  ) {
+    return false;
+  }
+
+  const date = new Date(
+    `${value}T00:00:00.000Z`,
+  );
+
+  return (
+    !Number.isNaN(date.getTime()) &&
+    date.toISOString().slice(0, 10) === value
+  );
+};
+
 let rowCounter = 0;
 
 const newItem = () => ({
   rowId: `sales-item-${++rowCounter}`,
   productId: "",
+  productName: "",
+  productCode: "",
+  productType: "",
+  unit: "",
+  hsnSacCode: "",
   quantity: "1",
   unitRate: "0",
   discountPercent: "0",
@@ -103,18 +2419,6 @@ const initialForm = () => {
     updateStock: false,
     notes: "",
   };
-};
-
-const validDate = (value) => {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return false;
-  }
-
-  const date = new Date(`${value}T00:00:00.000Z`);
-
-  return (
-    !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
-  );
 };
 
 const snapshot = (form, items) =>
@@ -136,18 +2440,28 @@ const savedTotals = (record) => ({
 const toFormItems = (record) =>
   record.items.map((item) => ({
     ...newItem(),
-    productId: String(item.productId),
+    productId: normalizeId(item.productId),
+    productName: item.productName || "",
+    productCode: item.productCode || "",
+    productType: item.productType || "",
+    unit: item.unit || "",
+    hsnSacCode: item.hsnSacCode || "",
     quantity: String(item.quantity),
-    unitRate: String(item.unitRatePaise / 100),
-    discountPercent: String(item.discountPercent),
-    gstRate: item.gstRate,
+    unitRate: String(
+      (item.unitRatePaise ?? 0) / 100,
+    ),
+    discountPercent: String(
+      item.discountPercent ?? 0,
+    ),
+    gstRate: item.gstRate ?? 0,
   }));
 
 const toInvoiceForm = (record) => ({
-  customerId: String(record.customerId),
+  customerId: normalizeId(record.customerId),
   invoiceDate: inputDate(record.invoiceDate),
   dueDate: inputDate(record.dueDate),
-  paymentTerms: record.paymentTerms || "Due on Receipt",
+  paymentTerms:
+    record.paymentTerms || "Due on Receipt",
   taxMode: record.taxMode,
   updateStock: Boolean(record.updateStock),
   notes: record.notes || "",
@@ -163,78 +2477,301 @@ const extractInvoice = (response) => {
     !Array.isArray(record.items)
   ) {
     throw new Error(
-      response?.data?.message || "The server did not return a valid invoice.",
+      response?.data?.message ||
+        "The server did not return a valid invoice.",
     );
   }
 
   return record;
 };
 
-/* ==========================================
-   CUSTOMER SEARCH HELPERS
-   ========================================== */
-
-// List endpoints return slightly different shapes between modules
-const extractList = (response) => {
+const parsePickerPage = (response, key) => {
   const body = response?.data;
 
-  if (Array.isArray(body?.data)) return body.data;
-  if (Array.isArray(body?.customers)) return body.customers;
-  if (Array.isArray(body)) return body;
-
-  return [];
-};
-
-/*
- * Server-side customer search used by the picker. Only one small page of
- * active customers is requested each time, so it stays fast with any number
- * of customers. Module-level so its identity never changes.
- */
-const fetchCustomerOptions = async (query) => {
-  if (typeof customerApi?.getAll !== "function") {
-    throw new Error("Configure the customers getAll API.");
+  if (body?.success === false) {
+    throw new Error(
+      body.message ||
+        `Unable to load ${key}.`,
+    );
   }
 
-  const params = {
-    page: 1,
-    limit: CUSTOMER_PICKER_LIMIT,
-    status: "Active",
-    sortBy: "customerName",
-    sortOrder: "asc",
+  const data = Array.isArray(body?.data)
+    ? body.data
+    : Array.isArray(body?.data?.[key])
+      ? body.data[key]
+      : Array.isArray(body?.[key])
+        ? body[key]
+        : null;
+
+  if (!data) {
+    throw new Error(
+      `Invalid ${key} list response.`,
+    );
+  }
+
+  const pagination =
+    body?.pagination || body?.data?.pagination;
+
+  const rawTotal =
+    pagination?.total ??
+    pagination?.totalRecords ??
+    pagination?.totalItems;
+
+  if (
+    rawTotal === undefined ||
+    rawTotal === null ||
+    !Number.isFinite(Number(rawTotal)) ||
+    Number(rawTotal) < 0
+  ) {
+    throw new Error(
+      `The ${key} endpoint must return pagination.total.`,
+    );
+  }
+
+  return {
+    data,
+    total: Number(rawTotal),
   };
-
-  if (query) {
-    params.search = query;
-  }
-
-  const response = await customerApi.getAll(params);
-
-  return extractList(response)
-    .filter(
-      (customer) =>
-        customer?._id && !customer.isDeleted && customer.status === "Active",
-    )
-    .map((customer) => ({
-      value: String(customer._id),
-      label: `${customer.customerName} (${customer.customerCode})`,
-      sublabel: [customer.city, customer.phone].filter(Boolean).join(" · "),
-      data: customer,
-    }));
 };
 
-// Loads one customer (edit mode). A missing customer returns null.
-const fetchCustomerByCode = async (customerCode) => {
-  if (typeof customerApi?.getByCode !== "function") {
-    throw new Error("Configure the customers getByCode API.");
+/* ------------------------------------------------------------------ */
+/* Remote EntitySearchPicker callbacks                                 */
+/* ------------------------------------------------------------------ */
+
+const fetchCustomerOptions = async ({
+  search,
+  page,
+  limit,
+}) => {
+  if (
+    typeof customerApi?.getAll !== "function"
+  ) {
+    throw new Error(
+      "Configure the customer getAll API.",
+    );
+  }
+
+  const response = await customerApi.getAll({
+    search,
+    page,
+    limit,
+    status: "Active",
+  });
+
+  return parsePickerPage(
+    response,
+    "customers",
+  );
+};
+
+const fetchProductOptions = async ({
+  search,
+  page,
+  limit,
+}) => {
+  if (
+    typeof productApi?.getAll !== "function"
+  ) {
+    throw new Error(
+      "Configure the product getAll API.",
+    );
+  }
+
+  const response = await productApi.getAll({
+    search,
+    page,
+    limit,
+    status: "ACTIVE",
+  });
+
+  return parsePickerPage(
+    response,
+    "products",
+  );
+};
+
+const fetchOrderOptions = async ({
+  search,
+  page,
+  limit,
+}) => {
+  if (
+    typeof salesOrderApi?.getOrders !== "function"
+  ) {
+    throw new Error(
+      "Configure the Sales Order getOrders API.",
+    );
+  }
+
+  const response = await salesOrderApi.getOrders({
+    search,
+    page,
+    limit,
+  });
+
+  const result = parsePickerPage(
+    response,
+    "orders",
+  );
+
+  return {
+    data:
+      page === 1
+        ? [
+            {
+              orderNumber: NO_ORDER,
+              directOption: true,
+            },
+            ...result.data,
+          ]
+        : result.data,
+
+    // The direct-invoice shortcut is not an order.
+    total: Math.max(1, result.total),
+  };
+};
+
+const getCustomerId = (record) =>
+  normalizeId(record);
+
+const getCustomerLabel = (record) =>
+  record.customerName ||
+  record.customerCode ||
+  "Customer";
+
+const getCustomerSubtitle = (record) =>
+  [
+    record.customerCode,
+    record.city,
+    record.phone,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+const getProductId = (record) =>
+  normalizeId(record);
+
+const getProductLabel = (record) =>
+  record.name ||
+  record.productCode ||
+  "Product";
+
+const getProductSubtitle = (record) =>
+  [
+    record.productCode,
+    record.type,
+    record.unit,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+const getOrderId = (record) =>
+  record.orderNumber;
+
+const getOrderLabel = (record) =>
+  record.directOption
+    ? "No Sales Order (direct invoice)"
+    : record.orderNumber;
+
+const getOrderSubtitle = (record) =>
+  record.directOption
+    ? "Enter the customer and items manually"
+    : [
+        record.customerName,
+        record.status,
+        Number.isSafeInteger(
+          record.totalAmountPaise,
+        )
+          ? formatPaise(
+              record.totalAmountPaise,
+            )
+          : "",
+        record.invoiceNumber
+          ? `Invoice: ${record.invoiceNumber}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" · ");
+
+/* ------------------------------------------------------------------ */
+/* Local options — still use your existing EntitySearchPicker           */
+/* ------------------------------------------------------------------ */
+
+const localOptionId = (option) =>
+  String(option.value);
+
+const localOptionLabel = (option) =>
+  option.label;
+
+const fetchLocalOptions = (
+  options,
+  { search = "", page = 1, limit = 20 },
+) => {
+  const query = search.trim().toLowerCase();
+
+  const matching = options.filter(
+    (option) =>
+      !query ||
+      String(option.label)
+        .toLowerCase()
+        .includes(query),
+  );
+
+  const start = (page - 1) * limit;
+
+  return {
+    data: matching.slice(
+      start,
+      start + limit,
+    ),
+    total: matching.length,
+  };
+};
+
+const fetchTaxOptions = async (params) =>
+  fetchLocalOptions(TAX_OPTIONS, params);
+
+const GST_PICKER_OPTIONS = GST_RATES.map(
+  (rate) => ({
+    value: rate,
+    label: `${rate}%`,
+  }),
+);
+
+const fetchGstOptions = async (params) =>
+  fetchLocalOptions(
+    GST_PICKER_OPTIONS,
+    params,
+  );
+
+/* ------------------------------------------------------------------ */
+/* Load only selected master records in edit mode                       */
+/* ------------------------------------------------------------------ */
+
+const fetchCustomerByCode = async (
+  customerCode,
+) => {
+  if (
+    !customerCode ||
+    typeof customerApi?.getByCode !== "function"
+  ) {
+    return null;
   }
 
   try {
-    const response = await customerApi.getByCode(customerCode);
+    const response =
+      await customerApi.getByCode(
+        customerCode,
+      );
 
     return (
       response?.data?.customer ||
       response?.data?.data ||
-      (response?.data?._id ? response.data : null)
+      (
+        response?.data?._id
+          ? response.data
+          : null
+      )
     );
   } catch (error) {
     if (error?.response?.status === 404) {
@@ -245,39 +2782,65 @@ const fetchCustomerByCode = async (customerCode) => {
   }
 };
 
-/*
- * Loads every Sales Order header page by page. The response shape is read
- * defensively because list endpoints differ between modules.
- */
-const fetchAllOrders = async () => {
-  if (typeof salesOrderApi?.getOrders !== "function") {
-    throw new Error("Configure the Sales Order getOrders API.");
+const fetchSelectedProducts = async (
+  productIds,
+) => {
+  const ids = [
+    ...new Set(
+      productIds
+        .map(normalizeId)
+        .filter(Boolean),
+    ),
+  ];
+
+  const found = new Map();
+
+  for (
+    let start = 0;
+    start < ids.length;
+    start += 100
+  ) {
+    const chunk = ids.slice(
+      start,
+      start + 100,
+    );
+
+    const requested = new Set(chunk);
+
+    try {
+      const response =
+        await productApi.getAll({
+          ids: chunk.join(","),
+          page: 1,
+          limit: 100,
+        });
+
+      const { data } = parsePickerPage(
+        response,
+        "products",
+      );
+
+      for (const product of data) {
+        const id = normalizeId(product);
+
+        if (requested.has(id)) {
+          found.set(id, product);
+        }
+      }
+    } catch (error) {
+      console.warn(
+        "Selected-product lookup failed. Saved snapshots are preserved.",
+        error,
+      );
+    }
   }
 
-  const rows = [];
-  let page = 1;
-  let totalPages = 1;
-
-  do {
-    const response = await salesOrderApi.getOrders({ page, limit: 100 });
-    const body = response?.data;
-
-    const batch = Array.isArray(body?.data)
-      ? body.data
-      : Array.isArray(body?.orders)
-        ? body.orders
-        : Array.isArray(body)
-          ? body
-          : [];
-
-    rows.push(...batch);
-
-    totalPages = Number(body?.pagination?.totalPages) || 1;
-    page += 1;
-  } while (page <= totalPages && page <= 50);
-
-  return rows;
+  return Array.from(found.values());
 };
+
+/* ------------------------------------------------------------------ */
+/* Main form                                                           */
+/* ------------------------------------------------------------------ */
 
 function SalesInvoiceForm({
   mode,
@@ -285,45 +2848,79 @@ function SalesInvoiceForm({
   sourceOrderNumber: initialOrderNumber,
 }) {
   const navigate = useNavigate();
+  const keyboardOpen = useKeyboardOpen();
 
   const viewing = mode === "view";
   const editing = mode === "edit";
   const creating = mode === "create";
 
-  const [activeOrderNumber, setActiveOrderNumber] = useState(
-    creating ? initialOrderNumber : "",
+  const [
+    activeOrderNumber,
+    setActiveOrderNumber,
+  ] = useState(
+    creating
+      ? initialOrderNumber || ""
+      : "",
   );
-  const [pendingOrderNumber, setPendingOrderNumber] = useState("");
 
-  const fromOrder = creating && Boolean(activeOrderNumber);
+  const [
+    pendingOrderNumber,
+    setPendingOrderNumber,
+  ] = useState("");
 
-  const [form, setForm] = useState(initialForm);
-  const [items, setItems] = useState(() => [newItem()]);
+  const fromOrder =
+    creating &&
+    Boolean(activeOrderNumber);
 
-  const [invoice, setInvoice] = useState(null);
-  const [sourceOrder, setSourceOrder] = useState(null);
+  const [form, setForm] =
+    useState(initialForm);
 
-  // The customer chosen in the picker (full record, not a list of all)
-  const [selectedCustomerRecord, setSelectedCustomerRecord] = useState(null);
-  const [products, setProducts] = useState([]);
+  const [items, setItems] = useState(
+    () => [newItem()],
+  );
 
-  const [eligibleOrders, setEligibleOrders] = useState([]);
-  const [ordersLoading, setOrdersLoading] = useState(false);
-  const [ordersFailed, setOrdersFailed] = useState(false);
-  const [ordersReloadKey, setOrdersReloadKey] = useState(0);
+  const [invoice, setInvoice] =
+    useState(null);
 
-  const [loading, setLoading] = useState(true);
-  const [loadFailed, setLoadFailed] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
+  const [sourceOrder, setSourceOrder] =
+    useState(null);
 
-  const [errors, setErrors] = useState([]);
-  const [showNotes, setShowNotes] = useState(false);
+  const [
+    selectedCustomerRecord,
+    setSelectedCustomerRecord,
+  ] = useState(null);
 
-  const [savingAction, setSavingAction] = useState("");
-  const [confirmation, setConfirmation] = useState("");
+  const [products, setProducts] =
+    useState([]);
 
-  const [uncertainResult, setUncertainResult] = useState(false);
-  const [savedInvoice, setSavedInvoice] = useState(null);
+  const [loading, setLoading] =
+    useState(true);
+
+  const [loadFailed, setLoadFailed] =
+    useState(false);
+
+  const [reloadKey, setReloadKey] =
+    useState(0);
+
+  const [errors, setErrors] =
+    useState([]);
+
+  const [showNotes, setShowNotes] =
+    useState(false);
+
+  const [savingAction, setSavingAction] =
+    useState("");
+
+  const [confirmation, setConfirmation] =
+    useState("");
+
+  const [
+    uncertainResult,
+    setUncertainResult,
+  ] = useState(false);
+
+  const [savedInvoice, setSavedInvoice] =
+    useState(null);
 
   const submitLock = useRef(false);
   const alive = useRef(false);
@@ -333,29 +2930,55 @@ function SalesInvoiceForm({
   const saving = Boolean(savingAction);
 
   const transactionLocked =
-    loading || loadFailed || saving || uncertainResult || Boolean(savedInvoice);
+    loading ||
+    loadFailed ||
+    saving ||
+    uncertainResult ||
+    Boolean(savedInvoice);
 
-  const formDisabled = transactionLocked || viewing || Boolean(confirmation);
+  const formDisabled =
+    transactionLocked ||
+    viewing ||
+    Boolean(confirmation);
 
-  const orderFieldsLocked = formDisabled || fromOrder;
+  const orderFieldsLocked =
+    formDisabled || fromOrder;
 
   const orderPickerDisabled =
-    saving || uncertainResult || Boolean(savedInvoice) || Boolean(confirmation);
+    saving ||
+    uncertainResult ||
+    Boolean(savedInvoice) ||
+    Boolean(confirmation);
 
-  const displayRecord = invoice || sourceOrder;
-  const fixedLines = viewing || fromOrder;
+  const displayRecord =
+    invoice || sourceOrder;
 
-  const applyInvoice = useCallback((record) => {
-    const nextForm = toInvoiceForm(record);
-    const nextItems = toFormItems(record);
+  const fixedLines =
+    viewing || fromOrder;
 
-    setInvoice(record);
-    setForm(nextForm);
-    setItems(nextItems);
-    setShowNotes(Boolean(nextForm.notes));
+  const applyInvoice = useCallback(
+    (record) => {
+      const nextForm =
+        toInvoiceForm(record);
 
-    initialSnapshot.current = snapshot(nextForm, nextItems);
-  }, []);
+      const nextItems =
+        toFormItems(record);
+
+      setInvoice(record);
+      setForm(nextForm);
+      setItems(nextItems);
+      setShowNotes(
+        Boolean(nextForm.notes),
+      );
+
+      initialSnapshot.current =
+        snapshot(
+          nextForm,
+          nextItems,
+        );
+    },
+    [],
+  );
 
   useEffect(() => {
     alive.current = true;
@@ -365,70 +2988,9 @@ function SalesInvoiceForm({
     };
   }, []);
 
-  /* ==========================================
-     ELIGIBLE SALES ORDERS (create mode only)
-     ========================================== */
-
-  useEffect(() => {
-    if (!creating) return undefined;
-
-    let cancelled = false;
-
-    const loadOrders = async () => {
-      setOrdersLoading(true);
-      setOrdersFailed(false);
-
-      try {
-        const orderRows = await fetchAllOrders();
-
-        // Hide orders that already have an active invoice. If the invoice
-        // list cannot be read, the backend still blocks duplicates.
-        const invoiced = new Set();
-
-        try {
-          const invoiceRows = await loadAllPages(salesInvoiceApi, "invoices");
-
-          invoiceRows.forEach((row) => {
-            if (row.status !== "CANCELLED" && row.sourceSalesOrderNumber) {
-              invoiced.add(String(row.sourceSalesOrderNumber).toUpperCase());
-            }
-          });
-        } catch {
-          // Ignore: backend validation remains authoritative.
-        }
-
-        if (cancelled) return;
-
-        setEligibleOrders(
-          orderRows.filter(
-            (order) =>
-              order?.orderNumber &&
-              !order.isDeleted &&
-              ELIGIBLE_ORDER_STATUSES.includes(order.status) &&
-              !invoiced.has(String(order.orderNumber).toUpperCase()),
-          ),
-        );
-      } catch (error) {
-        if (cancelled) return;
-
-        setEligibleOrders([]);
-        setOrdersFailed(true);
-        toast.error(getErrors(error)[0]);
-      } finally {
-        if (!cancelled) setOrdersLoading(false);
-      }
-    };
-
-    void loadOrders();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [creating, ordersReloadKey]);
-
-  /* ==========================================
-     MAIN LOAD
-     ========================================== */
+  /* ---------------------------------------------------------------- */
+  /* Load invoice/order only — no full master-list loading              */
+  /* ---------------------------------------------------------------- */
 
   useEffect(() => {
     let cancelled = false;
@@ -439,8 +3001,14 @@ function SalesInvoiceForm({
       setErrors([]);
 
       try {
-        if (!["create", "edit", "view"].includes(mode)) {
-          throw new Error("Invalid invoice page mode.");
+        if (
+          !["create", "edit", "view"].includes(
+            mode,
+          )
+        ) {
+          throw new Error(
+            "Invalid invoice page mode.",
+          );
         }
 
         let loadedInvoice = null;
@@ -450,73 +3018,124 @@ function SalesInvoiceForm({
 
         if (viewing || editing) {
           if (!invoiceNumber) {
-            throw new Error("Invoice number is missing.");
+            throw new Error(
+              "Invoice number is missing.",
+            );
           }
 
-          const response = await salesInvoiceApi.getByNumber(invoiceNumber);
+          const response =
+            await salesInvoiceApi.getByNumber(
+              invoiceNumber,
+            );
 
-          loadedInvoice = extractInvoice(response);
+          loadedInvoice =
+            extractInvoice(response);
 
-          if (editing && loadedInvoice.status !== "CREATED") {
-            throw new Error("Only created sales invoices can be edited.");
+          if (
+            editing &&
+            loadedInvoice.status !== "CREATED"
+          ) {
+            throw new Error(
+              "Only created sales invoices can be edited.",
+            );
           }
 
-          if (editing && loadedInvoice.sourceSalesOrderId) {
+          if (
+            editing &&
+            loadedInvoice.sourceSalesOrderId
+          ) {
             throw new Error(
               "Order-linked invoices cannot be edited directly. Delete the created invoice and recreate it from the Sales Order.",
             );
           }
 
           if (editing) {
-            // Only the invoice's own customer is loaded, not every customer.
-            [customerRecord, productRecords] = await Promise.all([
-              fetchCustomerByCode(loadedInvoice.customerCode),
-              loadAllPages(productApi, "products"),
+            [
+              customerRecord,
+              productRecords,
+            ] = await Promise.all([
+              fetchCustomerByCode(
+                loadedInvoice.customerCode,
+              ),
+              fetchSelectedProducts(
+                loadedInvoice.items.map(
+                  (item) =>
+                    item.productId,
+                ),
+              ),
             ]);
           }
         } else if (fromOrder) {
-          if (typeof salesOrderApi?.getOrder !== "function") {
-            throw new Error("Configure the Sales Order getOrder API.");
+          if (
+            typeof salesOrderApi?.getOrder !==
+            "function"
+          ) {
+            throw new Error(
+              "Configure the Sales Order getOrder API.",
+            );
           }
 
-          const response = await salesOrderApi.getOrder(activeOrderNumber);
+          const response =
+            await salesOrderApi.getOrder(
+              activeOrderNumber,
+            );
 
-          loadedOrder = response?.data?.data;
+          loadedOrder =
+            response?.data?.data;
 
           if (
             response?.data?.success !== true ||
             !loadedOrder?._id ||
-            !Array.isArray(loadedOrder.items) ||
+            !Array.isArray(
+              loadedOrder.items,
+            ) ||
             !loadedOrder.items.length
           ) {
             throw new Error(
-              response?.data?.message || "Unable to load the Sales Order.",
+              response?.data?.message ||
+                "Unable to load the Sales Order.",
             );
           }
 
-          if (!ELIGIBLE_ORDER_STATUSES.includes(loadedOrder.status)) {
+          if (
+            !ELIGIBLE_ORDER_STATUSES.includes(
+              loadedOrder.status,
+            )
+          ) {
             throw new Error(
               "Confirm the Sales Order before creating an invoice.",
             );
           }
 
-          if (!Number.isSafeInteger(loadedOrder.__v) || loadedOrder.__v < 0) {
+          if (loadedOrder.invoiceNumber) {
+            throw new Error(
+              "This Sales Order already has an invoice. Verify it in the invoice list.",
+            );
+          }
+
+          if (
+            !Number.isSafeInteger(
+              loadedOrder.__v,
+            ) ||
+            loadedOrder.__v < 0
+          ) {
             throw new Error(
               "Sales Order version is missing. Refresh the order.",
             );
           }
-        } else {
-          // Direct invoice: customers are searched on demand by the picker.
-          productRecords = await loadAllPages(productApi, "products");
         }
 
         if (cancelled) return;
 
-        setSelectedCustomerRecord(customerRecord);
+        setSelectedCustomerRecord(
+          customerRecord,
+        );
 
         setProducts(
           productRecords.filter(
-            (product) => product.status === "ACTIVE" && !product.isDeleted,
+            (product) =>
+              product.status === "ACTIVE" &&
+              !product.isDeleted,
           ),
         );
 
@@ -525,27 +3144,41 @@ function SalesInvoiceForm({
         if (loadedInvoice) {
           applyInvoice(loadedInvoice);
 
-          if (loadedInvoice.status === "POSTED") {
+          if (
+            loadedInvoice.status === "POSTED"
+          ) {
             setUncertainResult(false);
           }
         } else {
           const today = localDate();
 
           const sourceDate = loadedOrder
-            ? inputDate(loadedOrder.orderDate)
+            ? inputDate(
+                loadedOrder.orderDate,
+              )
             : "";
 
-          const invoiceDate = sourceDate > today ? sourceDate : today;
+          const invoiceDate =
+            sourceDate > today
+              ? sourceDate
+              : today;
 
           const nextForm = loadedOrder
             ? {
-                customerId: String(loadedOrder.customerId),
+                customerId:
+                  normalizeId(
+                    loadedOrder.customerId,
+                  ),
                 invoiceDate,
                 dueDate: invoiceDate,
-                paymentTerms: loadedOrder.paymentTerms || "Due on Receipt",
-                taxMode: loadedOrder.taxMode,
+                paymentTerms:
+                  loadedOrder.paymentTerms ||
+                  "Due on Receipt",
+                taxMode:
+                  loadedOrder.taxMode,
                 updateStock: false,
-                notes: loadedOrder.notes || "",
+                notes:
+                  loadedOrder.notes || "",
               }
             : initialForm();
 
@@ -556,14 +3189,21 @@ function SalesInvoiceForm({
           setInvoice(null);
           setForm(nextForm);
           setItems(nextItems);
-          setShowNotes(Boolean(nextForm.notes));
+          setShowNotes(
+            Boolean(nextForm.notes),
+          );
 
-          initialSnapshot.current = snapshot(nextForm, nextItems);
+          initialSnapshot.current =
+            snapshot(
+              nextForm,
+              nextItems,
+            );
         }
       } catch (error) {
         if (cancelled) return;
 
-        const messages = getErrors(error);
+        const messages =
+          errorMessages(error);
 
         setErrors(messages);
         setLoadFailed(true);
@@ -591,15 +3231,26 @@ function SalesInvoiceForm({
     applyInvoice,
   ]);
 
+  /* ---------------------------------------------------------------- */
+  /* Selected customer and product snapshots                           */
+  /* ---------------------------------------------------------------- */
+
   const selectedCustomer = useMemo(() => {
     if (fixedLines && displayRecord) {
       return {
-        _id: String(displayRecord.customerId),
-        customerName: displayRecord.customerName,
-        customerCode: displayRecord.customerCode,
-        gstNo: displayRecord.customerGstNo,
-        billingAddress: displayRecord.billingAddress,
-        shippingAddress: displayRecord.shippingAddress,
+        _id: normalizeId(
+          displayRecord.customerId,
+        ),
+        customerName:
+          displayRecord.customerName,
+        customerCode:
+          displayRecord.customerCode,
+        gstNo:
+          displayRecord.customerGstNo,
+        billingAddress:
+          displayRecord.billingAddress,
+        shippingAddress:
+          displayRecord.shippingAddress,
       };
     }
 
@@ -607,15 +3258,25 @@ function SalesInvoiceForm({
       return selectedCustomerRecord;
     }
 
-    // Edit mode, customer no longer exists: show the invoice's saved details
-    if (invoice && form.customerId === String(invoice.customerId)) {
+    if (
+      invoice &&
+      form.customerId ===
+        normalizeId(invoice.customerId)
+    ) {
       return {
-        _id: String(invoice.customerId),
-        customerName: invoice.customerName,
-        customerCode: invoice.customerCode,
-        gstNo: invoice.customerGstNo,
-        billingAddress: invoice.billingAddress,
-        shippingAddress: invoice.shippingAddress,
+        _id: normalizeId(
+          invoice.customerId,
+        ),
+        customerName:
+          invoice.customerName,
+        customerCode:
+          invoice.customerCode,
+        gstNo:
+          invoice.customerGstNo,
+        billingAddress:
+          invoice.billingAddress,
+        shippingAddress:
+          invoice.shippingAddress,
         status: "UNAVAILABLE",
       };
     }
@@ -629,77 +3290,74 @@ function SalesInvoiceForm({
     form.customerId,
   ]);
 
-  // Read-only customer option (view mode / created from a Sales Order)
-  const fixedCustomerOptions = useMemo(
-    () =>
-      selectedCustomer
-        ? [
-            {
-              value: String(selectedCustomer._id),
-              label:
-                `${selectedCustomer.customerName} ` +
-                `(${selectedCustomer.customerCode})`,
-            },
-          ]
-        : [],
-    [selectedCustomer],
-  );
-
-  const customerPickerLabel = selectedCustomer
-    ? `${selectedCustomer.customerName} (${selectedCustomer.customerCode})` +
-      (selectedCustomer.status && selectedCustomer.status !== "Active"
-        ? " — unavailable"
-        : "")
-    : "";
-
-  const orderOptions = useMemo(() => {
-    const options = eligibleOrders.map((order) => ({
-      value: String(order.orderNumber),
-      label:
-        `${order.orderNumber}` +
-        `${order.customerName ? ` · ${order.customerName}` : ""}` +
-        `${
-          Number.isSafeInteger(order.totalAmountPaise)
-            ? ` · ${formatPaise(order.totalAmountPaise)}`
+  const customerPickerLabel =
+    selectedCustomer
+      ? `${selectedCustomer.customerName || "Customer"}${
+          selectedCustomer.customerCode
+            ? ` (${selectedCustomer.customerCode})`
             : ""
-        }`,
-    }));
+        }${
+          !fixedLines &&
+          selectedCustomer.status &&
+          selectedCustomer.status !== "Active"
+            ? " — reselect to verify"
+            : ""
+        }`
+      : "";
 
-    // Keep the active order visible even if it is not in the eligible list.
-    if (
-      activeOrderNumber &&
-      !options.some((option) => option.value === activeOrderNumber)
-    ) {
-      options.unshift({
-        value: activeOrderNumber,
-        label: activeOrderNumber,
+  const productMap = useMemo(() => {
+    const map = new Map();
+
+    for (const item of items) {
+      if (!item.productId) continue;
+
+      map.set(item.productId, {
+        _id: item.productId,
+        name: item.productName,
+        productCode: item.productCode,
+        type: item.productType,
+        unit: item.unit,
+        hsnSacCode: item.hsnSacCode,
+        status: "UNAVAILABLE",
       });
     }
 
-    return [
-      { value: NO_ORDER, label: "No Sales Order (direct invoice)" },
-      ...options,
-    ];
-  }, [eligibleOrders, activeOrderNumber]);
+    for (const product of products) {
+      map.set(
+        normalizeId(product),
+        product,
+      );
+    }
 
-  const productMap = useMemo(
-    () => new Map(products.map((product) => [String(product._id), product])),
-    [products],
-  );
+    return map;
+  }, [products, items]);
 
   const previews = useMemo(
     () =>
       items.map((item, index) => {
-        if (fixedLines && displayRecord?.items[index]) {
+        if (
+          fixedLines &&
+          displayRecord?.items[index]
+        ) {
           return {
             valid: true,
-            ...savedTotals(displayRecord.items[index]),
+            ...savedTotals(
+              displayRecord.items[index],
+            ),
           };
         }
 
-        return calculatePreview(item, form.taxMode);
+        return calculatePreview(
+          item,
+          form.taxMode,
+        );
       }),
-    [items, form.taxMode, fixedLines, displayRecord],
+    [
+      items,
+      form.taxMode,
+      fixedLines,
+      displayRecord,
+    ],
   );
 
   const totals = useMemo(() => {
@@ -709,29 +3367,40 @@ function SalesInvoiceForm({
 
     return previews.reduce(
       (result, preview) => {
-        const next = { ...result };
-
-        for (const key of Object.keys(EMPTY_TOTALS)) {
-          next[key] += preview[key];
+        for (
+          const key of Object.keys(
+            EMPTY_TOTALS,
+          )
+        ) {
+          result[key] += preview[key];
         }
 
-        return next;
+        return result;
       },
       { ...EMPTY_TOTALS },
     );
-  }, [previews, fixedLines, displayRecord]);
+  }, [
+    previews,
+    fixedLines,
+    displayRecord,
+  ]);
 
   const isDirty =
     !loading &&
     !viewing &&
     Boolean(initialSnapshot.current) &&
-    snapshot(form, items) !== initialSnapshot.current;
+    snapshot(form, items) !==
+      initialSnapshot.current;
 
   useEffect(() => {
     const beforeUnload = (event) => {
       if (savedRef.current) return;
 
-      if (!isDirty && !saving && !uncertainResult) {
+      if (
+        !isDirty &&
+        !saving &&
+        !uncertainResult
+      ) {
         return;
       }
 
@@ -739,32 +3408,69 @@ function SalesInvoiceForm({
       event.returnValue = "";
     };
 
-    window.addEventListener("beforeunload", beforeUnload);
+    window.addEventListener(
+      "beforeunload",
+      beforeUnload,
+    );
 
     return () => {
-      window.removeEventListener("beforeunload", beforeUnload);
+      window.removeEventListener(
+        "beforeunload",
+        beforeUnload,
+      );
     };
   }, [isDirty, saving, uncertainResult]);
 
-  /* ==========================================
-     SALES ORDER PICKER
-     ========================================== */
+  /* ---------------------------------------------------------------- */
+  /* Picker/form handlers                                              */
+  /* ---------------------------------------------------------------- */
 
-  const applyOrderSelection = (orderNumber) => {
+  const applyOrderSelection = (
+    orderNumber,
+  ) => {
     setActiveOrderNumber(orderNumber);
     setSourceOrder(null);
     setInvoice(null);
     setSelectedCustomerRecord(null);
+    setProducts([]);
     setErrors([]);
     setPendingOrderNumber("");
   };
 
-  const handleOrderChange = (event) => {
+  const handleOrderSelect = (
+    number,
+    record,
+  ) => {
     if (orderPickerDisabled) return;
 
-    const value = event.target.value === NO_ORDER ? "" : event.target.value;
+    const value =
+      !number || number === NO_ORDER
+        ? ""
+        : String(number);
 
-    if (value === activeOrderNumber) return;
+    if (value === activeOrderNumber) {
+      return;
+    }
+
+    if (value && record) {
+      if (
+        !ELIGIBLE_ORDER_STATUSES.includes(
+          record.status,
+        )
+      ) {
+        toast.error(
+          "Select a CONFIRMED, IN_PROGRESS, or COMPLETED Sales Order.",
+        );
+        return;
+      }
+
+      if (record.invoiceNumber) {
+        toast.error(
+          "This order already has an invoice. Verify the invoice list.",
+        );
+        return;
+      }
+    }
 
     if (isDirty) {
       setPendingOrderNumber(value);
@@ -776,11 +3482,16 @@ function SalesInvoiceForm({
   };
 
   const handleFieldChange = (event) => {
-    const { name, value } = event.target;
-
     if (formDisabled) return;
 
-    if (fromOrder && !["invoiceDate", "dueDate"].includes(name)) {
+    const { name, value } = event.target;
+
+    if (
+      fromOrder &&
+      !["invoiceDate", "dueDate"].includes(
+        name,
+      )
+    ) {
       return;
     }
 
@@ -792,31 +3503,72 @@ function SalesInvoiceForm({
     setErrors([]);
   };
 
-  // Called by the customer picker with the chosen option
-  const handleCustomerSelect = (option) => {
+  const handleCustomerSelect = (
+    customerId,
+    customer,
+  ) => {
     if (formDisabled || fromOrder) return;
 
-    const customer = option?.data || null;
+    const id = customerId
+      ? String(customerId)
+      : "";
 
-    setSelectedCustomerRecord(customer);
+    if (
+      id &&
+      (
+        !customer ||
+        customer.isDeleted ||
+        customer.status !== "Active"
+      )
+    ) {
+      toast.error(
+        "Select an active customer.",
+      );
+      return;
+    }
+
+    setSelectedCustomerRecord(
+      customer || null,
+    );
+
+    if (id === form.customerId) return;
 
     setForm((previous) => ({
       ...previous,
-
-      customerId: customer ? String(customer._id) : "",
-
-      paymentTerms: customer?.paymentTerms || "Due on Receipt",
-
-      dueDate: addDays(previous.invoiceDate, customer?.creditDays || 0),
+      customerId: id,
+      paymentTerms:
+        customer?.paymentTerms ||
+        "Due on Receipt",
+      dueDate: addDays(
+        previous.invoiceDate,
+        customer?.creditDays || 0,
+      ),
     }));
 
     setErrors([]);
   };
 
-  const handleTaxModeChange = (event) => {
-    if (formDisabled || fromOrder) return;
+  const handleTaxModeSelect = (value) => {
+    if (
+      formDisabled ||
+      fromOrder ||
+      value === null
+    ) {
+      return;
+    }
 
-    const taxMode = event.target.value;
+    const taxMode = String(value);
+
+    if (
+      !TAX_OPTIONS.some(
+        (option) =>
+          option.value === taxMode,
+      )
+    ) {
+      return;
+    }
+
+    if (taxMode === form.taxMode) return;
 
     setForm((previous) => ({
       ...previous,
@@ -826,43 +3578,37 @@ function SalesInvoiceForm({
     setItems((previous) =>
       previous.map((item) => ({
         ...item,
-
         gstRate:
           taxMode === "NONE"
             ? 0
-            : (productMap.get(item.productId)?.gstRate ?? 0),
+            : (
+                productMap.get(
+                  item.productId,
+                )?.gstRate ??
+                item.gstRate ??
+                0
+              ),
       })),
     );
 
     setErrors([]);
   };
 
-  const updateItem = (rowId, field, value) => {
-    if (formDisabled || fixedLines) return;
-
-    setItems((previous) =>
-      previous.map((item) =>
-        item.rowId === rowId ? { ...item, [field]: value } : item,
-      ),
-    );
-
-    setErrors([]);
-  };
-
-  const selectProduct = (rowId, productId) => {
-    if (formDisabled || fixedLines) return;
-
-    const product = productMap.get(productId);
+  const updateItem = (
+    rowId,
+    field,
+    value,
+  ) => {
+    if (formDisabled || fixedLines) {
+      return;
+    }
 
     setItems((previous) =>
       previous.map((item) =>
         item.rowId === rowId
           ? {
               ...item,
-              productId,
-              unitRate: String(product?.salePrice ?? 0),
-
-              gstRate: form.taxMode === "NONE" ? 0 : (product?.gstRate ?? 0),
+              [field]: value,
             }
           : item,
       ),
@@ -871,30 +3617,185 @@ function SalesInvoiceForm({
     setErrors([]);
   };
 
+  const selectProduct = (
+    rowId,
+    productId,
+    product,
+  ) => {
+    if (formDisabled || fixedLines) {
+      return;
+    }
+
+    const id = productId
+      ? String(productId)
+      : "";
+
+    if (id) {
+      if (
+        !product ||
+        product.status !== "ACTIVE" ||
+        product.isDeleted
+      ) {
+        toast.error(
+          "Select an active product.",
+        );
+        return;
+      }
+
+      if (
+        items.some(
+          (item) =>
+            item.rowId !== rowId &&
+            item.productId === id,
+        )
+      ) {
+        toast.error(
+          "A product can appear only once in a direct invoice.",
+        );
+        return;
+      }
+
+      setProducts((previous) => [
+        ...previous.filter(
+          (record) =>
+            normalizeId(record) !== id,
+        ),
+        product,
+      ]);
+    }
+
+    setItems((previous) =>
+      previous.map((item) => {
+        if (item.rowId !== rowId) {
+          return item;
+        }
+
+        // Refresh the cached master without overwriting
+        // manually entered pricing for the same product.
+        if (
+          id &&
+          item.productId === id
+        ) {
+          return item;
+        }
+
+        return {
+          ...item,
+          productId: id,
+          productName:
+            product?.name || "",
+          productCode:
+            product?.productCode || "",
+          productType:
+            product?.type || "",
+          unit:
+            product?.unit || "",
+          hsnSacCode:
+            product?.hsnSacCode || "",
+          unitRate: String(
+            product?.salePrice ?? 0,
+          ),
+          gstRate:
+            form.taxMode === "NONE"
+              ? 0
+              : (
+                  product?.gstRate ??
+                  0
+                ),
+        };
+      }),
+    );
+
+    setErrors([]);
+  };
+
+  const addItem = () => {
+    if (
+      formDisabled ||
+      fixedLines ||
+      items.length >= 200
+    ) {
+      return;
+    }
+
+    setItems((previous) => [
+      ...previous,
+      newItem(),
+    ]);
+
+    setErrors([]);
+  };
+
+  const removeItem = (rowId) => {
+    if (
+      formDisabled ||
+      fixedLines ||
+      items.length <= 1
+    ) {
+      return;
+    }
+
+    setItems((previous) =>
+      previous.filter(
+        (item) =>
+          item.rowId !== rowId,
+      ),
+    );
+
+    setErrors([]);
+  };
+
+  /* ---------------------------------------------------------------- */
+  /* Validation                                                        */
+  /* ---------------------------------------------------------------- */
+
   const validateForm = (action) => {
     const messages = [];
 
-    if (!validDate(form.invoiceDate) || !validDate(form.dueDate)) {
-      messages.push("Valid invoice and due dates are required.");
-    } else if (form.dueDate < form.invoiceDate) {
-      messages.push("Due date cannot be before invoice date.");
+    if (
+      !validDate(form.invoiceDate) ||
+      !validDate(form.dueDate)
+    ) {
+      messages.push(
+        "Valid invoice and due dates are required.",
+      );
+    } else if (
+      form.dueDate < form.invoiceDate
+    ) {
+      messages.push(
+        "Due date cannot be before invoice date.",
+      );
     }
 
     if (fromOrder) {
       if (
         !sourceOrder?._id ||
-        !Number.isSafeInteger(sourceOrder.__v) ||
+        !Number.isSafeInteger(
+          sourceOrder.__v,
+        ) ||
         sourceOrder.__v < 0
       ) {
-        messages.push("Reload the Sales Order before creating the invoice.");
+        messages.push(
+          "Reload the Sales Order before creating the invoice.",
+        );
       }
 
-      if (sourceOrder && form.invoiceDate < inputDate(sourceOrder.orderDate)) {
-        messages.push("Invoice date cannot be before the Sales Order date.");
+      if (
+        sourceOrder &&
+        form.invoiceDate <
+          inputDate(
+            sourceOrder.orderDate,
+          )
+      ) {
+        messages.push(
+          "Invoice date cannot be before the Sales Order date.",
+        );
       }
 
       if (action !== "SAVE_CREATED") {
-        messages.push("Create the invoice first, then post it separately.");
+        messages.push(
+          "Create the invoice first, then post it separately.",
+        );
       }
 
       return messages;
@@ -902,75 +3803,138 @@ function SalesInvoiceForm({
 
     if (
       !selectedCustomer ||
-      String(selectedCustomer._id) !== form.customerId ||
+      normalizeId(selectedCustomer) !==
+        form.customerId ||
       selectedCustomer.status !== "Active" ||
       selectedCustomer.isDeleted
     ) {
-      messages.push("Select an active customer.");
+      messages.push(
+        "Select an active customer.",
+      );
     }
 
     if (!form.paymentTerms.trim()) {
-      messages.push("Payment terms are required.");
+      messages.push(
+        "Payment terms are required.",
+      );
     }
 
     if (
-      form.paymentTerms.trim().length > 100 ||
+      form.paymentTerms.trim().length >
+        100 ||
       form.notes.trim().length > 1000
     ) {
-      messages.push("Payment terms or notes exceed the allowed length.");
+      messages.push(
+        "Payment terms or notes exceed the allowed length.",
+      );
     }
 
-    if (!TAX_OPTIONS.some((option) => option.value === form.taxMode)) {
-      messages.push("Select a valid tax treatment.");
+    if (
+      !TAX_OPTIONS.some(
+        (option) =>
+          option.value === form.taxMode,
+      )
+    ) {
+      messages.push(
+        "Select a valid tax treatment.",
+      );
     }
 
-    if (!items.length || items.length > 200) {
-      messages.push("Add between 1 and 200 items.");
+    if (
+      items.length < 1 ||
+      items.length > 200
+    ) {
+      messages.push(
+        "Add between 1 and 200 items.",
+      );
     }
 
-    const ids = items.map((item) => item.productId).filter(Boolean);
+    const ids = items
+      .map((item) => item.productId)
+      .filter(Boolean);
 
-    if (new Set(ids).size !== ids.length) {
-      messages.push("A product can appear only once in a direct invoice.");
+    if (
+      new Set(ids).size !== ids.length
+    ) {
+      messages.push(
+        "A product can appear only once in a direct invoice.",
+      );
     }
 
     items.forEach((item, index) => {
-      if (!productMap.has(item.productId)) {
-        messages.push(`Select an active product for item ${index + 1}.`);
-      } else if (!previews[index]?.valid) {
+      const product =
+        productMap.get(
+          item.productId,
+        );
+
+      if (
+        !product ||
+        product.status !== "ACTIVE" ||
+        product.isDeleted
+      ) {
         messages.push(
-          `Check quantity, rate, discount, and GST for item ${index + 1}.`,
+          `Select an active product for item ${
+            index + 1
+          }.`,
+        );
+      } else if (
+        !previews[index]?.valid
+      ) {
+        messages.push(
+          `Check quantity, rate, discount, and GST for item ${
+            index + 1
+          }.`,
         );
       }
     });
 
     if (
       Object.values(totals).some(
-        (amount) => !Number.isSafeInteger(amount) || amount < 0,
+        (amount) =>
+          !Number.isSafeInteger(amount) ||
+          amount < 0,
       )
     ) {
-      messages.push("Invoice amounts exceed the supported range.");
+      messages.push(
+        "Invoice amounts exceed the supported range.",
+      );
     }
 
-    if (action === "SAVE_AND_POST" && totals.total <= 0) {
-      messages.push("A posted invoice must have a positive total.");
+    if (
+      action === "SAVE_AND_POST" &&
+      totals.total <= 0
+    ) {
+      messages.push(
+        "A posted invoice must have a positive total.",
+      );
     }
 
     return messages;
   };
 
-  const saveInvoice = async (action, postingConfirmed = false) => {
+  /* ---------------------------------------------------------------- */
+  /* Create/update                                                     */
+  /* ---------------------------------------------------------------- */
+
+  const saveInvoice = async (
+    action,
+    postingConfirmed = false,
+  ) => {
     if (
       transactionLocked ||
       viewing ||
       submitLock.current ||
       savedRef.current ||
-      (confirmation && !postingConfirmed)
+      (
+        confirmation &&
+        !postingConfirmed
+      )
     ) {
       return;
     }
 
-    const messages = validateForm(action);
+    const messages =
+      validateForm(action);
 
     if (messages.length) {
       setErrors(messages);
@@ -979,7 +3943,10 @@ function SalesInvoiceForm({
       return;
     }
 
-    if (action === "SAVE_AND_POST" && !postingConfirmed) {
+    if (
+      action === "SAVE_AND_POST" &&
+      !postingConfirmed
+    ) {
       setConfirmation("post");
       return;
     }
@@ -994,60 +3961,101 @@ function SalesInvoiceForm({
       let response;
 
       if (fromOrder) {
-        const latestResponse = await salesOrderApi.getOrder(
-          sourceOrder.orderNumber,
-        );
+        const latestResponse =
+          await salesOrderApi.getOrder(
+            sourceOrder.orderNumber,
+          );
 
-        const latest = latestResponse?.data?.data;
+        const latest =
+          latestResponse?.data?.data;
 
-        if (latestResponse?.data?.success !== true || !latest?._id) {
-          throw new Error("Unable to verify the Sales Order.");
+        if (
+          latestResponse?.data?.success !==
+            true ||
+          !latest?._id
+        ) {
+          throw new Error(
+            "Unable to verify the Sales Order.",
+          );
         }
 
         if (
+          normalizeId(latest) !==
+            normalizeId(sourceOrder) ||
+          latest.orderNumber !==
+            sourceOrder.orderNumber ||
           latest.__v !== sourceOrder.__v ||
-          latest.status !== sourceOrder.status
+          latest.status !==
+            sourceOrder.status ||
+          !ELIGIBLE_ORDER_STATUSES.includes(
+            latest.status,
+          ) ||
+          Boolean(latest.invoiceNumber)
         ) {
           throw new Error(
-            "The Sales Order changed. Reload it and review before creating the invoice.",
+            "The Sales Order changed or is no longer eligible. Reload it and review before creating the invoice.",
           );
         }
 
         writeStarted = true;
 
-        response = await salesInvoiceApi.createFromSalesOrder(
-          sourceOrder.orderNumber,
-          {
-            version: sourceOrder.__v,
-            invoiceDate: form.invoiceDate,
-            dueDate: form.dueDate,
-          },
-        );
+        response =
+          await salesInvoiceApi.createFromSalesOrder(
+            sourceOrder.orderNumber,
+            {
+              version:
+                sourceOrder.__v,
+              invoiceDate:
+                form.invoiceDate,
+              dueDate:
+                form.dueDate,
+            },
+          );
       } else {
         const payload = {
-          customerId: form.customerId,
-          invoiceDate: form.invoiceDate,
-          dueDate: form.dueDate,
-          paymentTerms: form.paymentTerms.trim(),
-          taxMode: form.taxMode,
-          updateStock: form.updateStock,
+          customerId:
+            form.customerId,
+          invoiceDate:
+            form.invoiceDate,
+          dueDate:
+            form.dueDate,
+          paymentTerms:
+            form.paymentTerms.trim(),
+          taxMode:
+            form.taxMode,
+          updateStock:
+            form.updateStock,
 
           items: items.map((item) => ({
-            productId: item.productId,
-            quantity: Number(item.quantity),
-            unitRate: Number(item.unitRate),
-            discountPercent: Number(item.discountPercent),
-
-            gstRate: form.taxMode === "NONE" ? 0 : Number(item.gstRate),
+            productId:
+              item.productId,
+            quantity:
+              Number(item.quantity),
+            unitRate:
+              Number(item.unitRate),
+            discountPercent:
+              Number(
+                item.discountPercent,
+              ),
+            gstRate:
+              form.taxMode === "NONE"
+                ? 0
+                : Number(
+                    item.gstRate,
+                  ),
           })),
 
-          notes: form.notes.trim(),
+          notes:
+            form.notes.trim(),
         };
 
         writeStarted = true;
 
         response = editing
-          ? await salesInvoiceApi.update(invoiceNumber, payload)
+          ? await salesInvoiceApi.update(
+              invoiceNumber,
+              payload,
+            )
           : await salesInvoiceApi.create({
               ...payload,
               action,
@@ -1057,7 +4065,8 @@ function SalesInvoiceForm({
       let saved;
 
       try {
-        saved = extractInvoice(response);
+        saved =
+          extractInvoice(response);
       } catch (error) {
         error.uncertain = true;
         throw error;
@@ -1078,21 +4087,33 @@ function SalesInvoiceForm({
             : `${saved.invoiceNumber} created successfully`,
       );
 
-      navigate(SALES_PATHS.view(saved.invoiceNumber), { replace: true });
+      navigate(
+        SALES_PATHS.view(
+          saved.invoiceNumber,
+        ),
+        { replace: true },
+      );
     } catch (error) {
       if (!alive.current) return;
 
-      const status = error?.response?.status;
+      const status =
+        error?.response?.status;
 
       if (
         !savedRef.current &&
         writeStarted &&
-        (error.uncertain || !status || status >= 500 || status === 408)
+        (
+          error.uncertain ||
+          !status ||
+          status >= 500 ||
+          status === 408
+        )
       ) {
         setUncertainResult(true);
       }
 
-      const messages = getErrors(error);
+      const messages =
+        errorMessages(error);
 
       setErrors(messages);
       setConfirmation("");
@@ -1106,9 +4127,9 @@ function SalesInvoiceForm({
     }
   };
 
-  /* ==========================================
-     POST AN EXISTING CREATED INVOICE
-     ========================================== */
+  /* ---------------------------------------------------------------- */
+  /* Post an existing CREATED invoice                                  */
+  /* ---------------------------------------------------------------- */
 
   const postExistingInvoice = async () => {
     if (
@@ -1130,16 +4151,13 @@ function SalesInvoiceForm({
     let postStarted = false;
 
     try {
-      /*
-       * Check that the invoice being reviewed has not
-       * changed before sending the posting request.
-       * Backend validation remains authoritative.
-       */
-      const latestResponse = await salesInvoiceApi.getByNumber(
-        original.invoiceNumber,
-      );
+      const latestResponse =
+        await salesInvoiceApi.getByNumber(
+          original.invoiceNumber,
+        );
 
-      const latest = extractInvoice(latestResponse);
+      const latest =
+        extractInvoice(latestResponse);
 
       if (!alive.current) return;
 
@@ -1147,7 +4165,9 @@ function SalesInvoiceForm({
         applyInvoice(latest);
         setConfirmation("");
 
-        toast.success(`${latest.invoiceNumber} is already posted.`);
+        toast.success(
+          `${latest.invoiceNumber} is already posted.`,
+        );
 
         return;
       }
@@ -1155,10 +4175,14 @@ function SalesInvoiceForm({
       if (latest.status !== "CREATED") {
         applyInvoice(latest);
 
-        throw new Error("This invoice is no longer available for posting.");
+        throw new Error(
+          "This invoice is no longer available for posting.",
+        );
       }
 
-      if (latest.__v !== original.__v) {
+      if (
+        latest.__v !== original.__v
+      ) {
         applyInvoice(latest);
 
         throw new Error(
@@ -1168,15 +4192,23 @@ function SalesInvoiceForm({
 
       postStarted = true;
 
-      const response = await salesInvoiceApi.post(original.invoiceNumber);
+      const response =
+        await salesInvoiceApi.post(
+          original.invoiceNumber,
+        );
 
       let posted;
 
       try {
-        posted = extractInvoice(response);
+        posted =
+          extractInvoice(response);
 
-        if (posted.status !== "POSTED") {
-          throw new Error("The server did not return a posted invoice.");
+        if (
+          posted.status !== "POSTED"
+        ) {
+          throw new Error(
+            "The server did not return a posted invoice.",
+          );
         }
       } catch (error) {
         error.uncertain = true;
@@ -1190,36 +4222,49 @@ function SalesInvoiceForm({
       setUncertainResult(false);
 
       toast.success(
-        response.data.message || `${posted.invoiceNumber} posted successfully`,
+        response.data.message ||
+          `${posted.invoiceNumber} posted successfully`,
       );
     } catch (error) {
       if (!alive.current) return;
 
-      const status = error?.response?.status;
+      const status =
+        error?.response?.status;
 
       const unknownResult =
         postStarted &&
-        (error.uncertain || !status || status >= 500 || status === 408);
+        (
+          error.uncertain ||
+          !status ||
+          status >= 500 ||
+          status === 408
+        );
 
       setConfirmation("");
 
       if (postStarted) {
         try {
-          const response = await salesInvoiceApi.getByNumber(
-            original.invoiceNumber,
-          );
+          const response =
+            await salesInvoiceApi.getByNumber(
+              original.invoiceNumber,
+            );
 
-          const latest = extractInvoice(response);
+          const latest =
+            extractInvoice(response);
 
           if (!alive.current) return;
 
           applyInvoice(latest);
 
-          if (latest.status === "POSTED") {
+          if (
+            latest.status === "POSTED"
+          ) {
             setErrors([]);
             setUncertainResult(false);
 
-            toast.success(`${latest.invoiceNumber} is posted.`);
+            toast.success(
+              `${latest.invoiceNumber} is posted.`,
+            );
 
             return;
           }
@@ -1230,9 +4275,12 @@ function SalesInvoiceForm({
 
       if (!alive.current) return;
 
-      setUncertainResult(Boolean(unknownResult));
+      setUncertainResult(
+        Boolean(unknownResult),
+      );
 
-      const messages = getErrors(error);
+      const messages =
+        errorMessages(error);
 
       setErrors(messages);
       toast.error(messages[0]);
@@ -1246,8 +4294,15 @@ function SalesInvoiceForm({
     }
   };
 
+  /* ---------------------------------------------------------------- */
+  /* Exit and confirmations                                            */
+  /* ---------------------------------------------------------------- */
+
   const exitPage = () => {
-    if (saving || submitLock.current) {
+    if (
+      saving ||
+      submitLock.current
+    ) {
       return;
     }
 
@@ -1256,7 +4311,10 @@ function SalesInvoiceForm({
       return;
     }
 
-    if (isDirty || uncertainResult) {
+    if (
+      isDirty ||
+      uncertainResult
+    ) {
       setConfirmation("exit");
       return;
     }
@@ -1264,30 +4322,43 @@ function SalesInvoiceForm({
     navigate(SALES_PATHS.list);
   };
 
-  const closeConfirmation = useCallback(() => {
-    if (submitLock.current) return;
+  const closeConfirmation =
+    useCallback(() => {
+      if (submitLock.current) return;
 
-    setConfirmation("");
-    setPendingOrderNumber("");
-  }, []);
+      setConfirmation("");
+      setPendingOrderNumber("");
+    }, []);
 
   const handleConfirmation = () => {
-    if (saving || submitLock.current) return;
+    if (
+      saving ||
+      submitLock.current
+    ) {
+      return;
+    }
 
-    if (confirmation === "post-existing") {
+    if (
+      confirmation ===
+      "post-existing"
+    ) {
       void postExistingInvoice();
       return;
     }
 
     if (confirmation === "post") {
-      void saveInvoice("SAVE_AND_POST", true);
-
+      void saveInvoice(
+        "SAVE_AND_POST",
+        true,
+      );
       return;
     }
 
     if (confirmation === "switch") {
       setConfirmation("");
-      applyOrderSelection(pendingOrderNumber);
+      applyOrderSelection(
+        pendingOrderNumber,
+      );
       return;
     }
 
@@ -1297,9 +4368,9 @@ function SalesInvoiceForm({
     }
   };
 
-  /* ==========================================
-     HEADER / MOBILE ACTIONS
-     ========================================== */
+  /* ---------------------------------------------------------------- */
+  /* Header/mobile actions                                             */
+  /* ---------------------------------------------------------------- */
 
   const actionButtons = viewing ? (
     invoice?.status === "CREATED" ? (
@@ -1310,13 +4381,16 @@ function SalesInvoiceForm({
             variant="secondary"
             icon={Save}
             disabled={
-              loading ||
-              loadFailed ||
-              saving ||
-              uncertainResult ||
+              transactionLocked ||
               Boolean(confirmation)
             }
-            onClick={() => navigate(SALES_PATHS.edit(invoice.invoiceNumber))}
+            onClick={() =>
+              navigate(
+                SALES_PATHS.edit(
+                  invoice.invoiceNumber,
+                ),
+              )
+            }
           >
             Edit Invoice
           </Button>
@@ -1326,16 +4400,18 @@ function SalesInvoiceForm({
           type="button"
           icon={Send}
           disabled={
-            loading ||
-            loadFailed ||
-            saving ||
-            uncertainResult ||
+            transactionLocked ||
             Boolean(confirmation)
           }
-          loading={savingAction === "POST_EXISTING"}
+          loading={
+            savingAction ===
+            "POST_EXISTING"
+          }
           onClick={() => {
             setErrors([]);
-            setConfirmation("post-existing");
+            setConfirmation(
+              "post-existing",
+            );
           }}
         >
           Post Invoice
@@ -1349,10 +4425,19 @@ function SalesInvoiceForm({
         variant="secondary"
         icon={Save}
         disabled={formDisabled}
-        loading={savingAction === "SAVE_CREATED"}
-        onClick={() => void saveInvoice("SAVE_CREATED")}
+        loading={
+          savingAction ===
+          "SAVE_CREATED"
+        }
+        onClick={() =>
+          void saveInvoice(
+            "SAVE_CREATED",
+          )
+        }
       >
-        {editing ? "Save Changes" : "Create Invoice"}
+        {editing
+          ? "Save Changes"
+          : "Create Invoice"}
       </Button>
 
       {!editing && !fromOrder && (
@@ -1360,8 +4445,15 @@ function SalesInvoiceForm({
           type="button"
           icon={Send}
           disabled={formDisabled}
-          loading={savingAction === "SAVE_AND_POST"}
-          onClick={() => void saveInvoice("SAVE_AND_POST")}
+          loading={
+            savingAction ===
+            "SAVE_AND_POST"
+          }
+          onClick={() =>
+            void saveInvoice(
+              "SAVE_AND_POST",
+            )
+          }
         >
           Create & Post
         </Button>
@@ -1371,7 +4463,8 @@ function SalesInvoiceForm({
 
   const address = selectedCustomer
     ? fixedLines
-      ? selectedCustomer.billingAddress || ""
+      ? selectedCustomer.billingAddress ||
+        ""
       : [
           selectedCustomer.billingAddress,
           selectedCustomer.city,
@@ -1379,59 +4472,175 @@ function SalesInvoiceForm({
           selectedCustomer.pincode,
           selectedCustomer.country,
         ]
-          .filter((value) => typeof value === "string" && value.trim())
+          .filter(
+            (value) =>
+              typeof value === "string" &&
+              value.trim(),
+          )
           .join(", ")
     : "";
 
   const sourceNumber =
-    sourceOrder?.orderNumber || invoice?.sourceSalesOrderNumber || "";
+    sourceOrder?.orderNumber ||
+    invoice?.sourceSalesOrderNumber ||
+    "";
 
   const isPostingConfirmation =
-    confirmation === "post" || confirmation === "post-existing";
+    confirmation === "post" ||
+    confirmation === "post-existing";
 
-  const isSwitchConfirmation = confirmation === "switch";
+  const isSwitchConfirmation =
+    confirmation === "switch";
 
   const postingUpdatesStock =
     confirmation === "post-existing"
       ? Boolean(invoice?.updateStock)
       : Boolean(form.updateStock);
 
-  const confirmationTitle = isPostingConfirmation
-    ? "Post sales invoice?"
-    : isSwitchConfirmation
-      ? "Change Sales Order?"
-      : uncertainResult
-        ? "Check invoice status?"
-        : "Discard invoice changes?";
+  const confirmationTitle =
+    isPostingConfirmation
+      ? "Post sales invoice?"
+      : isSwitchConfirmation
+        ? "Change Sales Order?"
+        : uncertainResult
+          ? "Check invoice status?"
+          : "Discard invoice changes?";
 
-  const confirmationMessage = isPostingConfirmation
-    ? postingUpdatesStock
-      ? "This creates accounting entries and deducts inventory-tracked goods. Do not continue if the same goods have already been deducted through a Delivery Note."
-      : "This creates accounting entries without deducting stock. The invoice becomes Posted and can no longer be edited or deleted."
-    : isSwitchConfirmation
-      ? "Your unsaved changes will be replaced by the details of the selected option. Continue?"
-      : uncertainResult
-        ? "The previous request may already have completed. Open Sales Invoices and verify the result before trying again."
-        : "Your unsaved changes will be lost. Leave this page?";
+  const confirmationMessage =
+    isPostingConfirmation
+      ? postingUpdatesStock
+        ? "This creates accounting entries and deducts inventory-tracked goods. Do not continue if the same goods have already been deducted through a Delivery Note."
+        : "This creates accounting entries without deducting stock. The invoice becomes Posted and can no longer be edited or deleted."
+      : isSwitchConfirmation
+        ? "Your unsaved changes will be replaced by the selected option. Continue?"
+        : uncertainResult
+          ? "The previous request may already have completed. Open Sales Invoices and verify the result before trying again."
+          : "Your unsaved changes will be lost. Leave this page?";
 
-  const confirmationConfirmText = isPostingConfirmation
-    ? "Post Invoice"
-    : isSwitchConfirmation
-      ? "Change & Replace"
-      : uncertainResult
-        ? "Open Invoice List"
-        : "Discard & Leave";
+  const confirmationConfirmText =
+    isPostingConfirmation
+      ? "Post Invoice"
+      : isSwitchConfirmation
+        ? "Change & Replace"
+        : uncertainResult
+          ? "Open Invoice List"
+          : "Discard & Leave";
+
+  const taxLabel =
+    TAX_OPTIONS.find(
+      (option) =>
+        option.value === form.taxMode,
+    )?.label || form.taxMode;
+
+  /* ---------------------------------------------------------------- */
+  /* Render                                                            */
+  /* ---------------------------------------------------------------- */
 
   return (
-    <div className="doc-page">
-      <form noValidate onSubmit={(event) => event.preventDefault()}>
+    <div
+      className={`doc-page si-existing-picker-page ${
+        keyboardOpen
+          ? "is-keyboard-open"
+          : ""
+      }`}
+    >
+      <style>{`
+        .si-existing-picker-page {
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+        }
+
+        .si-existing-picker-page .doc-main,
+        .si-existing-picker-page .doc-panel,
+        .si-existing-picker-page .doc-cell-item,
+        .si-existing-picker-page .esp-wrapper {
+          min-width: 0;
+        }
+
+        .si-existing-picker-page .doc-party-card {
+          margin-top: 14px;
+        }
+
+        .si-existing-picker-page .doc-title,
+        .si-existing-picker-page .doc-party-copy {
+          min-width: 0;
+        }
+
+        .si-existing-picker-page .doc-title span,
+        .si-existing-picker-page .doc-party-copy h3,
+        .si-existing-picker-page .doc-party-copy p {
+          white-space: normal;
+          overflow-wrap: anywhere;
+        }
+
+        .si-existing-picker-page .si-static-picker .esp-clear {
+          display: none;
+        }
+
+        .si-existing-picker-page.is-keyboard-open .doc-mobile-bar,
+        .si-existing-picker-page .doc-mobile-bar[hidden] {
+          display: none !important;
+        }
+
+        .si-existing-picker-page .si-order-summary {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 10px;
+          margin-top: 12px;
+        }
+
+        .si-existing-picker-page .si-pre-wrap {
+          white-space: pre-wrap;
+          overflow-wrap: anywhere;
+        }
+
+        @media (max-width: 600px) {
+          .si-existing-picker-page .doc-fields-grid {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 14px;
+          }
+
+          .si-existing-picker-page .form-input,
+          .si-existing-picker-page .form-textarea {
+            font-size: 16px;
+          }
+
+          .si-existing-picker-page .doc-mobile-actions {
+            display: grid;
+            grid-template-columns: repeat(
+              auto-fit,
+              minmax(120px, 1fr)
+            );
+            gap: 8px;
+          }
+
+          .si-existing-picker-page .doc-mobile-actions .form-button {
+            width: 100%;
+            min-width: 0;
+            min-height: 44px;
+            white-space: normal;
+          }
+        }
+      `}</style>
+
+      <form
+        noValidate
+        onSubmit={(event) =>
+          event.preventDefault()
+        }
+      >
         <header className="doc-header">
           <div className="doc-header-left">
             <Button
               type="button"
               variant="secondary"
               icon={ArrowLeft}
-              disabled={saving || Boolean(confirmation)}
+              disabled={
+                saving ||
+                Boolean(confirmation)
+              }
               onClick={exitPage}
             >
               Exit
@@ -1452,29 +4661,48 @@ function SalesInvoiceForm({
             </div>
           </div>
 
-          <div className="doc-header-actions">{actionButtons}</div>
+          <div className="doc-header-actions">
+            {actionButtons}
+          </div>
         </header>
 
-        {(loading || errors.length > 0 || uncertainResult || savedInvoice) && (
+        {(loading ||
+          errors.length > 0 ||
+          uncertainResult ||
+          savedInvoice) && (
           <div className="doc-alerts">
             {loading && (
-              <div className="doc-alert" role="status">
+              <div
+                className="doc-alert"
+                role="status"
+              >
                 {fromOrder
                   ? "Loading Sales Order..."
                   : viewing
                     ? "Loading sales invoice..."
-                    : "Loading invoice details and options..."}
+                    : "Loading invoice details..."}
               </div>
             )}
 
             {errors.length > 0 && (
-              <div className="doc-alert doc-alert-error" role="alert">
-                <strong>Please review the following</strong>
+              <div
+                className="doc-alert doc-alert-error"
+                role="alert"
+              >
+                <strong>
+                  Please review the following
+                </strong>
 
                 <ul>
-                  {errors.map((message, index) => (
-                    <li key={`${index}-${message}`}>{message}</li>
-                  ))}
+                  {errors.map(
+                    (message, index) => (
+                      <li
+                        key={`${index}-${message}`}
+                      >
+                        {message}
+                      </li>
+                    ),
+                  )}
                 </ul>
 
                 {loadFailed && (
@@ -1482,7 +4710,11 @@ function SalesInvoiceForm({
                     type="button"
                     variant="secondary"
                     disabled={saving}
-                    onClick={() => setReloadKey((value) => value + 1)}
+                    onClick={() =>
+                      setReloadKey(
+                        (value) => value + 1,
+                      )
+                    }
                   >
                     Retry Loading
                   </Button>
@@ -1496,7 +4728,11 @@ function SalesInvoiceForm({
                       type="button"
                       variant="secondary"
                       disabled={saving}
-                      onClick={() => setReloadKey((value) => value + 1)}
+                      onClick={() =>
+                        setReloadKey(
+                          (value) => value + 1,
+                        )
+                      }
                     >
                       Reload Sales Order
                     </Button>
@@ -1505,16 +4741,24 @@ function SalesInvoiceForm({
             )}
 
             {uncertainResult && (
-              <div className="doc-alert" role="alert">
+              <div
+                className="doc-alert"
+                role="alert"
+              >
                 <p>
-                  The request result is uncertain. Further submission is locked.
-                  Check the invoice list before trying again.
+                  The request result is
+                  uncertain. Further submission
+                  is locked. Check the invoice
+                  list before trying again.
                 </p>
 
                 <Button
                   type="button"
                   variant="secondary"
-                  disabled={saving || Boolean(confirmation)}
+                  disabled={
+                    saving ||
+                    Boolean(confirmation)
+                  }
                   onClick={exitPage}
                 >
                   Check Sales Invoices
@@ -1523,16 +4767,27 @@ function SalesInvoiceForm({
             )}
 
             {savedInvoice && (
-              <div className="doc-alert" role="status">
-                <p>{savedInvoice.invoiceNumber} was saved successfully.</p>
+              <div
+                className="doc-alert"
+                role="status"
+              >
+                <p>
+                  {
+                    savedInvoice.invoiceNumber
+                  }{" "}
+                  was saved successfully.
+                </p>
 
                 <Button
                   type="button"
                   variant="secondary"
                   onClick={() =>
-                    navigate(SALES_PATHS.view(savedInvoice.invoiceNumber), {
-                      replace: true,
-                    })
+                    navigate(
+                      SALES_PATHS.view(
+                        savedInvoice.invoiceNumber,
+                      ),
+                      { replace: true },
+                    )
                   }
                 >
                   Open Invoice
@@ -1542,71 +4797,76 @@ function SalesInvoiceForm({
           </div>
         )}
 
-        {/* CREATE FROM SALES ORDER */}
         {creating && (
           <div className="doc-alerts">
             <div className="doc-panel">
-              <h2 className="doc-panel-title">Create From Sales Order</h2>
+              <h2 className="doc-panel-title">
+                Create From Sales Order
+              </h2>
 
-              <Select
+              <EntitySearchPicker
                 label="Sales Order (optional)"
-                name="sourceOrder"
-                value={activeOrderNumber || NO_ORDER}
-                options={orderOptions}
-                disabled={orderPickerDisabled}
-                onChange={handleOrderChange}
+                placeholder="Search Sales Order or customer..."
+                fetchOptions={
+                  fetchOrderOptions
+                }
+                getOptionId={
+                  getOrderId
+                }
+                getOptionLabel={
+                  getOrderLabel
+                }
+                getOptionSubtitle={
+                  getOrderSubtitle
+                }
+                selectedIds={
+                  activeOrderNumber
+                    ? [activeOrderNumber]
+                    : [NO_ORDER]
+                }
+                selectedLabel={
+                  activeOrderNumber ||
+                  "No Sales Order (direct invoice)"
+                }
+                onToggle={
+                  handleOrderSelect
+                }
+                multiple={false}
+                disabled={
+                  orderPickerDisabled
+                }
+                pageSize={20}
+                debounceMs={350}
+                emptyMessage="No matching Sales Orders found."
               />
 
-              {ordersLoading && (
-                <p className="doc-note" role="status">
-                  Loading Sales Orders...
-                </p>
-              )}
-
-              {ordersFailed && !ordersLoading && (
-                <p className="doc-note" role="alert">
-                  Unable to load Sales Orders.{" "}
-                  <button
-                    type="button"
-                    className="doc-link-button"
-                    onClick={() => setOrdersReloadKey((value) => value + 1)}
-                  >
-                    Retry
-                  </button>
-                </p>
-              )}
-
-              {!ordersLoading &&
-                !ordersFailed &&
-                eligibleOrders.length === 0 && (
-                  <p className="doc-note">
-                    No confirmed Sales Orders are waiting to be invoiced. You
-                    can still create a direct invoice.
-                  </p>
-                )}
-
-              {!fromOrder && !ordersLoading && eligibleOrders.length > 0 && (
-                <p className="doc-note">
-                  Select a Sales Order to fill the customer, items, taxes and
-                  totals automatically.
-                </p>
-              )}
+              <p className="doc-note">
+                Select a confirmed, in-progress,
+                or completed order. Clear the
+                selection to create a direct
+                invoice. Order eligibility is
+                checked again before creation.
+              </p>
 
               {fromOrder && sourceOrder && (
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    alignItems: "center",
-                    gap: "10px",
-                    marginTop: "12px",
-                  }}
-                >
-                  <strong>{sourceOrder.orderNumber}</strong>
+                <div className="si-order-summary">
+                  <strong>
+                    {
+                      sourceOrder.orderNumber
+                    }
+                  </strong>
 
-                  <StatusField value={sourceOrder.status} />
+                  <StatusField
+                    value={
+                      sourceOrder.status
+                    }
+                  />
 
-                  <strong>{formatPaise(sourceOrder.totalAmountPaise)}</strong>
+                  <strong>
+                    {formatPaise(
+                      sourceOrder.totalAmountPaise,
+                    )}
+                  </strong>
                 </div>
               )}
             </div>
@@ -1616,90 +4876,135 @@ function SalesInvoiceForm({
         {(invoice || sourceNumber) && (
           <div className="doc-alerts">
             <div className="doc-alert">
-              {invoice && <StatusField value={invoice.status} />}
+              {invoice && (
+                <StatusField
+                  value={invoice.status}
+                />
+              )}
 
-              {invoice?.status === "POSTED" && (
+              {invoice?.status ===
+                "POSTED" && (
                 <>
                   {" "}
-                  <StatusField value={invoice.paymentStatus} />
+                  <StatusField
+                    value={
+                      invoice.paymentStatus
+                    }
+                  />
                 </>
               )}
 
-              {viewing && invoice?.status === "CREATED" && (
-                <p>
-                  This invoice is created but not posted. Use Post Invoice to
-                  create its accounting entry.
-                </p>
-              )}
+              {viewing &&
+                invoice?.status ===
+                  "CREATED" && (
+                  <p>
+                    This invoice is created but
+                    not posted. Use Post Invoice
+                    to create its accounting
+                    entry.
+                  </p>
+                )}
             </div>
           </div>
         )}
 
-        <fieldset className="doc-fieldset" disabled={formDisabled}>
+        <fieldset
+          className="doc-fieldset"
+          disabled={formDisabled}
+        >
           <main className="doc-main">
             <section className="doc-top">
               <div className="doc-panel doc-party-panel">
-                <h2 className="doc-panel-title">Bill To</h2>
+                <h2 className="doc-panel-title">
+                  Bill To
+                </h2>
 
-                {fixedLines ? (
-                  <Select
-                    label="Customer"
-                    name="customerId"
-                    value={form.customerId}
-                    placeholder="Select customer"
-                    options={fixedCustomerOptions}
-                    disabled
-                    onChange={() => {}}
-                    required
-                  />
-                ) : (
-                  <AsyncSearchSelect
-                    label="Customer"
-                    name="customerId"
-                    value={form.customerId}
-                    selectedLabel={customerPickerLabel}
-                    placeholder="Search customer by name, code or phone"
-                    fetchOptions={fetchCustomerOptions}
-                    limit={CUSTOMER_PICKER_LIMIT}
-                    disabled={orderFieldsLocked}
-                    onSelect={handleCustomerSelect}
-                    emptyMessage="No active customers found"
-                    required
-                  />
-                )}
+                <EntitySearchPicker
+                  label="Customer"
+                  placeholder="Search customer, code or phone..."
+                  fetchOptions={
+                    fetchCustomerOptions
+                  }
+                  getOptionId={
+                    getCustomerId
+                  }
+                  getOptionLabel={
+                    getCustomerLabel
+                  }
+                  getOptionSubtitle={
+                    getCustomerSubtitle
+                  }
+                  selectedIds={
+                    form.customerId
+                      ? [form.customerId]
+                      : []
+                  }
+                  selectedLabel={
+                    customerPickerLabel
+                  }
+                  onToggle={
+                    handleCustomerSelect
+                  }
+                  multiple={false}
+                  disabled={
+                    orderFieldsLocked
+                  }
+                  pageSize={20}
+                  debounceMs={350}
+                  emptyMessage="No active customers found."
+                />
 
                 {selectedCustomer && (
                   <div className="doc-party-card">
                     <div className="doc-avatar">
-                      {selectedCustomer.customerName?.charAt(0).toUpperCase() ||
+                      {selectedCustomer.customerName
+                        ?.charAt(0)
+                        .toUpperCase() ||
                         "C"}
                     </div>
 
                     <div className="doc-party-copy">
-                      <h3>{selectedCustomer.customerName}</h3>
-
-                      <p>{selectedCustomer.customerCode}</p>
+                      <h3>
+                        {
+                          selectedCustomer.customerName
+                        }
+                      </h3>
 
                       <p>
-                        <span>Address:</span> {address || "Not provided"}
+                        {
+                          selectedCustomer.customerCode
+                        }
                       </p>
 
-                      {fixedLines && selectedCustomer.shippingAddress && (
-                        <p>
-                          <span>Shipping:</span>{" "}
-                          {selectedCustomer.shippingAddress}
-                        </p>
-                      )}
+                      <p>
+                        <span>Address:</span>{" "}
+                        {address ||
+                          "Not provided"}
+                      </p>
+
+                      {fixedLines &&
+                        selectedCustomer.shippingAddress && (
+                          <p>
+                            <span>
+                              Shipping:
+                            </span>{" "}
+                            {
+                              selectedCustomer.shippingAddress
+                            }
+                          </p>
+                        )}
 
                       <p>
                         <span>GSTIN:</span>{" "}
-                        {selectedCustomer.gstNo || "Not provided"}
+                        {selectedCustomer.gstNo ||
+                          "Not provided"}
                       </p>
 
                       {!fixedLines && (
                         <p>
                           <span>Phone:</span>{" "}
-                          {selectedCustomer.phone || "Not provided"}
+                          {selectedCustomer.phone ||
+                            "Not provided"}
                         </p>
                       )}
                     </div>
@@ -1708,13 +5013,18 @@ function SalesInvoiceForm({
               </div>
 
               <div className="doc-panel">
-                <h2 className="doc-panel-title">Invoice Details</h2>
+                <h2 className="doc-panel-title">
+                  Invoice Details
+                </h2>
 
                 <div className="doc-fields-grid">
                   <Input
                     label="Invoice Number"
                     name="invoiceNumber"
-                    value={invoice?.invoiceNumber || "Generated after saving"}
+                    value={
+                      invoice?.invoiceNumber ||
+                      "Generated after saving"
+                    }
                     readOnly
                   />
 
@@ -1722,7 +5032,9 @@ function SalesInvoiceForm({
                     <Input
                       label="Sales Order"
                       name="sourceSalesOrderNumber"
-                      value={sourceNumber}
+                      value={
+                        sourceNumber
+                      }
                       readOnly
                     />
                   )}
@@ -1731,13 +5043,20 @@ function SalesInvoiceForm({
                     label="Invoice Date"
                     name="invoiceDate"
                     type="date"
-                    value={form.invoiceDate}
+                    value={
+                      form.invoiceDate
+                    }
                     min={
-                      fromOrder && sourceOrder
-                        ? inputDate(sourceOrder.orderDate)
+                      fromOrder &&
+                      sourceOrder
+                        ? inputDate(
+                            sourceOrder.orderDate,
+                          )
                         : undefined
                     }
-                    onChange={handleFieldChange}
+                    onChange={
+                      handleFieldChange
+                    }
                     required
                   />
 
@@ -1746,56 +5065,111 @@ function SalesInvoiceForm({
                     name="dueDate"
                     type="date"
                     value={form.dueDate}
-                    min={form.invoiceDate}
-                    onChange={handleFieldChange}
+                    min={
+                      form.invoiceDate
+                    }
+                    onChange={
+                      handleFieldChange
+                    }
                     required
                   />
 
                   <Input
                     label="Payment Terms"
                     name="paymentTerms"
-                    value={form.paymentTerms}
+                    value={
+                      form.paymentTerms
+                    }
                     readOnly={fromOrder}
-                    onChange={handleFieldChange}
+                    onChange={
+                      handleFieldChange
+                    }
                     maxLength={100}
                     required
                   />
 
-                  <Select
-                    label="Tax Treatment"
-                    name="taxMode"
-                    value={form.taxMode}
-                    options={TAX_OPTIONS}
-                    disabled={orderFieldsLocked}
-                    onChange={handleTaxModeChange}
-                  />
+                  <div className="si-static-picker">
+                    <EntitySearchPicker
+                      label="Tax Treatment"
+                      placeholder="Select tax treatment..."
+                      fetchOptions={
+                        fetchTaxOptions
+                      }
+                      getOptionId={
+                        localOptionId
+                      }
+                      getOptionLabel={
+                        localOptionLabel
+                      }
+                      selectedIds={
+                        form.taxMode
+                          ? [form.taxMode]
+                          : []
+                      }
+                      selectedLabel={
+                        taxLabel
+                      }
+                      onToggle={
+                        handleTaxModeSelect
+                      }
+                      multiple={false}
+                      disabled={
+                        orderFieldsLocked
+                      }
+                      pageSize={20}
+                      debounceMs={0}
+                      emptyMessage="No matching tax treatment."
+                    />
+                  </div>
                 </div>
 
-                {fromOrder || invoice?.sourceSalesOrderId ? (
+                {fromOrder ||
+                invoice?.sourceSalesOrderId ? (
                   <p className="doc-note">
-                    This invoice does not deduct stock. Record goods dispatch
-                    through Delivery Notes.
+                    This invoice does not
+                    deduct stock. Record goods
+                    dispatch through Delivery
+                    Notes.
                   </p>
                 ) : (
                   <label className="doc-check">
                     <input
                       type="checkbox"
-                      checked={form.updateStock}
+                      checked={
+                        form.updateStock
+                      }
+                      disabled={
+                        formDisabled
+                      }
                       onChange={(event) => {
-                        const checked = event.target.checked;
+                        if (formDisabled) {
+                          return;
+                        }
 
-                        setForm((previous) => ({
-                          ...previous,
-                          updateStock: checked,
-                        }));
+                        const checked =
+                          event.target.checked;
+
+                        setForm(
+                          (previous) => ({
+                            ...previous,
+                            updateStock:
+                              checked,
+                          }),
+                        );
+
+                        setErrors([]);
                       }}
                     />
 
                     <span>
-                      Deduct inventory-tracked goods when posting
+                      Deduct inventory-tracked
+                      goods when posting
+
                       <small>
-                        Do not select this if the same goods have already been
-                        deducted through a Delivery Note.
+                        Do not select this if
+                        the same goods have
+                        already been deducted
+                        through a Delivery Note.
                       </small>
                     </span>
                   </label>
@@ -1812,220 +5186,370 @@ function SalesInvoiceForm({
                       <th>Items</th>
                       <th>HSN / SAC</th>
                       <th>Qty</th>
-                      <th>Price/Item (₹)</th>
+                      <th>
+                        Price/Item (₹)
+                      </th>
                       <th>Discount %</th>
                       <th>GST</th>
                       <th>Amount</th>
                       <th>
-                        <span className="doc-sr-only">Remove</span>
+                        <span className="doc-sr-only">
+                          Remove
+                        </span>
                       </th>
                     </tr>
                   </thead>
 
                   <tbody>
-                    {items.map((item, index) => {
-                      const savedItem = fixedLines
-                        ? displayRecord?.items[index]
-                        : null;
+                    {items.map(
+                      (item, index) => {
+                        const savedItem =
+                          fixedLines
+                            ? displayRecord
+                                ?.items[index]
+                            : null;
 
-                      const product = productMap.get(item.productId);
+                        const product =
+                          productMap.get(
+                            item.productId,
+                          );
 
-                      const options = products
-                        .filter(
-                          (record) =>
-                            String(record._id) === item.productId ||
-                            !items.some(
-                              (other) => other.productId === String(record._id),
-                            ),
-                        )
-                        .map((record) => ({
-                          value: String(record._id),
-                          label: `${record.name} ` + `(${record.productCode})`,
-                        }));
+                        const productName =
+                          product?.name ||
+                          product?.productCode ||
+                          "Product";
 
-                      if (
-                        !fixedLines &&
-                        item.productId &&
-                        !options.some(
-                          (option) => option.value === item.productId,
-                        )
-                      ) {
-                        const original = invoice?.items.find(
-                          (record) =>
-                            String(record.productId) === item.productId,
-                        );
+                        const selectedProductLabel =
+                          product
+                            ? `${productName}${
+                                product.productCode &&
+                                product.name
+                                  ? ` (${product.productCode})`
+                                  : ""
+                              }${
+                                product.status ===
+                                "UNAVAILABLE"
+                                  ? " — reselect to verify"
+                                  : ""
+                              }`
+                            : "";
 
-                        options.unshift({
-                          value: item.productId,
-                          label: original
-                            ? `${original.productName} (unavailable)`
-                            : "Unavailable product",
-                        });
-                      }
+                        return (
+                          <tr
+                            key={item.rowId}
+                          >
+                            <td
+                              data-label="No."
+                              className="doc-cell-no"
+                            >
+                              {index + 1}
+                            </td>
 
-                      return (
-                        <tr key={item.rowId}>
-                          <td data-label="No." className="doc-cell-no">
-                            {index + 1}
-                          </td>
-
-                          <td data-label="Item" className="doc-cell-item">
-                            {fixedLines ? (
-                              <div>
-                                <strong>{savedItem?.productName}</strong>
-
-                                <small className="doc-item-meta">
-                                  {savedItem?.productCode}
-                                  {" · "}
-                                  {savedItem?.unit}
-                                </small>
-
-                                {savedItem?.specification && (
-                                  <p className="doc-note">
-                                    {savedItem.specification}
-                                  </p>
-                                )}
-                              </div>
-                            ) : (
-                              <>
-                                <Select
-                                  name={`product-${item.rowId}`}
-                                  aria-label={`Product ${index + 1}`}
-                                  value={item.productId}
-                                  placeholder="Select product"
-                                  options={options}
-                                  onChange={(event) =>
-                                    selectProduct(
-                                      item.rowId,
-                                      event.target.value,
-                                    )
-                                  }
-                                />
-
-                                {product && (
-                                  <small className="doc-item-meta">
-                                    {product.unit}
-                                    {" · "}
-                                    {product.type}
-                                    {product.trackInventory
-                                      ? " · Stock tracked"
-                                      : ""}
-                                  </small>
-                                )}
-                              </>
-                            )}
-                          </td>
-
-                          <td data-label="HSN / SAC" className="doc-cell-hsn">
-                            {savedItem?.hsnSacCode ||
-                              product?.hsnSacCode ||
-                              "—"}
-                          </td>
-
-                          {NUMBER_COLUMNS.map((column) => (
-                            <td key={column.field} data-label={column.label}>
+                            <td
+                              data-label="Item"
+                              className="doc-cell-item"
+                            >
                               {fixedLines ? (
-                                column.field === "unitRate" ? (
-                                  formatPaise(savedItem?.unitRatePaise)
-                                ) : (
-                                  item[column.field]
-                                )
+                                <div>
+                                  <strong>
+                                    {
+                                      savedItem?.productName
+                                    }
+                                  </strong>
+
+                                  <small className="doc-item-meta">
+                                    {
+                                      savedItem?.productCode
+                                    }
+                                    {" · "}
+                                    {
+                                      savedItem?.unit
+                                    }
+                                  </small>
+
+                                  {savedItem?.specification && (
+                                    <p className="doc-note">
+                                      {
+                                        savedItem.specification
+                                      }
+                                    </p>
+                                  )}
+                                </div>
                               ) : (
-                                <Input
-                                  name={`${column.field}-${item.rowId}`}
-                                  aria-label={`${column.label} ${index + 1}`}
-                                  type="number"
-                                  inputMode="decimal"
-                                  min={column.min}
-                                  max={column.max}
-                                  step={column.step}
-                                  value={item[column.field]}
-                                  onChange={(event) =>
-                                    updateItem(
-                                      item.rowId,
-                                      column.field,
-                                      event.target.value,
-                                    )
-                                  }
-                                />
+                                <>
+                                  <EntitySearchPicker
+                                    placeholder="Search product or service..."
+                                    fetchOptions={
+                                      fetchProductOptions
+                                    }
+                                    getOptionId={
+                                      getProductId
+                                    }
+                                    getOptionLabel={
+                                      getProductLabel
+                                    }
+                                    getOptionSubtitle={
+                                      getProductSubtitle
+                                    }
+                                    selectedIds={
+                                      item.productId
+                                        ? [
+                                            item.productId,
+                                          ]
+                                        : []
+                                    }
+                                    selectedLabel={
+                                      selectedProductLabel
+                                    }
+                                    onToggle={(
+                                      id,
+                                      record,
+                                    ) =>
+                                      selectProduct(
+                                        item.rowId,
+                                        id,
+                                        record,
+                                      )
+                                    }
+                                    multiple={false}
+                                    disabled={
+                                      formDisabled
+                                    }
+                                    pageSize={
+                                      20
+                                    }
+                                    debounceMs={
+                                      350
+                                    }
+                                    emptyMessage="No active products found."
+                                  />
+
+                                  {product && (
+                                    <small className="doc-item-meta">
+                                      {
+                                        product.unit
+                                      }
+                                      {" · "}
+                                      {
+                                        product.type
+                                      }
+
+                                      {product.trackInventory
+                                        ? " · Stock tracked"
+                                        : ""}
+                                    </small>
+                                  )}
+                                </>
                               )}
                             </td>
-                          ))}
 
-                          <td data-label="GST">
-                            {fixedLines ? (
-                              `${item.gstRate}%`
-                            ) : (
-                              <Select
-                                name={`gst-${item.rowId}`}
-                                aria-label={`GST ${index + 1}`}
-                                value={item.gstRate}
-                                disabled={
-                                  formDisabled || form.taxMode === "NONE"
-                                }
-                                options={GST_RATES.map((rate) => ({
-                                  value: rate,
-                                  label: `${rate}%`,
-                                }))}
-                                onChange={(event) =>
-                                  updateItem(
-                                    item.rowId,
-                                    "gstRate",
-                                    Number(event.target.value),
+                            <td
+                              data-label="HSN / SAC"
+                              className="doc-cell-hsn"
+                            >
+                              {savedItem?.hsnSacCode ||
+                                product?.hsnSacCode ||
+                                "—"}
+                            </td>
+
+                            {NUMBER_COLUMNS.map(
+                              (column) => (
+                                <td
+                                  key={
+                                    column.field
+                                  }
+                                  data-label={
+                                    column.label
+                                  }
+                                >
+                                  {fixedLines ? (
+                                    column.field ===
+                                    "unitRate" ? (
+                                      formatPaise(
+                                        savedItem?.unitRatePaise,
+                                      )
+                                    ) : (
+                                      item[
+                                        column.field
+                                      ]
+                                    )
+                                  ) : (
+                                    <Input
+                                      name={`${column.field}-${item.rowId}`}
+                                      aria-label={`${column.label} ${
+                                        index +
+                                        1
+                                      }`}
+                                      type="number"
+                                      inputMode="decimal"
+                                      min={
+                                        column.min
+                                      }
+                                      max={
+                                        column.max
+                                      }
+                                      step={
+                                        column.step
+                                      }
+                                      value={
+                                        item[
+                                          column.field
+                                        ]
+                                      }
+                                      onChange={(
+                                        event,
+                                      ) =>
+                                        updateItem(
+                                          item.rowId,
+                                          column.field,
+                                          event
+                                            .target
+                                            .value,
+                                        )
+                                      }
+                                    />
+                                  )}
+                                </td>
+                              ),
+                            )}
+
+                            <td data-label="GST">
+                              {fixedLines ? (
+                                `${item.gstRate}%`
+                              ) : (
+                                <div className="si-static-picker">
+                                  <EntitySearchPicker
+                                    placeholder="Select GST..."
+                                    fetchOptions={
+                                      fetchGstOptions
+                                    }
+                                    getOptionId={
+                                      localOptionId
+                                    }
+                                    getOptionLabel={
+                                      localOptionLabel
+                                    }
+                                    selectedIds={[
+                                      String(
+                                        item.gstRate,
+                                      ),
+                                    ]}
+                                    selectedLabel={`${item.gstRate}%`}
+                                    onToggle={(
+                                      value,
+                                    ) => {
+                                      if (
+                                        value ===
+                                        null
+                                      ) {
+                                        return;
+                                      }
+
+                                      updateItem(
+                                        item.rowId,
+                                        "gstRate",
+                                        Number(
+                                          value,
+                                        ),
+                                      );
+                                    }}
+                                    multiple={false}
+                                    disabled={
+                                      formDisabled ||
+                                      form.taxMode ===
+                                        "NONE"
+                                    }
+                                    pageSize={
+                                      20
+                                    }
+                                    debounceMs={
+                                      0
+                                    }
+                                    emptyMessage="No matching GST rate."
+                                  />
+                                </div>
+                              )}
+                            </td>
+
+                            <td
+                              data-label="Amount"
+                              className="doc-cell-amount"
+                            >
+                              {previews[
+                                index
+                              ]?.valid
+                                ? formatPaise(
+                                    previews[
+                                      index
+                                    ].total,
                                   )
-                                }
-                              />
-                            )}
-                          </td>
+                                : "—"}
+                            </td>
 
-                          <td data-label="Amount" className="doc-cell-amount">
-                            {previews[index]?.valid
-                              ? formatPaise(previews[index].total)
-                              : "—"}
-                          </td>
-
-                          <td data-label="Remove" className="doc-cell-action">
-                            {!fixedLines && (
-                              <button
-                                type="button"
-                                className="doc-remove-button"
-                                aria-label={`Remove item ${index + 1}`}
-                                disabled={items.length === 1}
-                                onClick={() => {
-                                  setItems((previous) =>
-                                    previous.filter(
-                                      (record) => record.rowId !== item.rowId,
-                                    ),
-                                  );
-
-                                  setErrors([]);
-                                }}
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                            <td
+                              data-label="Remove"
+                              className="doc-cell-action"
+                            >
+                              {!fixedLines && (
+                                <button
+                                  type="button"
+                                  className="doc-remove-button"
+                                  aria-label={`Remove item ${
+                                    index +
+                                    1
+                                  }`}
+                                  disabled={
+                                    formDisabled ||
+                                    items.length <=
+                                      1
+                                  }
+                                  onClick={() =>
+                                    removeItem(
+                                      item.rowId,
+                                    )
+                                  }
+                                >
+                                  <Trash2
+                                    size={
+                                      16
+                                    }
+                                  />
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      },
+                    )}
                   </tbody>
 
                   <tfoot>
                     <tr>
-                      <td colSpan={5} className="doc-subtotal-label">
+                      <td
+                        colSpan={5}
+                        className="doc-subtotal-label"
+                      >
                         Subtotal
                       </td>
 
                       <td className="doc-subtotal-value">
-                        {formatPaise(totals.discount)}
+                        {formatPaise(
+                          totals.discount,
+                        )}
                       </td>
 
                       <td className="doc-subtotal-value">
-                        {formatPaise(totals.cgst + totals.sgst + totals.igst)}
+                        {formatPaise(
+                          totals.cgst +
+                            totals.sgst +
+                            totals.igst,
+                        )}
                       </td>
 
                       <td className="doc-subtotal-value">
-                        {formatPaise(totals.total)}
+                        {formatPaise(
+                          totals.total,
+                        )}
                       </td>
 
                       <td />
@@ -2039,12 +5563,12 @@ function SalesInvoiceForm({
                   <button
                     type="button"
                     className="doc-dashed-line"
-                    disabled={items.length >= 200}
-                    onClick={() => {
-                      setItems((previous) => [...previous, newItem()]);
-
-                      setErrors([]);
-                    }}
+                    disabled={
+                      formDisabled ||
+                      items.length >=
+                        200
+                    }
+                    onClick={addItem}
                   >
                     <Plus size={15} />
                     Add Item
@@ -2057,28 +5581,40 @@ function SalesInvoiceForm({
               <div className="doc-extras">
                 {fixedLines ? (
                   <div className="doc-panel">
-                    <h2 className="doc-panel-title">Notes</h2>
+                    <h2 className="doc-panel-title">
+                      Notes
+                    </h2>
 
-                    <p style={{ whiteSpace: "pre-wrap" }}>
-                      {form.notes || "No notes added."}
+                    <p className="si-pre-wrap">
+                      {form.notes ||
+                        "No notes added."}
                     </p>
 
                     {displayRecord?.deliveryTerms && (
                       <>
-                        <h3>Delivery Terms</h3>
+                        <h3>
+                          Delivery Terms
+                        </h3>
 
-                        <p style={{ whiteSpace: "pre-wrap" }}>
-                          {displayRecord.deliveryTerms}
+                        <p className="si-pre-wrap">
+                          {
+                            displayRecord.deliveryTerms
+                          }
                         </p>
                       </>
                     )}
 
                     {displayRecord?.termsAndConditions && (
                       <>
-                        <h3>Terms and Conditions</h3>
+                        <h3>
+                          Terms and
+                          Conditions
+                        </h3>
 
-                        <p style={{ whiteSpace: "pre-wrap" }}>
-                          {displayRecord.termsAndConditions}
+                        <p className="si-pre-wrap">
+                          {
+                            displayRecord.termsAndConditions
+                          }
                         </p>
                       </>
                     )}
@@ -2087,22 +5623,45 @@ function SalesInvoiceForm({
                   <>
                     <button
                       type="button"
-                      className={`doc-extra-row ${showNotes ? "is-open" : ""}`}
-                      aria-expanded={showNotes}
-                      onClick={() => setShowNotes((previous) => !previous)}
+                      className={`doc-extra-row ${
+                        showNotes
+                          ? "is-open"
+                          : ""
+                      }`}
+                      aria-expanded={
+                        showNotes
+                      }
+                      onClick={() =>
+                        setShowNotes(
+                          (previous) =>
+                            !previous,
+                        )
+                      }
                     >
-                      <StickyNote size={16} />
-                      <span>Add Notes</span>
-                      <ChevronDown size={16} />
+                      <StickyNote
+                        size={16}
+                      />
+                      <span>
+                        Add Notes
+                      </span>
+                      <ChevronDown
+                        size={16}
+                      />
                     </button>
 
                     {showNotes && (
                       <div className="doc-extra-content">
                         <Textarea
                           name="notes"
-                          value={form.notes}
-                          onChange={handleFieldChange}
-                          maxLength={1000}
+                          value={
+                            form.notes
+                          }
+                          onChange={
+                            handleFieldChange
+                          }
+                          maxLength={
+                            1000
+                          }
                           rows={4}
                           placeholder="Customer instructions or sales notes..."
                         />
@@ -2112,65 +5671,118 @@ function SalesInvoiceForm({
                 )}
 
                 <p className="doc-note">
-                  Payments are recorded separately through Customer Receipts.
-                  Creating or posting an invoice does not mark it as paid.
+                  Payments are recorded
+                  separately through Customer
+                  Receipts. Creating or posting
+                  an invoice does not mark it as
+                  paid.
                 </p>
 
                 {(fromOrder || editing) && (
                   <p className="doc-note">
-                    Save the invoice with status Created, then open it and click
-                    Post Invoice.
+                    Save the invoice with status
+                    Created, then open it and
+                    click Post Invoice.
                   </p>
                 )}
               </div>
 
               <div className="doc-summary">
                 {[
-                  ["Gross Amount", totals.gross],
-                  ["Line Discounts", -totals.discount],
-                  ["Taxable Amount", totals.taxable],
+                  [
+                    "Gross Amount",
+                    totals.gross,
+                  ],
+                  [
+                    "Line Discounts",
+                    -totals.discount,
+                  ],
+                  [
+                    "Taxable Amount",
+                    totals.taxable,
+                  ],
 
-                  ...(form.taxMode === "INTRA_STATE"
+                  ...(form.taxMode ===
+                  "INTRA_STATE"
                     ? [
-                        ["CGST", totals.cgst],
-                        ["SGST", totals.sgst],
+                        [
+                          "CGST",
+                          totals.cgst,
+                        ],
+                        [
+                          "SGST",
+                          totals.sgst,
+                        ],
                       ]
                     : []),
 
-                  ...(form.taxMode === "INTER_STATE"
-                    ? [["IGST", totals.igst]]
+                  ...(form.taxMode ===
+                  "INTER_STATE"
+                    ? [
+                        [
+                          "IGST",
+                          totals.igst,
+                        ],
+                      ]
                     : []),
-                ].map(([label, amount]) => (
-                  <div className="doc-summary-row" key={label}>
-                    <span>{label}</span>
-
-                    <strong>{formatPaise(amount)}</strong>
-                  </div>
-                ))}
-
-                <div className="doc-summary-total">
-                  <span>Total Amount:</span>
-
-                  <strong>{formatPaise(totals.total)}</strong>
-                </div>
-
-                {viewing && invoice?.status === "POSTED" && (
-                  <>
-                    <div className="doc-summary-row">
-                      <span>Paid Amount</span>
-
-                      <strong>{formatPaise(invoice.paidAmountPaise)}</strong>
-                    </div>
-
-                    <div className="doc-summary-row">
-                      <span>Outstanding Amount</span>
+                ].map(
+                  ([label, amount]) => (
+                    <div
+                      className="doc-summary-row"
+                      key={label}
+                    >
+                      <span>{label}</span>
 
                       <strong>
-                        {formatPaise(invoice.outstandingAmountPaise)}
+                        {formatPaise(
+                          amount,
+                        )}
                       </strong>
                     </div>
-                  </>
+                  ),
                 )}
+
+                <div className="doc-summary-total">
+                  <span>
+                    Total Amount:
+                  </span>
+
+                  <strong>
+                    {formatPaise(
+                      totals.total,
+                    )}
+                  </strong>
+                </div>
+
+                {viewing &&
+                  invoice?.status ===
+                    "POSTED" && (
+                    <>
+                      <div className="doc-summary-row">
+                        <span>
+                          Paid Amount
+                        </span>
+
+                        <strong>
+                          {formatPaise(
+                            invoice.paidAmountPaise,
+                          )}
+                        </strong>
+                      </div>
+
+                      <div className="doc-summary-row">
+                        <span>
+                          Outstanding Amount
+                        </span>
+
+                        <strong>
+                          {formatPaise(
+                            invoice.outstandingAmountPaise,
+                          )}
+                        </strong>
+                      </div>
+                    </>
+                  )}
 
                 <p className="doc-note">
                   {viewing
@@ -2187,50 +5799,99 @@ function SalesInvoiceForm({
         {viewing && invoice && (
           <EwayBillPanel
             invoice={invoice}
-            disabled={saving || uncertainResult || Boolean(confirmation)}
+            disabled={
+              saving ||
+              uncertainResult ||
+              Boolean(confirmation)
+            }
             onUpdated={applyInvoice}
           />
         )}
 
-        <div className="doc-mobile-bar">
+        <div
+          className="doc-mobile-bar"
+          hidden={keyboardOpen}
+        >
           <div className="doc-mobile-total">
             <span>Total</span>
 
-            <strong>{formatPaise(totals.total)}</strong>
+            <strong>
+              {formatPaise(
+                totals.total,
+              )}
+            </strong>
           </div>
 
-          <div className="doc-mobile-actions">{actionButtons}</div>
+          <div className="doc-mobile-actions">
+            {actionButtons}
+          </div>
         </div>
       </form>
 
       <ConfirmModal
         open={Boolean(confirmation)}
-        type={isPostingConfirmation ? "info" : "warning"}
-        icon={isPostingConfirmation ? Send : undefined}
+        type={
+          isPostingConfirmation
+            ? "info"
+            : "warning"
+        }
+        icon={
+          isPostingConfirmation
+            ? Send
+            : undefined
+        }
         title={confirmationTitle}
-        message={confirmationMessage}
-        confirmText={confirmationConfirmText}
-        cancelText={isPostingConfirmation ? "Back" : "Stay on Page"}
+        message={
+          confirmationMessage
+        }
+        confirmText={
+          confirmationConfirmText
+        }
+        cancelText={
+          isPostingConfirmation
+            ? "Back"
+            : "Stay on Page"
+        }
         loading={saving}
         closeOnBackdrop={!saving}
         closeOnEscape={!saving}
-        onCancel={closeConfirmation}
-        onConfirm={handleConfirmation}
+        onCancel={
+          closeConfirmation
+        }
+        onConfirm={
+          handleConfirmation
+        }
       />
     </div>
   );
 }
 
-export default function SalesInvoiceCreate({ mode = "create" }) {
+/* ------------------------------------------------------------------ */
+/* Route wrapper — retains tenant-based remounting                      */
+/* ------------------------------------------------------------------ */
+
+export default function SalesInvoiceCreate({
+  mode = "create",
+}) {
   const params = useParams();
   const [searchParams] = useSearchParams();
 
-  const tenantRevision = useTenantRevision();
+  const tenantRevision =
+    useTenantRevision();
 
-  const invoiceNumber = params.invoiceNumber || params.id || "";
+  const invoiceNumber =
+    params.invoiceNumber ||
+    params.id ||
+    "";
 
   const sourceOrderNumber =
-    mode === "create" ? (searchParams.get("orderNumber") || "").trim() : "";
+    mode === "create"
+      ? (
+          searchParams.get(
+            "orderNumber",
+          ) || ""
+        ).trim()
+      : "";
 
   return (
     <SalesInvoiceForm

@@ -378,3 +378,165 @@
     min-height: 40px;
   }
 }
+.dnl-list-page {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.dnl-list-error {
+  margin: 0 0 12px;
+}
+
+.dnl-document-link {
+  margin: 0;
+  padding: 0;
+
+  border: 0;
+  background: transparent;
+
+  color: var(--primary-color, #2563eb);
+
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 600;
+  text-align: left;
+
+  cursor: pointer;
+}
+
+.dnl-document-link:hover {
+  text-decoration: underline;
+}
+
+.dnl-document-link:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dnl-bulk-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  margin-top: 12px;
+}
+
+.dnl-bulk-note {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 19px;
+}
+
+.dnl-bulk-remarks {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.dnl-bulk-remarks > span {
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dnl-bulk-remarks textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 110px;
+  padding: 10px 12px;
+
+  border: 1px solid #dfe3e8;
+  border-radius: 6px;
+
+  background: #fff;
+  color: #334155;
+
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 20px;
+
+  resize: vertical;
+}
+
+.dnl-bulk-remarks textarea:focus {
+  outline: 2px solid var(--primary-light, #dbeafe);
+  border-color: var(--primary-color, #2563eb);
+}
+
+.dnl-bulk-remarks small {
+  color: #64748b;
+  font-size: 11px;
+  line-height: 17px;
+}
+
+.dnl-bulk-errors {
+  max-height: 280px;
+  padding: 12px;
+  overflow-y: auto;
+
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+
+  background: #fff7f7;
+  color: #b42318;
+
+  font-size: 12px;
+  line-height: 19px;
+  overflow-wrap: anywhere;
+}
+
+.dnl-bulk-errors ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.dnl-bulk-errors li + li {
+  margin-top: 10px;
+}
+
+.dnl-bulk-errors li > span {
+  font-weight: 600;
+}
+
+.dnl-bulk-errors small {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 17px;
+}
+
+.dnl-bulk-errors p {
+  margin: 10px 0 0;
+}
+
+@media (max-width: 600px) {
+  .dnl-bulk-remarks textarea {
+    font-size: 16px;
+  }
+
+  .dnl-row-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .dnl-action {
+    min-height: 44px;
+  }
+
+  .dnl-modal {
+    max-width: calc(100vw - 20px);
+  }
+
+  .dnl-modal-body {
+    min-width: 0;
+  }
+
+  .dnl-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}

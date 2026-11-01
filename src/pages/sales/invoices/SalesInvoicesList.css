@@ -1,0 +1,83 @@
+.sil-list-page {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.sil-list-alert {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+
+  border: 1px solid #fecaca;
+  border-radius: 7px;
+
+  background: #fff7f7;
+  color: #b42318;
+
+  font-size: 13px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+.sil-confirm-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  margin-top: 12px;
+}
+
+.sil-confirm-note {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 19px;
+}
+
+.sil-action-errors {
+  max-height: 280px;
+  padding: 12px;
+
+  overflow-y: auto;
+
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+
+  background: #fff7f7;
+  color: #b42318;
+
+  font-size: 12px;
+  line-height: 19px;
+  overflow-wrap: anywhere;
+}
+
+.sil-action-errors ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.sil-action-errors li + li {
+  margin-top: 10px;
+}
+
+.sil-action-errors li > span {
+  font-weight: 600;
+}
+
+.sil-action-errors small {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 17px;
+}
+
+.sil-action-errors p {
+  margin: 10px 0 0;
+}
+
+@media (max-width: 600px) {
+  .sil-list-page .so-primary-button,
+  .sil-list-page .sip-btn {
+    min-height: 44px;
+  }
+}
