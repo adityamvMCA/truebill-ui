@@ -1,3 +1,10 @@
+/* =====================================================
+   PURCHASE RFQ  (list + create / edit / view)
+   Breakpoints: >1024 desktop | 768-1024 tablet |
+                601-767 large phone | <=600 phone
+   Capacitor: safe-area insets, dvh, keyboard-aware bar
+===================================================== */
+
 .rfqu-list-page,
 .rfqu-document-page {
   --rfqu-primary: var(--primary-color, #2563eb);
@@ -7,9 +14,18 @@
   --rfqu-border: var(--border-color, #e2e8f0);
   --rfqu-surface: var(--bg-primary, #ffffff);
   --rfqu-soft: var(--bg-secondary, #f8fafc);
+  --rfqu-danger: var(--danger, #dc2626);
 
+  --rfqu-bar-height: 72px;
+  --rfqu-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --rfqu-safe-left: env(safe-area-inset-left, 0px);
+  --rfqu-safe-right: env(safe-area-inset-right, 0px);
+
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
   color: var(--rfqu-text);
+  -webkit-tap-highlight-color: transparent;
   animation: rfqu-enter 180ms ease-out both;
 }
 
@@ -17,6 +33,27 @@
 .rfqu-document-page * {
   box-sizing: border-box;
 }
+
+.rfqu-document-page button,
+.rfqu-document-page label,
+.rfqu-list-page button {
+  touch-action: manipulation;
+}
+
+/* opacity only: a leftover transform would break position: fixed children */
+@keyframes rfqu-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* =====================================================
+   DOCUMENT PAGE (create / edit / view)
+===================================================== */
 
 .rfqu-document-page {
   background: var(--rfqu-soft);
@@ -31,9 +68,10 @@
 }
 
 .rfqu-document-page .doc-main {
+  min-width: 0;
   border-radius: 14px;
   box-shadow: 0 4px 18px rgb(15 23 42 / 3%);
-  /* lets the PR dropdown menu overflow the card */
+  /* lets dropdowns overflow the card */
   overflow: visible;
 }
 
@@ -42,23 +80,35 @@
   color: var(--rfqu-text);
 }
 
+.rfqu-document-page .doc-title {
+  min-width: 0;
+}
+
 .rfqu-document-page .doc-title svg,
 .rfqu-document-page .doc-extra-row,
 .rfqu-document-page .doc-dashed-line {
   color: var(--rfqu-primary);
 }
 
-.rfqu-document-page .doc-header-actions {
-  flex-wrap: wrap;
+.rfqu-document-page .doc-header-left {
+  min-width: 0;
 }
 
-/* desktop: wrapper is invisible so header layout stays exactly as before */
+.rfqu-document-page .doc-header-actions {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* desktop: wrapper is invisible so header layout stays as before */
 .rfqu-header-buttons {
   display: contents;
 }
 
 .rfqu-document-page .doc-fieldset {
   min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
 .rfqu-document-page .doc-fieldset:disabled {
@@ -70,13 +120,20 @@
 .rfqu-document-page .doc-party-panel,
 .rfqu-document-page .doc-extras,
 .rfqu-document-page .doc-items {
+  min-width: 0;
   border-color: var(--rfqu-border);
 }
 
 .rfqu-document-page .doc-panel-title {
-  color: var(--rfqu-text);
   font-size: 14px;
   font-weight: 650;
+}
+
+.rfqu-document-page .doc-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .rfqu-document-page .doc-table th {
@@ -94,10 +151,14 @@
 .rfqu-document-page .doc-summary-row {
   color: var(--rfqu-muted);
   border-color: var(--rfqu-border);
+  gap: 12px;
 }
 
 .rfqu-document-page .doc-summary-row strong {
+  min-width: 0;
   color: var(--rfqu-text);
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .rfqu-document-page .doc-note {
@@ -109,6 +170,17 @@
   border-color: var(--rfqu-border);
 }
 
+.rfqu-document-page.doc-detail-page .form-input:disabled,
+.rfqu-document-page.doc-detail-page .form-select:disabled,
+.rfqu-document-page.doc-detail-page .form-textarea:disabled {
+  opacity: 1;
+  color: var(--rfqu-text);
+  -webkit-text-fill-color: var(--rfqu-text);
+  background: var(--rfqu-soft);
+}
+
+/* ----- Cells / links / buttons ----- */
+
 .rfqu-document-cell {
   display: flex;
   flex-direction: column;
@@ -119,12 +191,14 @@
 .rfqu-document-cell strong {
   font-size: 13px;
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .rfqu-document-cell span {
   color: var(--rfqu-muted);
   font-size: 11px;
   line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .rfqu-document-link {
@@ -173,6 +247,7 @@
 .rfqu-count-badge {
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
   padding: 4px 9px;
   border-radius: 999px;
   background: var(--rfqu-light);
@@ -180,7 +255,10 @@
   font-size: 11px;
   font-weight: 600;
   line-height: 1.5;
+  white-space: nowrap;
 }
+
+/* ----- Source section ----- */
 
 .rfqu-source-section {
   display: grid;
@@ -223,6 +301,7 @@
 
 .rfqu-source-confirmation strong {
   font-size: 13px;
+  overflow-wrap: anywhere;
 }
 
 .rfqu-source-confirmation span {
@@ -250,7 +329,10 @@
 .rfqu-source-reference strong {
   color: var(--rfqu-primary);
   font-size: 13px;
+  overflow-wrap: anywhere;
 }
+
+/* ----- Suppliers ----- */
 
 .rfqu-section-heading {
   display: flex;
@@ -261,6 +343,7 @@
 }
 
 .rfqu-section-heading .doc-panel-title {
+  min-width: 0;
   margin: 0;
 }
 
@@ -269,9 +352,11 @@
   flex-direction: column;
   gap: 9px;
   max-height: 340px;
-  overflow-y: auto;
   margin-top: 14px;
   padding: 2px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
 }
 
@@ -279,6 +364,7 @@
   display: flex;
   align-items: center;
   gap: 11px;
+  min-width: 0;
   padding: 12px;
   border: 1px solid var(--rfqu-border);
   border-radius: 10px;
@@ -293,9 +379,9 @@
 }
 
 .rfqu-supplier-card input[type="checkbox"] {
-  width: 17px;
-  height: 17px;
-  flex: 0 0 17px;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
   margin: 0;
   accent-color: var(--rfqu-primary);
 }
@@ -335,8 +421,8 @@
 }
 
 .rfqu-empty {
-  padding: 12px;
   margin: 0;
+  padding: 12px;
   color: var(--rfqu-muted);
   font-size: 12px;
   line-height: 1.7;
@@ -346,7 +432,18 @@
 
 .rfqu-full-width {
   grid-column: 1 / -1;
+  min-width: 0;
 }
+
+.rfqu-document-page.doc-detail-page .rfqu-supplier-list {
+  max-height: none;
+}
+
+.rfqu-document-page.doc-detail-page .rfqu-supplier-card {
+  cursor: default;
+}
+
+/* ----- Items table ----- */
 
 .rfqu-document-page .rfqu-items-table {
   min-width: 1000px;
@@ -390,22 +487,7 @@
   line-height: 1.8;
 }
 
-.rfqu-document-page.doc-detail-page .form-input:disabled,
-.rfqu-document-page.doc-detail-page .form-select:disabled,
-.rfqu-document-page.doc-detail-page .form-textarea:disabled {
-  opacity: 1;
-  color: var(--rfqu-text);
-  -webkit-text-fill-color: var(--rfqu-text);
-  background: var(--rfqu-soft);
-}
-
-.rfqu-document-page.doc-detail-page .rfqu-supplier-list {
-  max-height: none;
-}
-
-.rfqu-document-page.doc-detail-page .rfqu-supplier-card {
-  cursor: default;
-}
+/* ----- Focus ----- */
 
 .rfqu-document-link:focus-visible,
 .rfqu-primary-button:focus-visible,
@@ -415,7 +497,7 @@
 }
 
 /* =====================================================
-   SEARCHABLE PR DROPDOWN
+   LEGACY SEARCHABLE DROPDOWN (kept for other pages)
 ===================================================== */
 
 .rfqu-combo {
@@ -438,7 +520,7 @@
   justify-content: space-between;
   gap: 8px;
   width: 100%;
-  min-height: 42px;
+  min-height: 44px;
   padding: 9px 12px;
   border: 1px solid var(--rfqu-border);
   border-radius: 9px;
@@ -506,7 +588,7 @@
   background: transparent;
   color: var(--rfqu-text);
   font: inherit;
-  font-size: 16px; /* prevents iOS zoom on focus */
+  font-size: 16px; /* prevents zoom on focus */
 }
 
 .rfqu-combo-list {
@@ -551,7 +633,7 @@
 }
 
 /* =====================================================
-   WORKFLOW (created by / approved by / cancelled by)
+   WORKFLOW (created / approved / issued / cancelled)
 ===================================================== */
 
 .rfqu-workflow {
@@ -595,18 +677,18 @@
 }
 
 .rfqu-workflow-dot {
+  position: relative;
+  z-index: 1;
   flex: 0 0 10px;
   width: 10px;
   height: 10px;
   margin-top: 4px;
   border-radius: 50%;
   background: var(--rfqu-primary);
-  position: relative;
-  z-index: 1;
 }
 
 .rfqu-workflow-step.is-danger .rfqu-workflow-dot {
-  background: var(--danger, #dc2626);
+  background: var(--rfqu-danger);
 }
 
 .rfqu-workflow-step > div {
@@ -629,227 +711,15 @@
   overflow-wrap: anywhere;
 }
 
-/* opacity only: a leftover transform would break position: fixed children */
-@keyframes rfqu-enter {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
 /* =====================================================
-   DESKTOP: sticky bar is mobile-only
+   LIST PAGE + CONFIRM MODAL CONTENT
 ===================================================== */
 
-@media (min-width: 768px) {
-  .rfqu-document-page .doc-mobile-bar {
-    display: none;
-  }
-}
-
-/* =====================================================
-   TABLET / MOBILE (<= 900px)
-===================================================== */
-
-@media (max-width: 900px) {
-  .rfqu-source-section {
-    grid-template-columns: minmax(0, 1fr);
-    padding: 16px;
-  }
-}
-
-/* =====================================================
-   MOBILE (<= 767px): action buttons stuck to bottom
-===================================================== */
-
-@media (max-width: 767px) {
-  /* room so content is never hidden behind the fixed bar */
-  .rfqu-document-page.rfqu-has-bar {
-    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
-  }
-
-  /* header buttons move to the bottom bar */
-  .rfqu-document-page .rfqu-header-buttons {
-    display: none;
-  }
-
-  .rfqu-document-page .doc-header {
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-
-  .rfqu-document-page .doc-header-left {
-    width: 100%;
-    min-width: 0;
-  }
-
-  .rfqu-document-page .doc-title {
-    min-width: 0;
-  }
-
-  .rfqu-document-page .doc-title span {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .rfqu-document-page .doc-fields-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  /* no animation/transform on the page, so the fixed bar sticks to the screen */
-  .rfqu-document-page {
-    animation: none;
-    transform: none;
-    filter: none;
-  }
-
-  /* fixed bottom bar, like the BoxModal footer */
-  .rfqu-document-page .doc-mobile-bar {
-    position: fixed !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    top: auto !important;
-    width: 100%;
-    z-index: 1000;
-
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-
-    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
-
-    background: var(--rfqu-surface);
-    border-top: 1px solid var(--rfqu-border);
-    box-shadow: 0 -6px 18px rgb(15 23 42 / 8%);
-  }
-
-  .rfqu-document-page .doc-mobile-total {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-    flex-shrink: 0;
-  }
-
-  .rfqu-document-page .doc-mobile-total span {
-    color: var(--rfqu-muted);
-    font-size: 11px;
-  }
-
-  .rfqu-document-page .doc-mobile-total strong {
-    color: var(--rfqu-text);
-    font-size: 15px;
-  }
-
-  .rfqu-document-page .doc-mobile-actions {
-    display: flex;
-    flex: 1;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 8px;
-    min-width: 0;
-  }
-
-  .rfqu-document-page .doc-mobile-actions > button {
-    flex: 1 1 120px;
-    min-width: 0;
-    min-height: 44px;
-    width: auto;
-  }
-
-  /* view mode: only buttons, so they fill the whole bar */
-  .rfqu-document-page .rfqu-mobile-bar--view .doc-mobile-actions {
-    justify-content: stretch;
-  }
-
-  .rfqu-document-page .rfqu-mobile-bar--view .doc-mobile-actions > button {
-    flex: 1 1 calc(50% - 8px);
-  }
-
-  .rfqu-document-page .doc-table tbody tr {
-    background: var(--rfqu-surface);
-    border-color: var(--rfqu-border);
-  }
-
-  .rfqu-document-page .doc-table tbody td::before {
-    color: var(--rfqu-muted);
-  }
-
-  .rfqu-document-page .rfqu-items-table {
-    min-width: 0;
-  }
-
-  .rfqu-document-page .rfqu-items-table td[data-label="Specification"] {
-    grid-column: 1 / -1;
-  }
-
-  .rfqu-combo-list {
-    max-height: 50vh;
-  }
-}
-
-/* =====================================================
-   SMALL MOBILE (<= 600px)
-===================================================== */
-
-@media (max-width: 600px) {
-  .rfqu-source-section {
-    padding: 14px 12px;
-  }
-
-  .rfqu-supplier-list {
-    max-height: 300px;
-  }
-
-  .rfqu-primary-button {
-    width: 100%;
-  }
-}
-
-/* very narrow: stack total above the buttons */
-@media (max-width: 400px) {
-  .rfqu-document-page .doc-mobile-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .rfqu-document-page .doc-mobile-total {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .rfqu-document-page .doc-mobile-actions > button {
-    flex: 1 1 100%;
-  }
-
-  .rfqu-document-page .rfqu-mobile-bar--view .doc-mobile-actions > button {
-    flex: 1 1 calc(50% - 8px);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .rfqu-list-page,
-  .rfqu-document-page {
-    animation: none;
-  }
-
-  .rfqu-list-page *,
-  .rfqu-document-page * {
-    transition: none !important;
-  }
-}.rfqu-decision-actions {
+.rfqu-decision-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
-  white-space: nowrap;
 }
 
 .rfqu-decision-button {
@@ -860,9 +730,11 @@
   padding: 6px 12px;
   border: 1px solid transparent;
   border-radius: 7px;
+  font: inherit;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.2;
+  white-space: nowrap;
   cursor: pointer;
   transition:
     background-color 0.15s ease,
@@ -901,41 +773,16 @@
   outline-offset: 2px;
 }
 
-.rfqu-rejection-reason {
-  display: block;
-  box-sizing: border-box;
-  width: 100%;
-  margin-top: 12px;
-  padding: 10px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font: inherit;
-  resize: vertical;
-}
-
-.rfqu-rejection-reason:focus {
-  outline: 2px solid #2563eb;
-  outline-offset: 2px;
-}
-
-.rfqu-list-page {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-}
-
 .rfqu-list-notice {
   margin: 0 0 12px;
   padding: 10px 12px;
-
   border: 1px solid #bfdbfe;
   border-radius: 7px;
-
   background: #eff6ff;
   color: #1d4ed8;
-
   font-size: 13px;
   line-height: 20px;
+  overflow-wrap: anywhere;
 }
 
 .rfqu-confirm-content {
@@ -966,24 +813,31 @@
   font-weight: 600;
 }
 
+.rfqu-reason-field small {
+  color: #64748b;
+  font-size: 11px;
+  line-height: 17px;
+}
+
 .rfqu-rejection-reason {
-  box-sizing: border-box;
+  display: block;
   width: 100%;
   min-width: 0;
   min-height: 110px;
+  margin-top: 12px;
   padding: 10px 12px;
-
   border: 1px solid #dfe3e8;
   border-radius: 6px;
-
   background: #fff;
   color: #334155;
-
   font-family: inherit;
   font-size: 13px;
   line-height: 20px;
-
   resize: vertical;
+}
+
+.rfqu-reason-field .rfqu-rejection-reason {
+  margin-top: 0;
 }
 
 .rfqu-rejection-reason:focus {
@@ -991,24 +845,14 @@
   border-color: var(--primary-color, #2563eb);
 }
 
-.rfqu-reason-field small {
-  color: #64748b;
-  font-size: 11px;
-  line-height: 17px;
-}
-
 .rfqu-action-errors {
   max-height: 240px;
   padding: 12px;
-
   overflow-y: auto;
-
   border: 1px solid #fecaca;
   border-radius: 6px;
-
   background: #fff7f7;
   color: #b42318;
-
   font-size: 12px;
   line-height: 19px;
   overflow-wrap: anywhere;
@@ -1031,12 +875,335 @@
   margin: 8px 0 0;
 }
 
+/* =====================================================
+   DESKTOP: bottom bar is mobile / small-tablet only
+===================================================== */
+
+@media (min-width: 768px) {
+  .rfqu-document-page .doc-mobile-bar {
+    display: none;
+  }
+}
+
+/* =====================================================
+   TABLET (<= 1024px)
+===================================================== */
+
+@media (max-width: 1024px) {
+  .rfqu-document-page .rfqu-items-table {
+    min-width: 860px;
+  }
+
+  .rfqu-document-page .rfqu-items-table th:nth-child(2) {
+    min-width: 230px;
+  }
+
+  .rfqu-document-page .rfqu-items-table th:nth-child(6) {
+    min-width: 210px;
+  }
+
+  /* avoid iOS / WebView zoom-on-focus on tablets */
+  .rfqu-document-page input:not([type="checkbox"]):not([type="radio"]),
+  .rfqu-document-page select,
+  .rfqu-document-page textarea {
+    font-size: 16px;
+  }
+}
+
+/* =====================================================
+   NARROW TABLET / LARGE PHONE (<= 900px)
+   Remove the two layout rules below if invoice-common1.css
+   already stacks these sections.
+===================================================== */
+
+@media (max-width: 900px) {
+  .rfqu-source-section {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 16px;
+  }
+
+  .rfqu-document-page .doc-top,
+  .rfqu-document-page .doc-bottom {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rfqu-document-page .doc-fields-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* =====================================================
+   PHONE + SMALL TABLET (<= 767px)
+   Action buttons live in a fixed bottom bar
+===================================================== */
+
+@media (max-width: 767px) {
+  /* room so content is never hidden behind the fixed bar */
+  .rfqu-document-page.rfqu-has-bar {
+    padding-bottom: calc(
+      var(--rfqu-bar-height) + var(--rfqu-safe-bottom) + 16px
+    );
+  }
+
+  /* header buttons move to the bottom bar */
+  .rfqu-document-page .rfqu-header-buttons {
+    display: none;
+  }
+
+  .rfqu-document-page .doc-header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .rfqu-document-page .doc-header-left {
+    width: 100%;
+  }
+
+  .rfqu-document-page .doc-title span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* no animation / transform so the fixed bar sticks to the screen */
+  .rfqu-document-page {
+    animation: none;
+    transform: none;
+    filter: none;
+  }
+
+  .rfqu-document-page .doc-main {
+    border-radius: 12px;
+  }
+
+  .rfqu-document-page .doc-mobile-bar {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    top: auto !important;
+    z-index: 1000;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+
+    padding-top: 10px;
+    padding-right: calc(12px + var(--rfqu-safe-right));
+    padding-bottom: calc(10px + var(--rfqu-safe-bottom));
+    padding-left: calc(12px + var(--rfqu-safe-left));
+
+    background: var(--rfqu-surface);
+    border-top: 1px solid var(--rfqu-border);
+    box-shadow: 0 -6px 18px rgb(15 23 42 / 8%);
+  }
+
+  .rfqu-document-page .doc-mobile-total {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .rfqu-document-page .doc-mobile-total span {
+    color: var(--rfqu-muted);
+    font-size: 11px;
+  }
+
+  .rfqu-document-page .doc-mobile-total strong {
+    color: var(--rfqu-text);
+    font-size: 15px;
+  }
+
+  .rfqu-document-page .doc-mobile-actions {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .rfqu-document-page .doc-mobile-actions > button {
+    flex: 1 1 120px;
+    width: auto;
+    min-width: 0;
+    min-height: 44px;
+  }
+
+  /* view mode: only buttons, so they fill the whole bar */
+  .rfqu-document-page .rfqu-mobile-bar--view .doc-mobile-actions {
+    justify-content: stretch;
+  }
+
+  .rfqu-document-page .rfqu-mobile-bar--view .doc-mobile-actions > button {
+    flex: 1 1 calc(50% - 8px);
+  }
+
+  /* keyboard open: hide the bar so it never covers the field */
+  .rfqu-document-page.is-keyboard-open .doc-mobile-bar {
+    display: none;
+  }
+
+  .rfqu-document-page.rfqu-has-bar.is-keyboard-open {
+    padding-bottom: 16px;
+  }
+
+  /* items table becomes stacked cards (relies on data-label cells) */
+  .rfqu-document-page .doc-table tbody tr {
+    background: var(--rfqu-surface);
+    border-color: var(--rfqu-border);
+  }
+
+  .rfqu-document-page .doc-table tbody td::before {
+    color: var(--rfqu-muted);
+  }
+
+  .rfqu-document-page .rfqu-items-table {
+    min-width: 0;
+  }
+
+  .rfqu-document-page .rfqu-items-table td[data-label="Product / Service"],
+  .rfqu-document-page .rfqu-items-table td[data-label="Specification"] {
+    grid-column: 1 / -1;
+  }
+
+  .rfqu-supplier-list {
+    max-height: min(320px, 45vh);
+  }
+
+  @supports (height: 1dvh) {
+    .rfqu-supplier-list {
+      max-height: min(320px, 45dvh);
+    }
+  }
+}
+
+/* =====================================================
+   PHONE (<= 600px)
+===================================================== */
+
 @media (max-width: 600px) {
+  .rfqu-document-page .doc-fields-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rfqu-source-section {
+    padding: 14px 12px;
+  }
+
+  .rfqu-source-confirmation {
+    padding: 12px;
+  }
+
+  .rfqu-primary-button {
+    width: 100%;
+    min-height: 44px;
+  }
+
   .rfqu-rejection-reason {
     font-size: 16px;
   }
 
-  .rfqu-primary-button {
+  .rfqu-decision-button {
+    min-height: 40px;
+  }
+
+  .rfqu-supplier-card {
+    padding: 11px 10px;
+  }
+}
+
+/* =====================================================
+   VERY NARROW (<= 400px): stack total above buttons
+===================================================== */
+
+@media (max-width: 400px) {
+  .rfqu-document-page .doc-mobile-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .rfqu-document-page .doc-mobile-total {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .rfqu-document-page .doc-mobile-actions > button {
+    flex: 1 1 100%;
+  }
+
+  .rfqu-document-page .rfqu-mobile-bar--view .doc-mobile-actions > button {
+    flex: 1 1 calc(50% - 8px);
+  }
+
+  .rfqu-document-page.rfqu-has-bar {
+    padding-bottom: calc(132px + var(--rfqu-safe-bottom));
+  }
+}
+
+/* =====================================================
+   PHONE LANDSCAPE (short screens): compact bar
+===================================================== */
+
+@media (max-width: 900px) and (max-height: 480px) and (orientation: landscape) {
+  .rfqu-document-page .doc-mobile-bar {
+    flex-direction: row;
+    padding-top: 6px;
+    padding-bottom: calc(6px + var(--rfqu-safe-bottom));
+  }
+
+  .rfqu-document-page .doc-mobile-total {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .rfqu-document-page .doc-mobile-actions > button {
+    flex: 1 1 110px;
+    min-height: 40px;
+  }
+
+  .rfqu-document-page.rfqu-has-bar {
+    padding-bottom: calc(64px + var(--rfqu-safe-bottom));
+  }
+}
+
+/* =====================================================
+   TOUCH DEVICES: comfortable tap targets
+===================================================== */
+
+@media (pointer: coarse) {
+  .rfqu-document-page .doc-remove-button {
+    min-width: 44px;
     min-height: 44px;
+  }
+
+  .rfqu-document-page .doc-dashed-line,
+  .rfqu-document-page .doc-extra-row {
+    min-height: 44px;
+  }
+
+  .rfqu-supplier-card input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+    flex-basis: 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rfqu-list-page,
+  .rfqu-document-page {
+    animation: none;
+  }
+
+  .rfqu-list-page *,
+  .rfqu-document-page * {
+    transition: none !important;
   }
 }

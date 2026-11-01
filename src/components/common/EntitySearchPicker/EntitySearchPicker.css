@@ -1,3 +1,21 @@
+/* =====================================================
+   ENTITY SEARCH PICKER
+   Panel is portaled to <body> and positioned by JS
+   (top / left / width / height). CSS only bounds it.
+===================================================== */
+
+:root {
+  /* Height of the app's fixed top bar. The picker panel never goes
+     above it, and triggers scroll to just below it. Adjust to match. */
+  --esp-top-inset: 72px;
+}
+
+@media (max-width: 600px) {
+  :root {
+    --esp-top-inset: 0px;
+  }
+}
+
 .esp-wrapper,
 .esp-wrapper *,
 .esp-panel,
@@ -12,6 +30,7 @@
   width: 100%;
   min-width: 0;
   font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .esp-label {
@@ -54,6 +73,10 @@
   text-align: left;
 
   cursor: pointer;
+  touch-action: manipulation;
+
+  /* scrollIntoView stops just under the top bar */
+  scroll-margin-top: calc(var(--esp-top-inset, 0px) + 12px);
 }
 
 .esp-trigger.has-value {
@@ -88,11 +111,11 @@
 
 .esp-clear {
   display: inline-flex;
-  flex: 0 0 40px;
+  flex: 0 0 44px;
   align-items: center;
   justify-content: center;
 
-  width: 40px;
+  width: 44px;
   min-height: 44px;
   padding: 0;
 
@@ -102,6 +125,7 @@
   background: #fff;
   color: #e11d48;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .esp-clear:hover {
@@ -109,7 +133,10 @@
   background: #fff1f2;
 }
 
-/* Rendered directly inside document.body. */
+/* -----------------------------------------------------
+   Panel (rendered directly inside document.body)
+----------------------------------------------------- */
+
 .esp-panel.esp-panel--portal {
   position: fixed;
   z-index: 10000;
@@ -117,6 +144,9 @@
   display: flex;
   flex-direction: column;
 
+  /* hard safety net; JS sets the exact values */
+  max-width: calc(100vw - 20px);
+  max-height: calc(100vh - 20px);
   min-width: 0;
   min-height: 0;
   margin: 0;
@@ -137,6 +167,12 @@
   isolation: isolate;
 
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.16);
+}
+
+@supports (height: 1dvh) {
+  .esp-panel.esp-panel--portal {
+    max-height: calc(100dvh - 20px);
+  }
 }
 
 .esp-search {
@@ -173,6 +209,14 @@
   font-family: inherit;
   font-size: 13px;
   outline: none;
+
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.esp-search input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .esp-search input:focus {
@@ -196,6 +240,7 @@
   background: #f1f5f9;
   color: #64748b;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .esp-panel-close:hover {
@@ -271,6 +316,7 @@
   font-family: inherit;
   text-align: left;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .esp-option:last-child {
@@ -323,7 +369,7 @@
   gap: 10px;
 
   min-width: 0;
-  padding: 9px 10px;
+  padding: 9px 10px calc(9px + env(safe-area-inset-bottom, 0px));
 
   border-top: 1px solid #edf1f5;
   background: #fff;
@@ -360,6 +406,7 @@
   font-family: inherit;
   font-size: 12px;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .esp-pagination button:hover:not(:disabled) {
@@ -381,6 +428,35 @@
   outline-offset: -2px;
 }
 
+/* -----------------------------------------------------
+   Tablet / touch: stop zoom-on-focus, bigger targets
+----------------------------------------------------- */
+
+@media (max-width: 1024px), (pointer: coarse) {
+  .esp-search input {
+    height: 44px;
+    font-size: 16px;
+  }
+
+  .esp-panel-close {
+    flex-basis: 44px;
+    width: 44px;
+    height: 44px;
+  }
+
+  .esp-pagination button {
+    min-height: 44px;
+  }
+
+  .esp-error button {
+    min-height: 44px;
+  }
+}
+
+/* -----------------------------------------------------
+   Phone
+----------------------------------------------------- */
+
 @media (max-width: 600px) {
   .esp-panel.esp-panel--portal {
     border-radius: 12px;
@@ -390,17 +466,6 @@
   .esp-search {
     gap: 8px;
     padding: 10px;
-  }
-
-  .esp-search input {
-    height: 44px;
-    font-size: 16px;
-  }
-
-  .esp-panel-close {
-    flex-basis: 40px;
-    width: 40px;
-    height: 44px;
   }
 
   .esp-option {
@@ -414,15 +479,28 @@
 
   .esp-pagination {
     gap: 8px;
-    padding: 8px 10px;
-  }
-
-  .esp-pagination button {
-    min-height: 44px;
+    padding-right: 10px;
+    padding-left: 10px;
   }
 
   .esp-pagination > span {
     font-size: 11px;
+  }
+}
+
+/* -----------------------------------------------------
+   Phone landscape: keep list visible above the keyboard
+----------------------------------------------------- */
+
+@media (max-height: 480px) and (orientation: landscape) {
+  .esp-option {
+    min-height: 48px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .esp-empty {
+    padding: 14px;
   }
 }
 

@@ -1,0 +1,90 @@
+.sales-quotation-document-page {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.sales-quotation-document-page .doc-main,
+.sales-quotation-document-page .doc-panel,
+.sales-quotation-document-page .doc-cell-item,
+.sales-quotation-document-page .esp-wrapper {
+  min-width: 0;
+}
+
+.sales-quotation-document-page .doc-party-card {
+  margin-top: 14px;
+}
+
+.sales-quotation-document-page .doc-party-copy {
+  min-width: 0;
+}
+
+.sales-quotation-document-page .doc-party-copy h3,
+.sales-quotation-document-page .doc-party-copy p {
+  overflow-wrap: anywhere;
+}
+
+.sales-quotation-document-page .doc-title {
+  min-width: 0;
+}
+
+.sales-quotation-document-page .doc-title span {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.sales-quotation-document-page
+  .sales-quotation-extra-fields {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  padding: 16px;
+}
+
+.sales-quotation-document-page.is-keyboard-open
+  .doc-mobile-bar,
+.sales-quotation-document-page
+  .doc-mobile-bar[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 600px) {
+  .sales-quotation-document-page
+    .doc-fields-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .sales-quotation-document-page
+    .form-input,
+  .sales-quotation-document-page
+    .form-select,
+  .sales-quotation-document-page
+    .form-textarea {
+    font-size: 16px;
+  }
+
+  .sales-quotation-document-page
+    .doc-mobile-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sales-quotation-document-page
+    .doc-mobile-actions
+    .form-button {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .sales-quotation-document-page
+    .sales-quotation-extra-fields {
+    gap: 14px;
+    padding: 12px;
+  }
+
+  .sales-quotation-document-page .doc-title {
+    font-size: 14px;
+    line-height: 21px;
+  }
+}

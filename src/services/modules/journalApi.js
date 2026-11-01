@@ -1,16 +1,28 @@
+
+
+// export default journalApi;
 import apiClient from "../apiClient";
 
+// `config` lets callers pass { signal } so in-flight requests can be cancelled.
 const journalApi = {
-  // existing: createManualJournal, getJournals, etc.
+  /** Old day book (kept) */
+  getDayBook: (params = {}, config = {}) =>
+    apiClient.get("/accounting/journals/daybook", { params, ...config }),
 
-  /** Day Book — paginated, filtered across all vouchers */
-  getDayBook: (params = {}) => {
-    return apiClient.get("/accounting/journals/daybook", { params });
-  },
+  /** FAST: lean paginated list */
+  getDayBookList: (params = {}, config = {}) =>
+    apiClient.get("/accounting/journals/daybook/list", { params, ...config }),
+
+  /** FAST: totals + type-wise counts in one aggregation */
+  getDayBookSummary: (params = {}, config = {}) =>
+    apiClient.get("/accounting/journals/daybook/summary", { params, ...config }),
+
+  // FIX: these used apiClient(url, params) which silently ignored params
   getTrialBalance: (params = {}) =>
-    apiClient("/accounting/reports/trial-balance", params),
+    apiClient.get("/accounting/reports/trial-balance", { params }),
   getBalanceSheet: (params = {}) =>
-    apiClient("/accounting/reports/balance-sheet", params),
+    apiClient.get("/accounting/reports/balance-sheet", { params }),
+
   getCustomerOutstanding: (params = {}) =>
     apiClient.get("/accounting/outstanding/customers", { params }),
   getSupplierOutstanding: (params = {}) =>

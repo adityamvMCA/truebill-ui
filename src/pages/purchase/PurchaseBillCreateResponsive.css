@@ -1,0 +1,87 @@
+.purchase-bill-document-page {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.purchase-bill-document-page .doc-main,
+.purchase-bill-document-page .doc-panel,
+.purchase-bill-document-page .doc-cell-item {
+  min-width: 0;
+}
+
+.purchase-bill-document-page .esp-wrapper {
+  width: 100%;
+  min-width: 0;
+}
+
+.purchase-bill-document-page .doc-party-card {
+  margin-top: 14px;
+}
+
+.purchase-bill-document-page .doc-party-copy {
+  min-width: 0;
+}
+
+.purchase-bill-document-page .doc-party-copy h3,
+.purchase-bill-document-page .doc-party-copy p {
+  overflow-wrap: anywhere;
+}
+
+.purchase-bill-document-page
+  .doc-fields-grid
+  + .doc-fields-grid {
+  margin-top: 16px;
+}
+
+.purchase-bill-document-page .doc-title {
+  min-width: 0;
+}
+
+.purchase-bill-document-page .doc-title span {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* Shared document CSS can otherwise override the hidden attribute. */
+.purchase-bill-document-page.is-keyboard-open
+  .doc-mobile-bar,
+.purchase-bill-document-page
+  .doc-mobile-bar[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 600px) {
+  .purchase-bill-document-page .doc-fields-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .purchase-bill-document-page .form-input,
+  .purchase-bill-document-page .form-select,
+  .purchase-bill-document-page .form-textarea {
+    font-size: 16px;
+  }
+
+  .purchase-bill-document-page .doc-mobile-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .purchase-bill-document-page
+    .doc-mobile-actions
+    .form-button {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .purchase-bill-document-page .doc-party-card {
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .purchase-bill-document-page .doc-title {
+    font-size: 14px;
+    line-height: 21px;
+  }
+}

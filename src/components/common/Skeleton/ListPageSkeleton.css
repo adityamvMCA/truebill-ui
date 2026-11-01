@@ -1,0 +1,22 @@
+.lps-block {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  background: var(--border-color, #e5e7eb);
+  border-radius: 6px;
+}
+.lps-block::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  animation: lps-shimmer 1.35s infinite;
+}
+@keyframes lps-shimmer {
+  100% { transform: translateX(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lps-block::after { animation: none; }
+}
+.lps-stack { display: flex; flex-direction: column; gap: 8px; }

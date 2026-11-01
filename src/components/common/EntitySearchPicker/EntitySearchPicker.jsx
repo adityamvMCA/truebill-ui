@@ -16,6 +16,29 @@ const EMPTY_IDS = [];
 const DEFAULT_PAGE_SIZE = 20;
 const DEFAULT_DEBOUNCE_MS = 350;
 
+const PANEL_MARGIN = 10;
+const PANEL_GAP = 6;
+const PANEL_MAX_HEIGHT = 420;
+const PANEL_MIN_HEIGHT = 160;
+const OPEN_BELOW_MIN_SPACE = 280;
+const SCROLL_TRIGGER_MIN_SPACE = 340;
+
+const isMobileViewport = () =>
+  window.matchMedia("(max-width: 600px)").matches;
+
+/* Height of the app's fixed top bar (CSS variable --esp-top-inset). */
+const getTopInset = () => {
+  if (isMobileViewport()) return 0;
+
+  const value = parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue(
+      "--esp-top-inset",
+    ),
+  );
+
+  return Number.isFinite(value) ? value : 0;
+};
+
 function EntitySearchPicker({
   label,
   placeholder = "Search...",
@@ -111,7 +134,8 @@ function EntitySearchPicker({
   );
 
   /* -------------------------------------------------------------- */
-  /* Position the portal inside the visible viewport                 */
+  /* Position the portal inside the visible viewport,                */
+  /* below the app's fixed top bar                                    */
   /* -------------------------------------------------------------- */
 
   const measurePosition = useCallback(() => {
@@ -134,21 +158,12 @@ function EntitySearchPicker({
     const viewportRight = viewportLeft + viewportWidth;
     const viewportBottom = viewportTop + viewportHeight;
 
-    const margin = 10;
-    const gap = 6;
-
-    const mobile = window.matchMedia(
-      "(max-width: 600px)",
-    ).matches;
+    const mobile = isMobileViewport();
+    const topInset = getTopInset();
 
     const availableWidth = Math.max(
       0,
-      viewportWidth - margin * 2,
-    );
-
-    const availableHeight = Math.max(
-      0,
-      viewportHeight - margin * 2,
+      viewportWidth - PANEL_MARGIN * 2,
     );
 
     const width = mobile
@@ -159,26 +174,33 @@ function EntitySearchPicker({
         );
 
     const left = mobile
-      ? viewportLeft + margin
+      ? viewportLeft + PANEL_MARGIN
       : Math.max(
-          viewportLeft + margin,
+          viewportLeft + PANEL_MARGIN,
           Math.min(
             rect.left,
-            viewportRight - width - margin,
+            viewportRight - width - PANEL_MARGIN,
           ),
         );
 
+    // The panel can never go above the top bar or below the screen.
+    const minTop = viewportTop + PANEL_MARGIN + topInset;
+    const maxBottom = viewportBottom - PANEL_MARGIN;
+
     const spaceBelow = Math.max(
       0,
-      viewportBottom - rect.bottom - gap - margin,
+      maxBottom - rect.bottom - PANEL_GAP,
     );
 
     const spaceAbove = Math.max(
       0,
-      rect.top - viewportTop - gap - margin,
+      rect.top - PANEL_GAP - minTop,
     );
 
-    const preferredHeight = Math.min(420, availableHeight);
+    const preferredHeight = Math.max(
+      PANEL_MIN_HEIGHT,
+      Math.min(PANEL_MAX_HEIGHT, maxBottom - minTop),
+    );
 
     let height;
     let top;
@@ -187,37 +209,30 @@ function EntitySearchPicker({
       height = preferredHeight;
 
       top = Math.max(
-        viewportTop + margin,
-        Math.min(
-          rect.bottom + gap,
-          viewportBottom - height - margin,
-        ),
+        minTop,
+        Math.min(rect.bottom + PANEL_GAP, maxBottom - height),
       );
     } else {
       const openAbove =
-        spaceBelow < 280 && spaceAbove > spaceBelow;
+        spaceBelow < OPEN_BELOW_MIN_SPACE &&
+        spaceAbove > spaceBelow;
 
       const anchorSpace = openAbove
         ? spaceAbove
         : spaceBelow;
 
-      // If the trigger is partly offscreen or space around it is
-      // very limited, keep the panel visible inside the viewport.
       height =
-        anchorSpace >= 160
+        anchorSpace >= PANEL_MIN_HEIGHT
           ? Math.min(preferredHeight, anchorSpace)
           : preferredHeight;
 
       const proposedTop = openAbove
-        ? rect.top - gap - height
-        : rect.bottom + gap;
+        ? rect.top - PANEL_GAP - height
+        : rect.bottom + PANEL_GAP;
 
       top = Math.max(
-        viewportTop + margin,
-        Math.min(
-          proposedTop,
-          viewportBottom - height - margin,
-        ),
+        minTop,
+        Math.min(proposedTop, maxBottom - height),
       );
     }
 
@@ -547,6 +562,27 @@ function EntitySearchPicker({
     }
 
     invalidateRequest();
+
+    // Not enough room below the trigger? Bring it up under the top
+    // bar first, so the list opens downward instead of covering the
+    // rows above it. Phones use a full-width sheet and skip this.
+    const trigger = triggerRef.current;
+
+    if (trigger && !isMobileViewport()) {
+      const viewportHeight =
+        window.visualViewport?.height ?? window.innerHeight;
+
+      const spaceBelow =
+        viewportHeight - trigger.getBoundingClientRect().bottom;
+
+      if (spaceBelow < SCROLL_TRIGGER_MIN_SPACE) {
+        trigger.scrollIntoView({
+          block: "start",
+          inline: "nearest",
+          behavior: "auto",
+        });
+      }
+    }
 
     // Calculate immediately so the portal exists on the first
     // open render, before we try focusing its search input.
