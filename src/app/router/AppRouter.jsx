@@ -100,6 +100,7 @@ import CashBook from "../../pages/accounting/report/CashBook";
 import PettyCash from "../../pages/accounting/report/PettyCash";
 import TemplateSettingsPage from "../../Settings/TemplateSettingsPage";
 import CustomerEdit from "../../pages/customers/CustomerEdit";
+import MessagingSettings from "../../pages/settings/MessagingSettings";
 
 // import InventoryReport from "../../pages/Reportdashboard/InventoryReport";
 
@@ -660,6 +661,7 @@ const AppRouter = () => (
           />
 
           <Route path="/settings/print-templates" element={<TemplateSettingsPage />} />
+          <Route path="/settings/messaging" element={<MessagingSettings />} />
           {/* =====================
               PLATFORM ROUTES
               Developer + Support
