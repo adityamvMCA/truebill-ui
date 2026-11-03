@@ -207,6 +207,8 @@ const routes = {
     inventory: "/reports/inventory",
     accounting: "/reports/accounting",
     bank: "/accounting/bank-ledger",
+    lreport:"/accounting/ledger-insights",
+    lfullreport:"/accounting/ledger/:ledgerCode",
   },
 
   note: {

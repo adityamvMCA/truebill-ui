@@ -1,0 +1,83 @@
+/* Ledger Statement — extras on top of Dashboard.css + LedgerInsights.css */
+
+@keyframes lgsSpin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
+
+.lgs-page .dbd-card.peak::after   { background: #16a34a; }
+.lgs-page .dbd-card.low::after    { background: #dc2626; }
+.lgs-page .dbd-card.busy::after   { background: #f97316; }
+.lgs-page .dbd-card.last::after   { background: #0ea5e9; }
+
+.lgs-toolbar {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  padding: 10px 14px; border-bottom: 1px solid var(--dbd-border);
+}
+.lgs-searchbox {
+  display: flex; align-items: center; gap: 8px; flex: 1 1 220px; min-width: 0;
+  min-height: 34px; padding: 0 10px; border: 1px solid var(--dbd-border);
+  border-radius: 8px; background: var(--dbd-bg); color: var(--dbd-muted);
+}
+.lgs-searchbox input {
+  flex: 1; min-width: 0; border: 0; outline: 0; background: transparent;
+  color: var(--dbd-text); font-size: 12px;
+}
+
+.lgs-table { min-width: 820px; }
+.lgs-table tbody tr.lgs-row { cursor: pointer; }
+.lgs-table tbody tr.lgs-row:hover { background: color-mix(in srgb, var(--dbd-primary) 5%, var(--dbd-card)); }
+.lgs-table tr.lgs-bf td, .lgs-table tr.lgs-cf td {
+  background: color-mix(in srgb, var(--dbd-primary) 7%, var(--dbd-card));
+  font-weight: 800; font-size: 11px;
+}
+.lgs-table tr.lgs-detail td {
+  background: var(--dbd-bg); font-size: 11px; color: var(--dbd-secondary); padding: 10px 14px;
+}
+.lgs-table tfoot td {
+  padding: 10px; font-weight: 800; border-top: 2px solid var(--dbd-border);
+  background: var(--dbd-bg); font-variant-numeric: tabular-nums;
+}
+.lgs-drcr {
+  display: inline-block; margin-left: 4px; padding: 1px 5px; border-radius: 5px;
+  font-size: 9px; font-weight: 800; letter-spacing: 0.04em;
+}
+.lgs-drcr.dr { background: #eff6ff; color: #2563eb; }
+.lgs-drcr.cr { background: #fffbeb; color: #d97706; }
+
+.lgs-pager {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  flex-wrap: wrap; padding: 10px 14px; border-top: 1px solid var(--dbd-border);
+  font-size: 12px; color: var(--dbd-secondary);
+}
+.lgs-pager-btns { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.lgs-pg {
+  min-width: 30px; height: 30px; padding: 0 8px; display: inline-grid; place-items: center;
+  border: 1px solid var(--dbd-border); border-radius: 7px; background: var(--dbd-card);
+  color: var(--dbd-text); font-size: 12px; font-weight: 700;
+}
+.lgs-pg:hover:not(:disabled) { border-color: var(--dbd-primary); color: var(--dbd-primary); }
+.lgs-pg.on { background: var(--dbd-primary); border-color: var(--dbd-primary); color: #fff; }
+.lgs-select {
+  height: 30px; padding: 0 8px; border: 1px solid var(--dbd-border); border-radius: 7px;
+  background: var(--dbd-card); color: var(--dbd-text); font-size: 12px;
+}
+
+.lgs-heat-wrap { overflow-x: auto; padding-bottom: 4px; }
+.lgs-heat {
+  display: grid; grid-template-rows: repeat(7, 14px); grid-auto-flow: column;
+  grid-auto-columns: 14px; gap: 3px; width: max-content;
+}
+.lgs-heat i { display: block; width: 14px; height: 14px; border-radius: 3px; }
+.lgs-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; }
+.lgs-tile {
+  padding: 8px; border-radius: 8px; border: 1px solid var(--dbd-border);
+  display: flex; flex-direction: column; gap: 2px; font-size: 10px; color: var(--dbd-secondary);
+}
+.lgs-tile strong { font-size: 14px; color: var(--dbd-text); }
+.lgs-heat-legend { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--dbd-muted); }
+.lgs-heat-legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+@media print {
+  .no-print { display: none !important; }
+  .lgs-page { padding: 0; background: #fff; overflow: visible; }
+  .lgs-page .dbd-panel { break-inside: avoid; }
+  .lgs-table { min-width: 0; }
+}

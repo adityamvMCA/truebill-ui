@@ -101,6 +101,8 @@ import PettyCash from "../../pages/accounting/report/PettyCash";
 import TemplateSettingsPage from "../../Settings/TemplateSettingsPage";
 import CustomerEdit from "../../pages/customers/CustomerEdit";
 import MessagingSettings from "../../pages/settings/MessagingSettings";
+import LedgerInsights from "../../pages/LedgerInsights";
+import LedgerStatement from "../../pages/LedgerStatement";
 
 // import InventoryReport from "../../pages/Reportdashboard/InventoryReport";
 
@@ -659,9 +661,18 @@ const AppRouter = () => (
             path={routes.accounting.supplierledger}
             element={gated("ledger.view", <SupplierLedger />)}
           />
+          <Route
+            path={routes.reports.lreport}
+            element={gated("ledger.view", <LedgerInsights />)}
+          />
+          <Route
+            path={routes.reports.lfullreport}
+            element={gated("ledger.view", <LedgerStatement />)}
+          />
 
           <Route path="/settings/print-templates" element={<TemplateSettingsPage />} />
           <Route path="/settings/messaging" element={<MessagingSettings />} />
+   
           {/* =====================
               PLATFORM ROUTES
               Developer + Support
