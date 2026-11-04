@@ -103,6 +103,8 @@ import CustomerEdit from "../../pages/customers/CustomerEdit";
 import MessagingSettings from "../../pages/settings/MessagingSettings";
 import LedgerInsights from "../../pages/LedgerInsights";
 import LedgerStatement from "../../pages/LedgerStatement";
+import MobileScannerPage from "../../pages/barcode/MobileScannerPage";
+import UnknownBarcodes from "../../pages/barcode/UnknownBarcodes";
 
 // import InventoryReport from "../../pages/Reportdashboard/InventoryReport";
 
@@ -607,15 +609,15 @@ const AppRouter = () => (
           />
           <Route
             path={routes.tds.tdsReg}
-            element={gated("ledger.view", <TdsRegister  />)}
+            element={gated("ledger.view", <TdsRegister />)}
           />
           <Route
             path={routes.tds.tdsDeduct}
-            element={gated("ledger.view", <TdsDeduct  />)}
+            element={gated("ledger.view", <TdsDeduct />)}
           />
           <Route
             path={routes.tds.tdsNatures}
-            element={gated("ledger.view", <TdsNatures  />)}
+            element={gated("ledger.view", <TdsNatures />)}
           />
           <Route
             path={routes.expenses.create}
@@ -639,11 +641,11 @@ const AppRouter = () => (
           />
           <Route
             path={routes.accounting.cashBook}
-            element={gated("ledger.view", <CashBook  />)}
+            element={gated("ledger.view", <CashBook />)}
           />
           <Route
             path={routes.accounting.pettyCash}
-            element={gated("ledger.view", <PettyCash   />)}
+            element={gated("ledger.view", <PettyCash />)}
           />
           <Route
             path={routes.accounting.trialBalance}
@@ -670,9 +672,18 @@ const AppRouter = () => (
             element={gated("ledger.view", <LedgerStatement />)}
           />
 
-          <Route path="/settings/print-templates" element={<TemplateSettingsPage />} />
+          <Route
+            path="/settings/print-templates"
+            element={<TemplateSettingsPage />}
+          />
           <Route path="/settings/messaging" element={<MessagingSettings />} />
-   
+
+          <Route path="/scanner" element={<MobileScannerPage />} />
+          <Route
+            path="/inventory/unknown-barcodes"
+            element={<UnknownBarcodes />}
+          />
+
           {/* =====================
               PLATFORM ROUTES
               Developer + Support

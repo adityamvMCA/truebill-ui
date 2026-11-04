@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { Plus, ScanBarcode } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import Papa from "papaparse";
@@ -7,13 +7,14 @@ import DataList from "../../components/common/DataList/DataList";
 import StatusField from "../../components/common/StatusField/StatusField";
 import ConfirmModal from "../../components/common/ConfirmModal/ConfirmModal";
 import ImportPreviewModal from "../../components/common/DataList/ImportPreviewModal";
-
+import { useLocation } from "react-router-dom";
 import api from "../../services/api";
 
 import ProductModal from "./ProductModal";
 import ProductDetailsModal from "./ProductDetailsModal";
 
 import "./products-list.css";
+import ScanBarcodeModal from "../barcode/ScanBarcodeModal";
 
 const INITIAL_CONFIRM_STATE = {
   open: false,
@@ -344,7 +345,10 @@ function ProductsList() {
   });
 
   const [showProductModal, setShowProductModal] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
+  const [newBarcode, setNewBarcode] = useState("");
 
+  const location = useLocation();
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [productModalMode, setProductModalMode] = useState("view");
 
@@ -461,7 +465,15 @@ function ProductsList() {
       csvParseRef.current += 1;
     };
   }, [query, reloadKey]);
+  useEffect(() => {
+    if (location.state?.newBarcode) {
+      setNewBarcode(location.state.newBarcode);
+      setShowProductModal(true);
 
+      // Clear navigation state to prevent reopening on refresh/navigation.
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [location.state]);
   const handlePageChange = useCallback((page) => {
     setQuery((current) =>
       current.page === page ? current : { ...current, page },
@@ -1289,17 +1301,43 @@ function ProductsList() {
         ]}
         onRefresh={loadProducts}
         importConfig={productImportConfig}
-        addButton={
-          <button
-            type="button"
-            className="so-primary-button products-list-add"
-            disabled={busy}
-            onClick={() => setShowProductModal(true)}
-          >
-            <Plus size={16} />
+        // addButton={
+        //   <button
+        //     type="button"
+        //     className="so-primary-button products-list-add"
+        //     disabled={busy}
+        //     onClick={() => setShowProductModal(true)}
+        //   >
+        //     <Plus size={16} />
 
-            <span>New Product</span>
-          </button>
+        //     <span>New Product</span>
+        //   </button>
+        // }
+        addButton={
+          <div className="products-list-add-actions">
+            <button
+              type="button"
+              className="so-primary-button products-list-add"
+              disabled={busy}
+              onClick={() => {
+                setNewBarcode("");
+                setShowProductModal(true);
+              }}
+            >
+              <Plus size={16} />
+              <span>New Product</span>
+            </button>
+
+            <button
+              type="button"
+              className="so-primary-button products-list-add"
+              disabled={busy}
+              onClick={() => setScanOpen(true)}
+            >
+              <ScanBarcode size={16} />
+              <span>Scan Barcode</span>
+            </button>
+          </div>
         }
       />
 
@@ -1343,6 +1381,19 @@ function ProductsList() {
         loading={importLoading}
         onCancel={closeImportPreview}
         onConfirm={confirmProductImport}
+      />
+      <ScanBarcodeModal
+        open={scanOpen}
+        onClose={() => setScanOpen(false)}
+        onFound={({ product }) => {
+          setScanOpen(false);
+          handleSearch(product.productCode);
+        }}
+        onUnknown={({ barcode }) => {
+          setScanOpen(false);
+          setNewBarcode(barcode);
+          setShowProductModal(true);
+        }}
       />
     </div>
   );
