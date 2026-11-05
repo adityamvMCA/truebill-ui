@@ -18,7 +18,7 @@ export async function syncCatalog({ onProgress, reset = false } = {}) {
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    const { data } = await barcodeApi.catalog(cursor, 5000);
+    const { data } = await barcodeApi.catalog({ after: cursor, limit: 5000 });
     if (data.items.length) {
       await catalogPutMany(data.items.map((it) => toRow(tenant, it)));
       loaded += data.items.length;
@@ -52,3 +52,47 @@ export const cacheServerHit = async (barcode, { product, mapping }) =>
   catalogPutMany([toRow(getTenantKey(), {
     b: barcode, pk: mapping.packagingName, q: mapping.conversionQuantity, p: product,
   })]);
+
+/* ---------------- unknown-barcode offline queue (uses the existing `meta` store) ---------------- */
+const unknownKey = () => `unknownQ:${getTenantKey()}`;
+let flushingUnknown = false;
+
+export async function queueUnknown(code) {
+  const q = (await metaGet(unknownKey())) || [];
+  if (!q.includes(code)) await metaSet(unknownKey(), [...q, code].slice(-500));
+}
+
+/** Report to server when online, otherwise remember it until we are. */
+export async function reportUnknownSafe(code) {
+  if (navigator.onLine) {
+    try {
+      await barcodeApi.reportUnknown(code);
+      return;
+    } catch (e) {
+      const status = e?.response?.status;
+      if (status && status >= 400 && status < 500) return; // permanent rejection – don't queue
+    }
+  }
+  await queueUnknown(code);
+}
+
+export async function flushUnknown() {
+  if (flushingUnknown || !navigator.onLine) return;
+  flushingUnknown = true;
+  try {
+    const q = (await metaGet(unknownKey())) || [];
+    if (!q.length) return;
+    const left = [];
+    for (const code of q) {
+      try {
+        await barcodeApi.reportUnknown(code);
+      } catch (e) {
+        const status = e?.response?.status;
+        if (!(status && status >= 400 && status < 500)) left.push(code); // drop permanent failures
+      }
+    }
+    await metaSet(unknownKey(), left);
+  } finally {
+    flushingUnknown = false;
+  }
+}

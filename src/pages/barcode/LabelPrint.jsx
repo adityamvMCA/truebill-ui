@@ -15,11 +15,22 @@ const DEFAULTS = {
   barHeight: 40, fontSize: 11,
 };
 
+// stored barcodeType -> JsBarcode format
+const FORMAT_BY_TYPE = { EAN13: "EAN13", EAN8: "EAN8", UPC_A: "UPC", ITF14: "ITF14", CODE128: "CODE128" };
+
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-const barcodeSvg = (code, cfg) => {
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  JsBarcode(svg, code, { format: "CODE128", displayValue: true, height: cfg.barHeight, width: 1.6, margin: 0, fontSize: cfg.fontSize });
+const barcodeSvg = (code, cfg, type) => {
+  const make = (format) => {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    JsBarcode(svg, code, {
+      format, displayValue: true, height: cfg.barHeight, width: 1.6, margin: 0, fontSize: cfg.fontSize,
+    });
+    return svg;
+  };
+  let svg;
+  try { svg = make(FORMAT_BY_TYPE[type] || "CODE128"); }
+  catch { svg = make("CODE128"); } // invalid for its own format -> still printable
   const w = svg.getAttribute("width"); const h = svg.getAttribute("height");
   svg.setAttribute("viewBox", `0 0 ${parseFloat(w)} ${parseFloat(h)}`);
   svg.removeAttribute("width"); svg.removeAttribute("height");
@@ -27,7 +38,14 @@ const barcodeSvg = (code, cfg) => {
   return svg.outerHTML;
 };
 
-/** labels: [{ name, sku, packaging, barcode, price }] – Code 128 only (internal use). */
+/** Pack text shown on the label: "Box ×100"; single units show nothing. */
+export const packLabel = (packagingName, conversionQuantity) => {
+  const q = Number(conversionQuantity) || 1;
+  if (q > 1) return `${packagingName && packagingName !== "Unit" ? packagingName : "Pack"} ×${q}`;
+  return packagingName && packagingName !== "Unit" ? packagingName : "";
+};
+
+/** labels: [{ name, sku, packaging, barcode, barcodeType, price }] */
 export function buildLabelHtml(labels, userCfg = {}) {
   const cfg = { ...DEFAULTS, ...userCfg };
   const p = LABEL_PRESETS[cfg.preset] || LABEL_PRESETS["50x25"];
@@ -36,8 +54,8 @@ export function buildLabelHtml(labels, userCfg = {}) {
 
   for (const l of labels) {
     if (!l?.barcode) continue;
-    const svg = barcodeSvg(l.barcode, cfg);
-    const meta = [cfg.showSku && l.sku, cfg.showPackaging && l.packaging && l.packaging !== "Unit" && l.packaging].filter(Boolean).join(" · ");
+    const svg = barcodeSvg(l.barcode, cfg, l.barcodeType);
+    const meta = [cfg.showSku && l.sku, cfg.showPackaging && l.packaging].filter(Boolean).join(" · ");
     const html = `<div class="label">
       ${cfg.showName ? `<div class="n">${esc(l.name)}</div>` : ""}
       ${svg}

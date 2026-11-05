@@ -7,9 +7,9 @@ import DataList from "../../components/common/DataList/DataList";
 import StatusField from "../../components/common/StatusField/StatusField";
 import ConfirmModal from "../../components/common/ConfirmModal/ConfirmModal";
 import ImportPreviewModal from "../../components/common/DataList/ImportPreviewModal";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import api from "../../services/api";
-
+import { requestCameraPermission } from "../../utils/cameraPermission";
 import ProductModal from "./ProductModal";
 import ProductDetailsModal from "./ProductDetailsModal";
 
@@ -112,7 +112,6 @@ const getErrorMessage = (error) => {
     "Something went wrong. Please try again."
   );
 };
-
 const getProductList = (response) => {
   const body = response?.data;
 
@@ -349,6 +348,7 @@ function ProductsList() {
   const [newBarcode, setNewBarcode] = useState("");
 
   const location = useLocation();
+  const navigate = useNavigate();
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [productModalMode, setProductModalMode] = useState("view");
 
@@ -365,6 +365,23 @@ function ProductsList() {
   const loadRequestRef = useRef(0);
   const mutationLockRef = useRef(false);
   const csvParseRef = useRef(0);
+
+  // Request Android camera permission before mounting the barcode scanner.
+  const handleOpenScanner = useCallback(async () => {
+    try {
+      const result = await requestCameraPermission();
+
+      if (!result?.granted) {
+        toast.error(result?.message || "Camera permission is required to scan barcodes.");
+        return;
+      }
+
+      setScanOpen(true);
+    } catch (error) {
+      console.error("Unable to open barcode scanner:", error);
+      toast.error("Unable to access the camera. Please check app permissions.");
+    }
+  }, []);
 
   // Trigger a refresh after mutations/imports without downloading the whole catalogue.
   const loadProducts = useCallback(() => {
@@ -466,14 +483,19 @@ function ProductsList() {
     };
   }, [query, reloadKey]);
   useEffect(() => {
-    if (location.state?.newBarcode) {
-      setNewBarcode(location.state.newBarcode);
-      setShowProductModal(true);
+    const barcode = location.state?.newBarcode;
 
-      // Clear navigation state to prevent reopening on refresh/navigation.
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, [location.state]);
+    if (!barcode) return;
+
+    setNewBarcode(String(barcode));
+    setShowProductModal(true);
+
+    // Clear only the React Router location state without corrupting its history state.
+    navigate(
+      `${location.pathname}${location.search}${location.hash}`,
+      { replace: true, state: null },
+    );
+  }, [location.state, location.pathname, location.search, location.hash, navigate]);
   const handlePageChange = useCallback((page) => {
     setQuery((current) =>
       current.page === page ? current : { ...current, page },
@@ -1301,18 +1323,6 @@ function ProductsList() {
         ]}
         onRefresh={loadProducts}
         importConfig={productImportConfig}
-        // addButton={
-        //   <button
-        //     type="button"
-        //     className="so-primary-button products-list-add"
-        //     disabled={busy}
-        //     onClick={() => setShowProductModal(true)}
-        //   >
-        //     <Plus size={16} />
-
-        //     <span>New Product</span>
-        //   </button>
-        // }
         addButton={
           <div className="products-list-add-actions">
             <button
@@ -1332,7 +1342,7 @@ function ProductsList() {
               type="button"
               className="so-primary-button products-list-add"
               disabled={busy}
-              onClick={() => setScanOpen(true)}
+              onClick={handleOpenScanner}
             >
               <ScanBarcode size={16} />
               <span>Scan Barcode</span>
@@ -1343,10 +1353,16 @@ function ProductsList() {
 
       <ProductModal
         isOpen={showProductModal}
-        onClose={() => setShowProductModal(false)}
+        initialBarcode={newBarcode}
+        onClose={() => {
+          setShowProductModal(false);
+          setNewBarcode("");
+        }}
         onSave={async (createdProduct) => {
           upsertProduct(createdProduct, true);
           setQuery((current) => ({ ...current, page: 1 }));
+          setShowProductModal(false);
+          setNewBarcode("");
           loadProducts();
         }}
       />
@@ -1385,13 +1401,25 @@ function ProductsList() {
       <ScanBarcodeModal
         open={scanOpen}
         onClose={() => setScanOpen(false)}
-        onFound={({ product }) => {
+        onFound={({ product } = {}) => {
           setScanOpen(false);
+
+          if (!product?.productCode) {
+            toast.error("The scanned barcode is linked to an invalid product record.");
+            return;
+          }
+
           handleSearch(product.productCode);
         }}
-        onUnknown={({ barcode }) => {
+        onUnknown={({ barcode } = {}) => {
           setScanOpen(false);
-          setNewBarcode(barcode);
+
+          if (!barcode) {
+            toast.error("The scanner did not return a valid barcode.");
+            return;
+          }
+
+          setNewBarcode(String(barcode));
           setShowProductModal(true);
         }}
       />

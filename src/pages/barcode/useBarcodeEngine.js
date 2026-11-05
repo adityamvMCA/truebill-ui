@@ -28,13 +28,17 @@ export default function useBarcodeEngine({ onFound, onUnknown, enabled = true, d
       if (navigator.onLine) {
         try {
           const { data } = await barcodeApi.lookup(barcode); // catalogue may be stale
-          const hit = data.data;
-          await cacheServerHit(barcode, hit);
-          return cb.current.onFound?.({
-            barcode, source, product: hit.product,
-            packaging: { packagingName: hit.mapping.packagingName, conversionQuantity: hit.mapping.conversionQuantity },
-          });
+          const hit = data?.data;
+          if (hit) {
+            await cacheServerHit(barcode, hit);
+            return cb.current.onFound?.({
+              barcode, source, product: hit.product,
+              packaging: { packagingName: hit.mapping.packagingName, conversionQuantity: hit.mapping.conversionQuantity },
+            });
+          }
         } catch (e) {
+          // 404 = genuinely unknown; only rethrow real errors so the caller
+          // can fall back to onUnknown instead of crashing the scan loop.
           if (e?.response?.status && e.response.status !== 404) throw e;
         }
       }

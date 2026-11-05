@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   Check, CloudOff, Flashlight, LogOut, Minus, Plus, RefreshCw, SwitchCamera, Undo2, Wifi,
 } from "lucide-react";
 
-import { apiError, barcodeApi } from "./barcodeApi";
-import { catalogStatus, syncCatalog } from "./barcodeCatalog";
+import { apiError } from "./barcodeApi";
+import { catalogStatus, flushUnknown, reportUnknownSafe, syncCatalog } from "./barcodeCatalog";
 import { feedbackOk, feedbackUnknown } from "./feedback";
 import { countPending, discardScan, enqueueScan, flushQueue, listPending } from "./pendingQueue";
 import { createScannerSocket, emitAck } from "./scannerSocket";
@@ -14,13 +13,12 @@ import useBarcodeEngine from "./useBarcodeEngine";
 import useCameraScanner from "./useCameraScanner";
 import useKeyboardWedge from "./useKeyboardWedge";
 import LinkBarcodeForm from "./LinkBarcodeForm";
+import QuickAddProduct from "./QuickAddProduct";
 import "./barcode.css";
 
 const qtyFmt = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 3 });
 
 export default function MobileScannerPage() {
-  const navigate = useNavigate();
-
   const [phase, setPhase] = useState("pair"); // pair | scan
   const [session, setSession] = useState(null); // { sessionId, documentType }
   const [items, setItems] = useState([]);
@@ -33,6 +31,7 @@ export default function MobileScannerPage() {
   const [confirm, setConfirm] = useState(null);
   const [unknown, setUnknown] = useState(null);
   const [linking, setLinking] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [flash, setFlash] = useState("");
   const [manual, setManual] = useState("");
   const [pairText, setPairText] = useState("");
@@ -94,7 +93,7 @@ export default function MobileScannerPage() {
     });
     socket.on("scanner:error", (p) => toast.error(p.message));
 
-    const goOnline = () => { setOnline(true); flush(); };
+    const goOnline = () => { setOnline(true); flush(); flushUnknown(); };
     const goOffline = () => setOnline(false);
     window.addEventListener("online", goOnline);
     window.addEventListener("offline", goOffline);
@@ -106,10 +105,10 @@ export default function MobileScannerPage() {
     };
   }, [flush, refreshPending, upsertItem]);
 
-  // retry queue periodically (covers silent socket recovery)
+  // retry queues periodically (covers silent socket recovery)
   useEffect(() => {
     if (phase !== "scan") return undefined;
-    const t = setInterval(flush, 10000);
+    const t = setInterval(() => { flush(); flushUnknown(); }, 10000);
     return () => clearInterval(t);
   }, [phase, flush]);
 
@@ -130,6 +129,7 @@ export default function MobileScannerPage() {
       setCatalog({ ...s, syncing: false });
       if (!s.done && navigator.onLine) runCatalogSync(false);
     });
+    flushUnknown();
   }, [runCatalogSync]);
 
   /* ---------------- pairing ---------------- */
@@ -152,12 +152,14 @@ export default function MobileScannerPage() {
     onFound: (f) => { feedbackOk(); flashFor("ok"); setConfirm({ ...f, qty: 1 }); },
     onUnknown: (u) => {
       feedbackUnknown(); flashFor("bad"); setUnknown(u);
-      if (navigator.onLine) barcodeApi.reportUnknown(u.barcode).catch(() => {});
+      reportUnknownSafe(u.barcode); // server inbox when online, offline queue otherwise (reported once)
     },
   });
 
+  const paused = Boolean(confirm || unknown || linking || adding);
+
   const camera = useCameraScanner({
-    active: !confirm && !unknown && !linking,
+    active: !paused,
     onBarcode: (code) => {
       if (phase === "pair") pairFrom(code);
       else engine(code, "camera");
@@ -187,6 +189,14 @@ export default function MobileScannerPage() {
 
   const setQty = (q) => setConfirm((c) => ({ ...c, qty: Math.max(0, Math.round(Number(q || 0) * 1000) / 1000) }));
 
+  /** After the barcode was linked / product created: re-run the scan so the confirm card appears. */
+  const rescan = (code) => {
+    setLinking(false); setAdding(false); setUnknown(null);
+    setTimeout(() => engine(code, "manual"), 80);
+  };
+
+  const skipUnknown = () => { setLinking(false); setAdding(false); setUnknown(null); };
+
   const leave = async () => {
     try { await emitAck(socketRef.current, "scanner:leave", {}); } catch { /* ignore */ }
     sessionRef.current = null; deviceTokenRef.current = null; joinRef.current = null;
@@ -194,7 +204,7 @@ export default function MobileScannerPage() {
   };
 
   const totalQty = useMemo(() => items.reduce((s, i) => s + (i.quantity || 0), 0), [items]);
-  const scanning = !confirm && !unknown && !linking;
+  const scanning = !paused;
 
   /* ---------------- render ---------------- */
   return (
@@ -302,7 +312,9 @@ export default function MobileScannerPage() {
               <button type="button" className="bcx-icon-btn" onClick={() => setQty(Number(confirm.qty) + 1)} aria-label="Increase"><Plus size={18} /></button>
             </div>
             {confirm.packaging?.conversionQuantity > 1 && (
-              <p className="bcx-hint">= {qtyFmt.format(Number(confirm.qty || 0) * confirm.packaging.conversionQuantity)} {confirm.product.unit}</p>
+              <p className="bcx-hint">
+                {qtyFmt.format(Number(confirm.qty || 0))} {confirm.packaging.packagingName} = {qtyFmt.format(Number(confirm.qty || 0) * confirm.packaging.conversionQuantity)} {confirm.product.unit}
+              </p>
             )}
             <div className="bcx-actions">
               <button type="button" className="bcx-btn" onClick={() => setConfirm(null)}>Cancel</button>
@@ -318,20 +330,26 @@ export default function MobileScannerPage() {
           <div className="bcx-sheet-card is-unknown">
             <div className="bcx-sheet-tag bad">Unknown product</div>
             <h3 className="bcx-code">{unknown.barcode}</h3>
-            {unknown.offline && <p className="bcx-hint">You are offline. This barcode is not in the cached catalogue.</p>}
+            {unknown.offline && <p className="bcx-hint">You are offline. This barcode is not in the cached catalogue and will be reported when you are back online.</p>}
+
             {linking ? (
-              <LinkBarcodeForm barcode={unknown.barcode} lockBarcode
+              <LinkBarcodeForm
+                barcode={unknown.barcode} lockBarcode
                 onCancel={() => setLinking(false)}
-                onDone={() => {
-                  const code = unknown.barcode;
-                  setLinking(false); setUnknown(null);
-                  setTimeout(() => engine(code, "manual"), 80);
-                }} />
+                onDone={() => rescan(unknown.barcode)}
+              />
+            ) : adding ? (
+              <QuickAddProduct
+                barcode={unknown.barcode}
+                onCancel={() => setAdding(false)}
+                onDone={() => rescan(unknown.barcode)}
+              />
             ) : (
               <div className="bcx-stack">
-                <button type="button" className="bcx-btn is-primary" onClick={() => navigate("/products", { state: { newBarcode: unknown.barcode } })}>Add new product</button>
+                <button type="button" className="bcx-btn is-primary" onClick={() => setAdding(true)} disabled={!online}>Create new product</button>
                 <button type="button" className="bcx-btn" onClick={() => setLinking(true)} disabled={!online}>Link to existing product</button>
-                <button type="button" className="bcx-btn" onClick={() => setUnknown(null)}>Skip – keep in pending list</button>
+                <button type="button" className="bcx-btn" onClick={skipUnknown}>Skip – handle later</button>
+                {!online && <p className="bcx-hint">Creating or linking needs internet. Tap Skip and it will wait in the Unknown Barcodes list.</p>}
               </div>
             )}
           </div>

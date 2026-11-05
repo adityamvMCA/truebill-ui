@@ -14,13 +14,16 @@ import "./barcode.css";
 const fmt = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 3 });
 
 /**
- * Drop into Purchase Entry / Sales / Stock In-Out / Inventory / Transfer screens.
- *   <ScanSessionPanel documentType="PURCHASE" onItemsChange={(lines) => mergeIntoBill(lines)} />
- * `lines` = [{ productId, productCode, name, quantity, unit, packaging, barcode, scanCount }]
- * It never touches your transaction payload – the module decides how to use the lines.
+ * Drop into Purchase / Sales / Stock In-Out / Inventory screens.
+ *   <ScanSessionPanel documentType="SALES" onItemsChange={applyLines} onEnd={handleEnd} />
+ * lines = [{ itemId, productId, productCode, name, quantity, unit, packaging, barcode, scanCount,
+ *            salePrice, purchasePrice, gstRate, productType, status }]
+ * `quantity` is already in the product's base unit (box scans are converted).
  */
-export default function ScanSessionPanel({ documentType, documentId = null, onItemsChange, disabled = false }) {
-  const [session, setSession] = useState(null); // { sessionId, joinToken }
+export default function ScanSessionPanel({
+  documentType, documentId = null, onItemsChange, onEnd, disabled = false,
+}) {
+  const [session, setSession] = useState(null); // { sessionId, sessionCode, joinToken }
   const [items, setItems] = useState({});
   const [devices, setDevices] = useState(0);
   const [connected, setConnected] = useState(false);
@@ -28,6 +31,8 @@ export default function ScanSessionPanel({ documentType, documentId = null, onIt
   const [drafts, setDrafts] = useState({});
   const socketRef = useRef(null);
   const sessionRef = useRef(null);
+  const onEndRef = useRef(onEnd);
+  onEndRef.current = onEnd;
 
   const upsert = useCallback(({ item, product }) => {
     setItems((prev) => {
@@ -68,15 +73,22 @@ export default function ScanSessionPanel({ documentType, documentId = null, onIt
     } catch (e) { toast.error(apiError(e)); } finally { setStarting(false); }
   };
 
-  const stop = useCallback(async () => {
+  const stop = useCallback(() => {
     const s = sessionRef.current;
     socketRef.current?.disconnect();
     socketRef.current = null; sessionRef.current = null;
-    setSession(null); setConnected(false); setDevices(0);
+    // tell the host first so it keeps the scanned rows as normal rows
+    onEndRef.current?.();
+    setSession(null); setConnected(false); setDevices(0); setItems({});
     if (s) barcodeApi.closeSession(s.sessionId).catch(() => {});
   }, []);
 
-  useEffect(() => () => { socketRef.current?.disconnect(); }, []);
+  // page left without pressing "End session": disconnect and close the session on the server
+  useEffect(() => () => {
+    socketRef.current?.disconnect();
+    const s = sessionRef.current;
+    if (s) barcodeApi.closeSession(s.sessionId).catch(() => {});
+  }, []);
 
   // QR join token is short-lived: rotate while the panel is open
   useEffect(() => {
@@ -92,8 +104,20 @@ export default function ScanSessionPanel({ documentType, documentId = null, onIt
 
   // hand lines to the host module
   const lines = useMemo(() => Object.values(items).map((i) => ({
-    itemId: i._id, productId: String(i.productId), productCode: i.product?.productCode, name: i.product?.name || i.barcode,
-    quantity: i.quantity, unit: i.unit, packaging: i.packaging, barcode: i.barcode, scanCount: i.scanCount,
+    itemId: i._id,
+    productId: String(i.productId),
+    productCode: i.product?.productCode,
+    name: i.product?.name || i.barcode,
+    quantity: i.quantity,
+    unit: i.unit || i.product?.unit,
+    packaging: i.packaging,
+    barcode: i.barcode,
+    scanCount: i.scanCount,
+    salePrice: i.product?.salePrice,
+    purchasePrice: i.product?.purchasePrice,
+    gstRate: i.product?.gstRate,
+    productType: i.product?.type,
+    status: i.product?.status,
   })), [items]);
   const cbRef = useRef(onItemsChange);
   cbRef.current = onItemsChange;

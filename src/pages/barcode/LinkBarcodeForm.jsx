@@ -10,6 +10,9 @@ const SOURCES = [
   { v: "INTERNAL", l: "Internal (not a GS1 barcode)" },
 ];
 
+// quick fill for the most common packagings – the user can still edit both fields
+const PRESETS = [["Unit", 1], ["Pack", 10], ["Box", 12], ["Carton", 100]];
+
 export default function LinkBarcodeForm({ barcode = "", lockBarcode = false, product = null, lockProduct = false, onDone, onCancel }) {
   const [code, setCode] = useState(barcode);
   const [picked, setPicked] = useState(product);
@@ -25,7 +28,7 @@ export default function LinkBarcodeForm({ barcode = "", lockBarcode = false, pro
     if (!picked?._id) return toast.error("Select a product");
     if (!code.trim()) return toast.error("Enter a barcode");
     const conversionQuantity = Number(qty);
-    if (!(conversionQuantity > 0)) return toast.error("Conversion quantity must be positive");
+    if (!(conversionQuantity > 0)) return toast.error("Units in this pack must be positive");
 
     setSaving(true);
     try {
@@ -54,6 +57,16 @@ export default function LinkBarcodeForm({ barcode = "", lockBarcode = false, pro
         </select>
       </label>
       {source === "GS1_ASSIGNED" && <p className="bcx-hint">Enter only GTINs officially assigned to you by GS1. Never type made-up EAN-13 numbers.</p>}
+
+      <div className="bcx-tools">
+        {PRESETS.map(([n, q]) => (
+          <button key={n} type="button" className="bcx-chip" disabled={saving}
+            onClick={() => { setPackagingName(n); setQty(String(q)); }}>
+            {n}
+          </button>
+        ))}
+      </div>
+
       <div className="bcx-row">
         <label>Packaging
           <input className="bcx-input" value={packagingName} onChange={(e) => setPackagingName(e.target.value)} maxLength={60} placeholder="Unit, Pack 200g, Carton of 20" disabled={saving} />
@@ -62,6 +75,8 @@ export default function LinkBarcodeForm({ barcode = "", lockBarcode = false, pro
           <input className="bcx-input" type="number" min="0.001" step="0.001" value={qty} onChange={(e) => setQty(e.target.value)} disabled={saving} />
         </label>
       </div>
+      <p className="bcx-hint">Example: a box barcode holding 100 pieces → Packaging “Box”, Units 100. Each scan adds 100 pieces.</p>
+
       <label className="bcx-check">
         <input type="checkbox" checked={primary} onChange={(e) => setPrimary(e.target.checked)} /> Primary barcode for this product
       </label>

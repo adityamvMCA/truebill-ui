@@ -6,7 +6,7 @@ import { apiError, barcodeApi } from "./barcodeApi";
 import BcxModal from "./BcxModal";
 import LinkBarcodeForm from "./LinkBarcodeForm";
 import ScanBarcodeModal from "./ScanBarcodeModal";
-import { LabelPrintDialog } from "./LabelPrint";
+import { LabelPrintDialog, packLabel } from "./LabelPrint";
 import "./barcode.css";
 
 const SOURCE_LABEL = { MANUFACTURER: "Manufacturer", SUPPLIER: "Supplier", INTERNAL: "Internal", GS1_ASSIGNED: "GS1 assigned" };
@@ -42,7 +42,14 @@ export default function BarcodeManager({ product }) {
     try { await barcodeApi.deactivate(row._id); load(); } catch (e) { toast.error(apiError(e)); }
   };
 
-  const labelOf = (r) => ({ name: product.name, sku: product.productCode, packaging: r.packagingName, barcode: r.barcode, price: product.salePrice });
+  const labelOf = (r) => ({
+    name: product.name,
+    sku: product.productCode,
+    barcode: r.barcode,
+    barcodeType: r.barcodeType,
+    packaging: packLabel(r.packagingName, r.conversionQuantity),
+    price: product.salePrice,
+  });
   const active = rows.filter((r) => r.isActive);
 
   return (
@@ -51,9 +58,9 @@ export default function BarcodeManager({ product }) {
         <h3><Barcode size={17} /> Barcodes</h3>
         <div className="bcx-tools">
           <button type="button" className="bcx-btn" onClick={() => setScanOpen(true)}><ScanLine size={15} /> Scan to add</button>
-          <button type="button" className="bcx-btn" onClick={() => setAdding({ barcode: "" })}><Plus size={15} /> Add barcode</button>
+          <button type="button" className="bcx-btn" onClick={() => setAdding({ barcode: "" })}><Plus size={15} /> Add barcode / box</button>
           <button type="button" className="bcx-btn" onClick={generate} disabled={busy}><Wand2 size={15} /> Generate internal</button>
-          <button type="button" className="bcx-btn" onClick={() => setPrintRows(active.map(labelOf))} disabled={!active.length}><Printer size={15} /> Print labels</button>
+          <button type="button" className="bcx-btn" onClick={() => setPrintRows(active.map(labelOf))} disabled={!active.length}><Printer size={15} /> Print all labels</button>
         </div>
       </header>
 
