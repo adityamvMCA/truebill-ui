@@ -4,6 +4,7 @@
 }
 @media (prefers-color-scheme:dark){:root{--bcx-bg:var(--surface,#161b22);--bcx-fg:var(--text,#e6edf3);--bcx-muted:var(--text-muted,#8b949e);--bcx-border:var(--border,#30363d)}}
 
+
 /* Native camera renders BEHIND the webview: hide everything except .bcx-ui while scanning */
 body.barcode-scanner-active,body.barcode-scanner-active #root,html:has(body.barcode-scanner-active){background:transparent!important}
 body.barcode-scanner-active{visibility:hidden}
