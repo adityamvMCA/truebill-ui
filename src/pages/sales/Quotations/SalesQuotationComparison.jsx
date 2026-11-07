@@ -302,7 +302,7 @@ function ComparisonPage({ comparisonGroupId }) {
     }
 
     navigate(
-      buildRoute(routes.sales.viewOrder, {
+      buildRoute(routes.sales.orders, {
         id: encodeURIComponent(order.orderNumber),
       }),
     );

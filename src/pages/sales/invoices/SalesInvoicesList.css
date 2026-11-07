@@ -81,3 +81,90 @@
     min-height: 44px;
   }
 }
+
+/* =========================================
+   PREMIUM POST BUTTON
+========================================= */
+
+.sip-btn-post {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  min-height: 34px;
+  padding: 0 13px !important;
+
+  border: 1px solid #2563eb !important;
+  border-radius: 7px !important;
+
+  background: linear-gradient(
+    135deg,
+    #3b82f6 0%,
+    #2563eb 100%
+  ) !important;
+
+  color: #ffffff !important;
+
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.2px;
+
+  box-shadow:
+    0 2px 5px rgba(37, 99, 235, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* Icon */
+.sip-btn-post svg {
+  width: 14px;
+  height: 14px;
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+  flex-shrink: 0;
+
+  transform: rotate(-45deg);
+  transition: transform 0.2s ease;
+}
+
+/* Hover */
+.sip-btn-post:hover:not(:disabled) {
+  background: linear-gradient(
+    135deg,
+    #2563eb 0%,
+    #1d4ed8 100%
+  ) !important;
+
+  border-color: #1d4ed8 !important;
+
+  box-shadow:
+    0 4px 10px rgba(37, 99, 235, 0.28);
+
+  transform: translateY(-1px);
+}
+
+.sip-btn-post:hover:not(:disabled) svg {
+  transform: rotate(-45deg) translateX(2px);
+}
+
+/* Active */
+.sip-btn-post:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2);
+}
+
+/* Disabled */
+.sip-btn-post:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}

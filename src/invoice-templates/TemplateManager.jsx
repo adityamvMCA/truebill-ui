@@ -11,6 +11,8 @@ import {
 import InvoiceTemplate from "./InvoiceTemplate";
 import EwayBillTemplate from "./EwayBillTemplate";
 import { SAMPLE_INVOICE } from "./sampleData";
+import { DELIVERY_TEMPLATES } from "./deliveryNote.templates";
+import DeliveryNoteTemplate from "./DeliveryNoteTemplate";
 
 const KINDS = {
   invoice: {
@@ -19,6 +21,7 @@ const KINDS = {
     Doc: InvoiceTemplate,
   },
   eway: { label: "E-way bill", list: EWAY_TEMPLATES, Doc: EwayBillTemplate },
+  delivery: { label: "Delivery note", list: DELIVERY_TEMPLATES, Doc: DeliveryNoteTemplate },
 };
 
 const mm = (v) => (v * 96) / 25.4;
