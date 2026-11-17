@@ -1,0 +1,140 @@
+/* Extra styles on top of BankLedger.css */
+
+.bl-page.pr-page {
+  container-name: product-report;
+}
+
+/* Tabs */
+
+.pr-page .pr-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+  overflow-x: auto;
+
+  border-bottom: 1px solid var(--bl-border);
+}
+
+.pr-page .pr-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 10px 14px;
+  margin-bottom: -1px;
+
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--bl-secondary);
+
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.pr-page .pr-tab:hover {
+  color: var(--bl-text);
+}
+
+.pr-page .pr-tab-active {
+  border-bottom-color: var(--bl-primary);
+  color: var(--bl-primary);
+  font-weight: 650;
+}
+
+/* Filters: search + period + from + to */
+
+.pr-page .pr-filters {
+  grid-template-columns:
+    minmax(200px, 2fr)
+    minmax(140px, 1fr)
+    minmax(140px, 1fr)
+    minmax(140px, 1fr);
+}
+
+.pr-page .bl-date select {
+  width: 100%;
+  padding: 0;
+
+  border: 0;
+  background: transparent;
+  color: var(--bl-text);
+  font-size: 13px;
+}
+
+/* Light grey header like the reference screenshots */
+
+.pr-page .pr-table {
+  min-width: 640px;
+}
+
+.pr-page .pr-table thead {
+  background: color-mix(in srgb, var(--bl-text) 6%, var(--bl-card));
+  color: var(--bl-text);
+}
+
+.pr-page .pr-table th {
+  text-transform: none;
+  font-size: 12px;
+}
+
+.pr-page .pr-table th.bl-number {
+  text-align: right;
+}
+
+.pr-page .pr-empty {
+  padding: 40px 0;
+  text-align: center;
+}
+
+/* Item details grid */
+
+.pr-page .pr-details {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.pr-page .pr-details .bl-card {
+  min-height: 80px;
+}
+
+.pr-page .pr-details .bl-card > strong {
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .pr-page .pr-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pr-page .pr-filters .bl-search {
+    grid-column: 1 / -1;
+  }
+
+  .pr-page .pr-details {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Print PDF: only header + table */
+
+@media print {
+  .pr-page .bl-actions,
+  .pr-page .bl-back,
+  .pr-page .pr-tabs,
+  .pr-page .pr-filters,
+  .pr-page .bl-footer {
+    display: none !important;
+  }
+
+  .bl-page.pr-page {
+    padding: 0;
+  }
+
+  .pr-page .bl-table-scroll {
+    overflow: visible;
+  }
+
+  .pr-page .bl-table {
+    min-width: 0;
+  }
+}

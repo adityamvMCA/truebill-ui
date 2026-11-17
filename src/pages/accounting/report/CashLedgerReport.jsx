@@ -353,10 +353,10 @@ export default function CashLedgerReport({
 
   const busy = accountsLoading || ledgerLoading;
 
-  const ready =
-    Boolean(summary) && !busy && !accountsError && !ledgerError;
+  const ready = Boolean(summary) && !busy && !accountsError && !ledgerError;
 
-  const wentNegative = ready && (lowestBalance < 0 || closing < 0 || opening < 0);
+  const wentNegative =
+    ready && (lowestBalance < 0 || closing < 0 || opening < 0);
 
   /* ----- export ----- */
 
@@ -547,9 +547,7 @@ export default function CashLedgerReport({
         <article className="bl-card">
           <span>Total {outLabel}</span>
 
-          <strong className="bl-out">
-            {ready ? money(totalCredit) : "—"}
-          </strong>
+          <strong className="bl-out">{ready ? money(totalCredit) : "—"}</strong>
 
           <small>{ready ? `${outCount} entries` : " "}</small>
         </article>
@@ -657,7 +655,10 @@ export default function CashLedgerReport({
                   <td colSpan={6}>Opening Balance</td>
 
                   <td className="bl-number">
-                    <Balance value={opening} type={summary.openingBalanceType} />
+                    <Balance
+                      value={opening}
+                      type={summary.openingBalanceType}
+                    />
                   </td>
                 </tr>
               )}

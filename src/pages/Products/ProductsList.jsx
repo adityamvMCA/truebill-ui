@@ -15,6 +15,7 @@ import ProductDetailsModal from "./ProductDetailsModal";
 
 import "./products-list.css";
 import ScanBarcodeModal from "../barcode/ScanBarcodeModal";
+import { BarChart3 } from "lucide-react";
 
 const INITIAL_CONFIRM_STATE = {
   open: false,
@@ -349,6 +350,17 @@ function ProductsList() {
 
   const location = useLocation();
   const navigate = useNavigate();
+  const openReport = useCallback(
+    (row) => {
+      if (!row?.productCode) {
+        toast.error("This product has no code, so its report can't be opened.");
+        return;
+      }
+
+      navigate(`/products/${encodeURIComponent(row.productCode)}/report`);
+    },
+    [navigate],
+  );
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [productModalMode, setProductModalMode] = useState("view");
 
@@ -372,7 +384,9 @@ function ProductsList() {
       const result = await requestCameraPermission();
 
       if (!result?.granted) {
-        toast.error(result?.message || "Camera permission is required to scan barcodes.");
+        toast.error(
+          result?.message || "Camera permission is required to scan barcodes.",
+        );
         return;
       }
 
@@ -491,11 +505,17 @@ function ProductsList() {
     setShowProductModal(true);
 
     // Clear only the React Router location state without corrupting its history state.
-    navigate(
-      `${location.pathname}${location.search}${location.hash}`,
-      { replace: true, state: null },
-    );
-  }, [location.state, location.pathname, location.search, location.hash, navigate]);
+    navigate(`${location.pathname}${location.search}${location.hash}`, {
+      replace: true,
+      state: null,
+    });
+  }, [
+    location.state,
+    location.pathname,
+    location.search,
+    location.hash,
+    navigate,
+  ]);
   const handlePageChange = useCallback((page) => {
     setQuery((current) =>
       current.page === page ? current : { ...current, page },
@@ -660,6 +680,24 @@ function ProductsList() {
         label: "Status",
         sortable: true,
         render: (value) => <StatusField value={value} />,
+      },
+      {
+        key: "report",
+        label: "Report",
+        sortable: false,
+        render: (_, row) => (
+          <button
+            type="button"
+            className="products-report-btn"
+            onClick={(event) => {
+              event.stopPropagation();
+              openReport(row);
+            }}
+          >
+            <BarChart3 size={14} />
+            <span>Report</span>
+          </button>
+        ),
       },
       {
         key: "brand",
@@ -1405,7 +1443,9 @@ function ProductsList() {
           setScanOpen(false);
 
           if (!product?.productCode) {
-            toast.error("The scanned barcode is linked to an invalid product record.");
+            toast.error(
+              "The scanned barcode is linked to an invalid product record.",
+            );
             return;
           }
 

@@ -105,6 +105,9 @@ import LedgerInsights from "../../pages/LedgerInsights";
 import LedgerStatement from "../../pages/LedgerStatement";
 import MobileScannerPage from "../../pages/barcode/MobileScannerPage";
 import UnknownBarcodes from "../../pages/barcode/UnknownBarcodes";
+import ProductReport from "../../pages/accounting/report/ProductReport";
+import BillWiseProfit from "../../pages/accounting/report/BillWiseProfit";
+import AuditTrail from "../../pages/accounting/report/AuditTrail";
 
 // import InventoryReport from "../../pages/Reportdashboard/InventoryReport";
 
@@ -591,6 +594,22 @@ const AppRouter = () => (
             path={routes.expenses.list}
             element={gated("ledger.view", <ExpenseList />)}
           />
+          <Route
+            path={routes.reports.items}
+            element={gated("ledger.view", <ProductReport />)}
+          />
+          <Route
+            path={routes.reports.itemsCode}
+            element={gated("ledger.view", <ProductReport />)}
+          />
+          <Route
+            path={routes.reports.billwiseprofit}
+            element={gated("ledger.view", <BillWiseProfit />)}
+          />
+          <Route
+            path={routes.reports.audittrail}
+            element={gated("ledger.view", <AuditTrail />)}
+          />
           {/* <Route
             path={routes.expenses.details}
             element={gated("ledger.view", <ExpenseDetail />)}
@@ -677,7 +696,6 @@ const AppRouter = () => (
             element={<TemplateSettingsPage />}
           />
           <Route path="/settings/messaging" element={<MessagingSettings />} />
-
           <Route path="/scanner" element={<MobileScannerPage />} />
           <Route
             path="/inventory/unknown-barcodes"

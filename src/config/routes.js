@@ -209,6 +209,10 @@ const routes = {
     bank: "/accounting/bank-ledger",
     lreport:"/accounting/ledger-insights",
     lfullreport:"/accounting/ledger/:ledgerCode",
+    items:"products/report",
+    itemsCode:"products/:productCode/report",
+    billwiseprofit:"/bill-wise-profit",
+    audittrail:"/audit-trail"
   },
 
   note: {
