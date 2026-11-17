@@ -212,7 +212,8 @@ const routes = {
     items:"products/report",
     itemsCode:"products/:productCode/report",
     billwiseprofit:"/bill-wise-profit",
-    audittrail:"/audit-trail"
+    audittrail:"/audit-trail",
+    pl:"/profit-loss"
   },
 
   note: {

@@ -108,6 +108,8 @@ import UnknownBarcodes from "../../pages/barcode/UnknownBarcodes";
 import ProductReport from "../../pages/accounting/report/ProductReport";
 import BillWiseProfit from "../../pages/accounting/report/BillWiseProfit";
 import AuditTrail from "../../pages/accounting/report/AuditTrail";
+import ProfitLoss from "../../pages/accounting/ProfitLoss/ProfitLoss";
+import Reports from "../../pages/Reports";
 
 // import InventoryReport from "../../pages/Reportdashboard/InventoryReport";
 
@@ -607,8 +609,16 @@ const AppRouter = () => (
             element={gated("ledger.view", <BillWiseProfit />)}
           />
           <Route
+            path={routes.reports.pl}
+            element={gated("ledger.view", <ProfitLoss />)}
+          />
+          <Route
             path={routes.reports.audittrail}
             element={gated("ledger.view", <AuditTrail />)}
+          />
+           <Route
+            path={routes.reports.index}
+            element={gated("ledger.view", <Reports />)}
           />
           {/* <Route
             path={routes.expenses.details}
