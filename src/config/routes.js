@@ -85,6 +85,7 @@ const routes = {
     editInvoice: "/purchase/invoices/edit/:id",
     viewInvoice: "/purchase/invoices/view/:id",
     returns: "/purchase/returns",
+    scan:"/purchase-bill-scan"
   },
   inventory: {
     index: "/inventory",

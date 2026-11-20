@@ -835,6 +835,7 @@ export default function Dashboard() {
               <a href="#/accounting/outstanding/customers" onClick={(e) => { e.preventDefault(); navigate("/accounting/outstanding/customers"); }}><ArrowUpRight size={14} /> Receivables</a>
               <a href="#/accounting/outstanding/suppliers" onClick={(e) => { e.preventDefault(); navigate("/accounting/outstanding/suppliers"); }}><ArrowDownRight size={14} /> Payables</a>
               <a href="#/expenses/list" onClick={(e) => { e.preventDefault(); navigate("/expenses/list"); }}><Receipt size={14} /> Expenses</a>
+              <a href="#/purchase-bill-scan" onClick={(e) => { e.preventDefault(); navigate("/purchase-bill-scan"); }}><Receipt size={14} /> Bill Scan</a>
             </div>
             <div style={{ marginTop: 12, padding: 10, borderRadius: 10, background: "color-mix(in srgb, var(--dbd-primary) 7%, var(--dbd-card))", border: "1px solid var(--dbd-border)", fontSize: 11, color: "var(--dbd-secondary)", lineHeight: 1.5 }}>
               <strong style={{ color: "var(--dbd-text)" }}>Paise-safe ledger.</strong> All amounts are stored as integers (×100) and balanced per Journal. Outstanding is as-of <strong style={{ color: "var(--dbd-text)" }}>{formatDateLabel(endDate)}</strong> (UTC).

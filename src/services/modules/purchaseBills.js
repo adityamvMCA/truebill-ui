@@ -16,7 +16,7 @@ const purchaseBillApi = {
     apiClient.get(`/purchase-bills/number/${encode(billNumber)}`),
 
   // POST /api/purchase-bills
-  // Body includes action: "SAVE_DRAFT" or "SAVE_AND_POST"
+  // Body uses action: "SAVE_AND_POST" (drafts are not supported by the server)
   create: (data) => apiClient.post("/purchase-bills", data),
 
   // PUT /api/purchase-bills/number/PB001
@@ -27,14 +27,34 @@ const purchaseBillApi = {
   // POST /api/purchase-bills/number/PB001/post
   post: (billNumber) =>
     apiClient.post(`/purchase-bills/number/${encode(billNumber)}/post`, {}),
+
   delete: (billNumber) =>
     apiClient.delete(`/purchase-bills/number/${encode(billNumber)}`),
 
   getPayments: (billNumber, params = {}) =>
-    apiClient.get(
-      `/purchase-bills/number/${encodeURIComponent(billNumber)}/payments`,
-      { params },
-    ),
+    apiClient.get(`/purchase-bills/number/${encode(billNumber)}/payments`, {
+      params,
+    }),
+
+  // POST /api/purchase-bills/scan  (multipart, field name "files")
+  // Reads the uploaded bill and returns extracted details. Saves nothing.
+  // `config` accepts { signal } so the user can cancel a slow scan.
+  scan: (formData, config = {}) =>
+    apiClient.post("/purchase-bills/scan", formData, {
+      timeout: 180000, // free LLMs can take a while
+      ...config,
+      headers: {
+        "Content-Type": "multipart/form-data",
+        ...(config.headers || {}),
+      },
+    }),
+
+  // POST /api/purchase-bills/scan/confirm
+  // Creates missing supplier/products, then creates and posts the bill.
+  confirmScan: (data) =>
+    apiClient.post("/purchase-bills/scan/confirm", data, {
+      timeout: 120000,
+    }),
 };
 
 export default purchaseBillApi;

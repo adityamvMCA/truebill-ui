@@ -110,6 +110,7 @@ import BillWiseProfit from "../../pages/accounting/report/BillWiseProfit";
 import AuditTrail from "../../pages/accounting/report/AuditTrail";
 import ProfitLoss from "../../pages/accounting/ProfitLoss/ProfitLoss";
 import Reports from "../../pages/Reports";
+import PurchaseBillScan from "../../pages/purchase/PurchaseBillScan";
 
 // import InventoryReport from "../../pages/Reportdashboard/InventoryReport";
 
@@ -342,6 +343,11 @@ const AppRouter = () => (
           <Route
             path={routes.purchase.createInvoice}
             element={<PurchaseBillCreate1 />}
+          />
+        
+          <Route
+            path={routes.purchase.scan}
+            element={<PurchaseBillScan />}
           />
           <Route
             path={routes.purchase.viewInvoice}
@@ -705,6 +711,7 @@ const AppRouter = () => (
             path="/settings/print-templates"
             element={<TemplateSettingsPage />}
           />
+        
           <Route path="/settings/messaging" element={<MessagingSettings />} />
           <Route path="/scanner" element={<MobileScannerPage />} />
           <Route
