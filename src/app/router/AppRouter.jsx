@@ -14,6 +14,7 @@ import GlobalSkeleton from "../../components/common/GlobalSkeleton";
 import PurchaseOrders from "../../pages/PurchaseOrders";
 import Traders from "../../pages/Traders/Traders";
 import MenuCreate from "../../pages/settings/MenuCreate";
+import DeveloperEmailCenter from "../../pages/developer/DeveloperEmailCenter";
 import CustomerCreate from "../../pages/customers/CustomerCreate";
 import ProductsList from "../../pages/Products/ProductsList";
 import StockAdjustmentCreate from "../../pages/stock-movements/StockAdjustmentCreate";
@@ -355,10 +356,13 @@ const AppRouter = () => (
             element={<PurchaseBillCreate1 />}
           />
 
-          <Route path={routes.purchase.scan} element={<PurchaseBillScan />} />
           <Route
             path={routes.purchase.viewInvoice}
             element={gated("purchase.invoices", <PurchaseBillDetail />)}
+          />
+          <Route
+            path={routes.purchase.scan}
+            element={gated("purchase.invoices", <PurchaseBillScan />)}
           />
           {/* =====================
               CUSTOMERS
@@ -739,6 +743,24 @@ const AppRouter = () => (
               element={
                 <DeveloperRoute>
                   <MenuCreate />
+                </DeveloperRoute>
+              }
+            />
+
+            <Route
+              path={routes.developer.emails}
+              element={
+                <DeveloperRoute>
+                  <DeveloperEmailCenter />
+                </DeveloperRoute>
+              }
+            />
+
+            <Route
+              path="/developer/emails"
+              element={
+                <DeveloperRoute>
+                  <DeveloperEmailCenter />
                 </DeveloperRoute>
               }
             />

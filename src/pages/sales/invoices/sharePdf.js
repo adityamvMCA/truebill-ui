@@ -274,6 +274,21 @@ const blobToBase64 = (blob) =>
     reader.readAsDataURL(blob);
   });
 
+export const openPdfInBrowser = (blob, fileName = "invoice.pdf") => {
+  const file = new Blob([blob], { type: "application/pdf" });
+  const url = URL.createObjectURL(file);
+  const win = window.open(url, "_blank");
+  if (!win) {
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+};
+
 export const downloadBlob = (blob, fileName) => {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -291,7 +306,7 @@ const abortError = () => {
   return error;
 };
 
-/* Returns "shared" or "downloaded". Throws AbortError if the user cancels. */
+/* Returns "shared" or "opened". Throws AbortError if the user cancels. */
 export const shareInvoiceFile = async ({ blob, fileName, text, title }) => {
   /* Capacitor (Android / iOS): native share sheet with the real file */
   if (Capacitor.isNativePlatform()) {
@@ -328,7 +343,7 @@ export const shareInvoiceFile = async ({ blob, fileName, text, title }) => {
     }
   }
 
-  /* Fallback: download so the user can attach it */
-  downloadBlob(blob, fileName);
-  return "downloaded";
+  /* Fallback: open in browser tab directly without prompting to download */
+  openPdfInBrowser(blob, fileName);
+  return "opened";
 };

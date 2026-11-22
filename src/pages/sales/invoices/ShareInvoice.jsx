@@ -11,6 +11,7 @@ import {
   X,
   Paperclip,
   Send,
+  ExternalLink,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
@@ -116,8 +117,27 @@ const cleanPhone = (value) => {
 };
 
 /* ================================================================
-   PDF DOWNLOAD
+   PDF BROWSER VIEW & DOWNLOAD
 ================================================================ */
+
+export const openPdfInBrowser = (blob, fileName = "invoice.pdf") => {
+  try {
+    const file = new Blob([blob], { type: "application/pdf" });
+    const url = URL.createObjectURL(file);
+    const win = window.open(url, "_blank");
+    if (!win) {
+      const a = document.createElement("a");
+      a.href = url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+  } catch (err) {
+    console.error("Failed to open PDF in browser:", err);
+  }
+};
 
 const downloadBlob = (blob, fileName) => {
   const url = URL.createObjectURL(blob);
@@ -281,6 +301,15 @@ const useCustomerContact = (row) => {
 ================================================================ */
 
 export const SHARE_ACTIONS = [
+  {
+    key: "open-browser",
+    label: "Open in Web Browser",
+    hint: "View, Print or Download",
+    icon: ExternalLink,
+    channel: "browser",
+    kind: "invoice",
+    tone: "blue",
+  },
   {
     key: "pdf-whatsapp",
     label: "Share Invoice PDF",
@@ -513,16 +542,13 @@ const previewSend = async (payload) => {
       return;
     }
 
-    // Web / mobile browser.
-    downloadBlob(blob, fileName);
+    // Web / mobile browser: open in browser tab directly without prompting to download
+    openPdfInBrowser(blob, fileName);
 
-    toast.success(
-      `${fileName} downloaded. Attach it with the paperclip.`,
-      {
-        id: toastId,
-        duration: 7000,
-      }
-    );
+    toast.success("Opening invoice in browser tab. You can view, print, or download.", {
+      id: toastId,
+      duration: 5000,
+    });
 
     await delay(700);
 
@@ -1375,6 +1401,25 @@ function ShareComposeModal({ row, action, onClose, onSend }) {
 
           <button
             type="button"
+            className="shr-btn shr-btn-ghost"
+            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+            onClick={async () => {
+              const toastId = toast.loading("Opening invoice in browser...");
+              try {
+                const blob = await createInvoicePdf(row);
+                openPdfInBrowser(blob, `${row.invoiceNumber || "invoice"}.pdf`);
+                toast.success("Opened in new browser tab! You can print or download.", { id: toastId });
+              } catch (err) {
+                toast.error("Failed to render invoice PDF", { id: toastId });
+              }
+            }}
+          >
+            <ExternalLink size={15} />
+            <span>Open in Browser</span>
+          </button>
+
+          <button
+            type="button"
             className={`shr-btn shr-btn-primary shr-${
               isEmail ? "red" : "green"
             }`}
@@ -1619,8 +1664,19 @@ export default function ShareInvoiceButton({
             role="menuitem"
             className="shr-item"
             disabled={Boolean(reason)}
-            onClick={() => {
+            onClick={async () => {
               setMenu(null);
+              if (action.key === "open-browser") {
+                const toastId = toast.loading("Opening invoice in browser...");
+                try {
+                  const blob = await createInvoicePdf(row);
+                  openPdfInBrowser(blob, `${row.invoiceNumber || "invoice"}.pdf`);
+                  toast.success("Opened in new browser tab! You can print or download.", { id: toastId });
+                } catch (err) {
+                  toast.error("Failed to render invoice PDF", { id: toastId });
+                }
+                return;
+              }
               setActive(action);
             }}
           >

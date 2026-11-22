@@ -273,6 +273,10 @@ const routes = {
     compose: "/gmail/compose",
     mail: "/gmail/mail/:id",
   },
+
+  developer: {
+    emails: "/developer/emails",
+  },
 };
 
 export const buildRoute = (route, params = {}) => {

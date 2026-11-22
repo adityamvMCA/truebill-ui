@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import useAuth from "../hooks/useAuth";
 import {
   ArrowUpRight,
   ArrowDownRight,
@@ -330,6 +331,13 @@ function BarList({ rows, max }) {
 // ---------- main ----------
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const displayName =
+    user?.name?.trim() ||
+    user?.username?.trim() ||
+    (user?.email ? user.email.split("@")[0] : "") ||
+    "User";
+
   const [startDate, setStartDate] = useState(getMonthStart);
   const [endDate, setEndDate] = useState(getToday);
   const [loading, setLoading] = useState(false);
@@ -561,7 +569,7 @@ export default function Dashboard() {
       {/* Header */}
       <div className="dbd-header">
         <div className="dbd-title">
-          <h1>{greeting()}, Admin!</h1>
+          <h1>{greeting()}, {displayName}!</h1>
           <p>Here is what is happening with your business today — <strong style={{ color: "var(--dbd-text)" }}>{periodLabel}</strong></p>
         </div>
         <div className="dbd-controls">

@@ -29,6 +29,7 @@ import quotationComparisonApi from "./modules/quotationComparisonApi";
 import productFormApi from "./modules/productFormApi";
 import barcodeApi from "./modules/barcodeApi";
 import transporterApi from "./modules/transporterApi";
+import developerEmailApi from "./modules/developerEmailApi";
 
 export const api = {
   auth: authApi,
@@ -61,7 +62,8 @@ export const api = {
   supplierQuotation: supplierQuotationApi,
   quotationComparison: quotationComparisonApi,
   productForm: productFormApi,
-    barcode: barcodeApi,
+  barcode: barcodeApi,
+  developerEmail: developerEmailApi,
 };
 
 export default api;
