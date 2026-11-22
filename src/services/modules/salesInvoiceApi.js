@@ -60,8 +60,9 @@ const salesInvoiceApi = {
      LIST / DETAILS
      ========================================== */
 
-  getAll(params = {}) {
+  getAll(params = {}, config = {}) {
     return apiClient.get(BASE_PATH, {
+      ...config,
       params,
     });
   },

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Download, FileText, MapPin, Send, Truck } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -6,7 +6,9 @@ import Button from "../../../components/common/Form/Button";
 import Input from "../../../components/common/Form/Input";
 import Select from "../../../components/common/Form/Select";
 import BoxModal from "../../../components/common/Modal/BoxModal";
+import EntitySearchPicker from "../../../components/common/EntitySearchPicker/EntitySearchPicker";
 import salesInvoiceApi from "../../../services/modules/salesInvoiceApi";
+import transporterApi from "../../../services/modules/transporterApi";
 
 import { formatPaise, getErrors } from "./salesInvoiceUtils";
 import {
@@ -202,13 +204,7 @@ export default function EwayBillModal({ invoiceNumber, onClose, onUpdated }) {
           );
         }
 
-        if (!isRequired(loaded)) {
-          throw new Error(
-            `The goods value is ${formatPaise(
-              goodsValuePaise(loaded),
-            )}. A mandatory e-way bill is not required because the goods value does not exceed ₹50,000.`,
-          );
-        }
+        // Under GST, voluntary generation is allowed for consignment values below ₹50,000
 
         if (active && requestId === requestRef.current) {
           setInvoice(loaded);
@@ -240,6 +236,89 @@ export default function EwayBillModal({ invoiceNumber, onClose, onUpdated }) {
   const locked = Boolean(busy);
   const ready = !loading && !loadError && Boolean(invoice);
   const isRoad = details.transportMode === "ROAD";
+  const [selectedTransporterId, setSelectedTransporterId] = useState("");
+  const [savingTransporter, setSavingTransporter] = useState(false);
+
+  const fetchTransporterOptions = useCallback(
+    async ({ search, page, limit, signal }) => {
+      try {
+        const response = await transporterApi.getAll(
+          {
+            search,
+            page,
+            limit,
+            status: "ACTIVE",
+          },
+          { signal },
+        );
+        const resData = response?.data || response;
+        const data = Array.isArray(resData?.data)
+          ? resData.data
+          : Array.isArray(resData)
+            ? resData
+            : [];
+        const total = resData?.pagination?.total ?? data.length;
+        return { data, total };
+      } catch (err) {
+        console.error("Failed to fetch transporters:", err);
+        return { data: [], total: 0 };
+      }
+    },
+    [],
+  );
+
+  const handleTransporterSelect = (id, transporter) => {
+    setSelectedTransporterId(id || "");
+    if (!transporter) return;
+    setDetails((previous) => ({
+      ...previous,
+      transporterName:
+        transporter.transporterName || transporter.name || "",
+      transporterId:
+        transporter.transporterId ||
+        transporter.gstin ||
+        previous.transporterId,
+      transportMode: transporter.transportMode || previous.transportMode,
+      vehicleType: transporter.vehicleType || previous.vehicleType,
+      vehicleNumber:
+        transporter.vehicleNumber || previous.vehicleNumber,
+      ...(transporter.distanceKm
+        ? { distanceKm: String(transporter.distanceKm) }
+        : {}),
+    }));
+    toast.success(
+      `Loaded details for "${transporter.transporterName || transporter.name}"`,
+    );
+  };
+
+  const saveAsTransporter = async () => {
+    if (!details.transporterName?.trim() || !details.transporterId?.trim()) {
+      toast.error(
+        "Please enter Transporter Name and GSTIN/TRANSIN to save",
+      );
+      return;
+    }
+    try {
+      setSavingTransporter(true);
+      await transporterApi.create({
+        transporterName: details.transporterName.trim(),
+        transporterId: details.transporterId.trim(),
+        transportMode: details.transportMode,
+        vehicleNumber: details.vehicleNumber?.trim() || "",
+        vehicleType: details.vehicleType,
+        distanceKm: Number(details.distanceKm) || 0,
+      });
+      toast.success("Transporter saved to master");
+    } catch (err) {
+      toast.error(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to save transporter",
+      );
+    } finally {
+      setSavingTransporter(false);
+    }
+  };
 
   const setDetail = (event) => {
     const { name, value } = event.target;
@@ -529,7 +608,11 @@ export default function EwayBillModal({ invoiceNumber, onClose, onUpdated }) {
 
               <div className="box-modal-section-header-content">
                 <h3>Invoice Information</h3>
-                <p>Review invoice and goods value before proceeding</p>
+                <p>
+                  {!isRequired(invoice)
+                    ? `Consignment value is ${formatPaise(goodsValuePaise(invoice))} (≤ ₹50,000). Voluntary E-Way Bill generation.`
+                    : "Review invoice and goods value before proceeding"}
+                </p>
               </div>
             </div>
 
@@ -573,8 +656,32 @@ export default function EwayBillModal({ invoiceNumber, onClose, onUpdated }) {
 
               <div className="box-modal-section-header-content">
                 <h3>Transport Details</h3>
-                <p>Mode, vehicle, transporter and transport document</p>
+                <p>Select a transporter to auto-populate mode, vehicle & GSTIN</p>
               </div>
+            </div>
+
+            <div style={{ marginBottom: "16px" }}>
+              <EntitySearchPicker
+                label="Select Transporter (Autofills details)"
+                placeholder="Search transporter by name, GSTIN, or vehicle..."
+                fetchOptions={fetchTransporterOptions}
+                getOptionId={(t) => t._id}
+                getOptionLabel={(t) => t.transporterName || t.name}
+                getOptionSubtitle={(t) =>
+                  [t.transporterId, t.transportMode, t.vehicleNumber]
+                    .filter(Boolean)
+                    .join(" • ")
+                }
+                selectedIds={
+                  selectedTransporterId ? [selectedTransporterId] : []
+                }
+                selectedLabel={details.transporterName}
+                onToggle={(id, item) =>
+                  handleTransporterSelect(id, item)
+                }
+                multiple={false}
+                disabled={locked}
+              />
             </div>
 
             <div className="box-modal-form-grid">
@@ -631,15 +738,39 @@ export default function EwayBillModal({ invoiceNumber, onClose, onUpdated }) {
                 disabled={locked}
               />
 
-              <Input
-                label="Transporter Name"
-                name="transporterName"
-                value={details.transporterName}
-                onChange={setDetail}
-                placeholder="Enter transporter name"
-                maxLength={200}
-                disabled={locked}
-              />
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <Input
+                  label="Transporter Name"
+                  name="transporterName"
+                  value={details.transporterName}
+                  onChange={setDetail}
+                  placeholder="Enter transporter name"
+                  maxLength={200}
+                  disabled={locked}
+                />
+                {details.transporterName && details.transporterId && (
+                  <button
+                    type="button"
+                    onClick={saveAsTransporter}
+                    disabled={locked || savingTransporter}
+                    style={{
+                      alignSelf: "flex-end",
+                      marginTop: "4px",
+                      background: "none",
+                      border: "none",
+                      color: "var(--primary-color, #2563eb)",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      padding: "2px 4px",
+                    }}
+                  >
+                    {savingTransporter
+                      ? "Saving..."
+                      : "+ Save Transporter to Master"}
+                  </button>
+                )}
+              </div>
 
               <Input
                 label={

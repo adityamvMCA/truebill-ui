@@ -1,12 +1,17 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FileText, PackageCheck, ReceiptText } from "lucide-react";
 import toast from "react-hot-toast";
 
 import Button from "../../../components/common/Form/Button";
 import Input from "../../../components/common/Form/Input";
 import Textarea from "../../../components/common/Form/Textarea";
+import Select from "../../../components/common/Form/Select";
 import BoxModal from "../../../components/common/Modal/BoxModal";
+import EntitySearchPicker from "../../../components/common/EntitySearchPicker/EntitySearchPicker";
 import api from "../../../services/api";
+
+import { PrintDocument } from "../../../invoice-templates/TemplateManager";
+import ShareInvoiceButton from "../../../components/common/ShareInvoice/ShareInvoiceButton";
 
 const initialFormData = {
   invoiceNumber: "",
@@ -44,6 +49,28 @@ const getSavedReturn = (response) =>
   response?.data?.return ||
   response?.data;
 
+const parsePickerResponse = (response, key) => {
+  const body = response?.data || response;
+  const data = Array.isArray(body?.data)
+    ? body.data
+    : Array.isArray(body?.[key])
+      ? body[key]
+      : Array.isArray(body)
+        ? body
+        : [];
+  const pagination = body?.pagination || body?.data?.pagination;
+  const total = Number(
+    pagination?.total ??
+      pagination?.totalRecords ??
+      pagination?.totalItems ??
+      data.length,
+  );
+  return {
+    data,
+    total: Number.isFinite(total) ? Math.max(0, total) : data.length,
+  };
+};
+
 function SalesReturnModal({
   isOpen,
   onClose,
@@ -52,6 +79,7 @@ function SalesReturnModal({
   mode = "create",
 }) {
   const [formData, setFormData] = useState(initialFormData);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [saving, setSaving] = useState(false);
   const [posting, setPosting] = useState(false);
 
@@ -59,6 +87,63 @@ function SalesReturnModal({
   const isEdit = mode === "edit";
   const busy = saving || posting;
   const canPost = Boolean(editData) && editData.status === "CREATED" && !!getReturnNumber(editData);
+
+  const fetchInvoiceOptions = useCallback(
+    async ({ search, page, limit, signal }) => {
+      try {
+        const response = await api.sales.getAll(
+          {
+            search,
+            page,
+            limit,
+          },
+          { signal },
+        );
+        return parsePickerResponse(response, "invoices");
+      } catch (err) {
+        console.error("Failed to fetch sales invoices:", err);
+        return { data: [], total: 0 };
+      }
+    },
+    [],
+  );
+
+  const handleSelectInvoice = async (id, invoiceOption) => {
+    if (busy || isEdit || isView) return;
+    if (!id || !invoiceOption) {
+      setFormData((prev) => ({
+        ...prev,
+        invoiceNumber: "",
+      }));
+      setSelectedInvoice(null);
+      return;
+    }
+
+    const invNumber = invoiceOption.invoiceNumber || id;
+    setFormData((prev) => ({
+      ...prev,
+      invoiceNumber: invNumber,
+    }));
+    setSelectedInvoice(invoiceOption);
+
+    try {
+      let fullInv = invoiceOption;
+      if (!Array.isArray(invoiceOption.items) || invoiceOption.items.length === 0) {
+        const res = await api.sales.getByNumber(invNumber);
+        fullInv = res?.data?.data || res?.data || invoiceOption;
+        setSelectedInvoice(fullInv);
+      }
+      if (Array.isArray(fullInv.items) && fullInv.items.length > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          invoiceNumber: invNumber,
+          items: [{ invoiceItemIndex: "0", quantity: "" }],
+        }));
+      }
+    } catch (e) {
+      console.warn("Could not fetch full invoice items:", e);
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -258,6 +343,20 @@ function SalesReturnModal({
       </Button>
 
       <div className="box-modal-footer-actions">
+        {isView && editData && (
+          <>
+            <PrintDocument
+              invoice={editData}
+              kind="salesReturn"
+              label="Print Credit Note"
+            />
+            <ShareInvoiceButton
+              row={editData}
+              label="Share Credit Note"
+            />
+          </>
+        )}
+
         {canPost && (
           <Button
             type="button"
@@ -328,15 +427,44 @@ function SalesReturnModal({
             />
           )}
 
-          <Input
-            label="Sales Invoice Number"
-            name="invoiceNumber"
-            value={formData.invoiceNumber}
-            onChange={handleChange}
-            placeholder="Enter existing invoice number"
-            required
-            disabled={busy || isEdit || isView}
-          />
+          {isView || isEdit ? (
+            <Input
+              label="Sales Invoice Number"
+              name="invoiceNumber"
+              value={formData.invoiceNumber}
+              disabled
+            />
+          ) : (
+            <EntitySearchPicker
+              label="Sales Invoice"
+              placeholder="Search and select Sales Invoice..."
+              fetchOptions={fetchInvoiceOptions}
+              getOptionId={(inv) => inv?.invoiceNumber || String(inv?._id || "")}
+              getOptionLabel={(inv) =>
+                inv ? `${inv.invoiceNumber} — ${inv.customerName || inv.customer?.name || inv.partyName || "Customer"}` : ""
+              }
+              getOptionSubtitle={(inv) =>
+                inv
+                  ? `Date: ${inv.invoiceDate ? new Date(inv.invoiceDate).toLocaleDateString("en-IN") : "N/A"} · Total: ₹${(
+                      (inv.totalAmountPaise || inv.totalAmount || 0) /
+                      (inv.totalAmountPaise ? 100 : 1)
+                    ).toFixed(2)} · Status: ${inv.status || ""}`
+                  : ""
+              }
+              selectedIds={formData.invoiceNumber ? [formData.invoiceNumber] : []}
+              selectedLabel={
+                formData.invoiceNumber
+                  ? selectedInvoice?.invoiceNumber === formData.invoiceNumber
+                    ? `${selectedInvoice.invoiceNumber} — ${selectedInvoice.customerName || selectedInvoice.customer?.name || "Customer"}`
+                    : formData.invoiceNumber
+                  : ""
+              }
+              onToggle={handleSelectInvoice}
+              multiple={false}
+              disabled={busy}
+              emptyMessage="No matching sales invoices found."
+            />
+          )}
 
           <Input
             label="Return Date"
@@ -399,8 +527,9 @@ function SalesReturnModal({
             margin: "0 0 14px",
           }}
         >
-          Item index starts at 0: 0 is the first invoice item, 1 is the second,
-          and so on.
+          {selectedInvoice?.items?.length
+            ? `Select an item from ${selectedInvoice.items.length} invoice line items (${selectedInvoice.invoiceNumber})`
+            : "Select a sales invoice above to pick from its line items, or enter the item index starting at 0."}
         </p>
 
         {formData.items.map((item, index) => (
@@ -412,17 +541,34 @@ function SalesReturnModal({
               alignItems: "end",
             }}
           >
-            <Input
-              label="Invoice Item Index"
-              name="invoiceItemIndex"
-              type="number"
-              min="0"
-              step="1"
-              value={item.invoiceItemIndex}
-              onChange={(event) => handleItemChange(index, event)}
-              required
-              disabled={busy || isView}
-            />
+            {selectedInvoice?.items?.length ? (
+              <Select
+                label="Invoice Item"
+                name="invoiceItemIndex"
+                value={item.invoiceItemIndex}
+                onChange={(event) => handleItemChange(index, event)}
+                required
+                disabled={busy || isView}
+              >
+                {selectedInvoice.items.map((invItem, i) => (
+                  <option key={i} value={String(i)}>
+                    #{i}: {invItem.productName || invItem.name || `Item ${i + 1}`} (Invoiced: {invItem.quantity ?? 1})
+                  </option>
+                ))}
+              </Select>
+            ) : (
+              <Input
+                label="Invoice Item Index"
+                name="invoiceItemIndex"
+                type="number"
+                min="0"
+                step="1"
+                value={item.invoiceItemIndex}
+                onChange={(event) => handleItemChange(index, event)}
+                required
+                disabled={busy || isView}
+              />
+            )}
 
             <Input
               label="Return Quantity"

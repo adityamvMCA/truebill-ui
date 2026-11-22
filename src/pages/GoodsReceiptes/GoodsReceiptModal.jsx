@@ -12,7 +12,7 @@ import {
   Truck,
 } from "lucide-react";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import toast from "react-hot-toast";
 
@@ -21,6 +21,10 @@ import Input from "../../components/common/Form/Input";
 import Textarea from "../../components/common/Form/Textarea";
 import BoxModal from "../../components/common/Modal/BoxModal";
 import StatusField from "../../components/common/StatusField/StatusField";
+
+import { PrintDocument } from "../../invoice-templates/TemplateManager";
+import ShareInvoiceButton from "../../components/common/ShareInvoice/ShareInvoiceButton";
+import EntitySearchPicker from "../../components/common/EntitySearchPicker/EntitySearchPicker";
 
 import api from "../../services/api";
 
@@ -56,6 +60,28 @@ const newDirectLine = (key) => ({
   estimatedRate: "",
   notes: "",
 });
+
+const parsePickerResponse = (response, key) => {
+  const body = response?.data || response;
+  const data = Array.isArray(body?.data)
+    ? body.data
+    : Array.isArray(body?.[key])
+      ? body[key]
+      : Array.isArray(body)
+        ? body
+        : [];
+  const pagination = body?.pagination || body?.data?.pagination;
+  const total = Number(
+    pagination?.total ??
+      pagination?.totalRecords ??
+      pagination?.totalItems ??
+      data.length,
+  );
+  return {
+    data,
+    total: Number.isFinite(total) ? Math.max(0, total) : data.length,
+  };
+};
 
 function GoodsReceiptModal({
   isOpen,
@@ -97,6 +123,73 @@ function GoodsReceiptModal({
   const productMap = useMemo(
     () => new Map(products.map((product) => [getId(product), product])),
     [products],
+  );
+
+  const selectedSupplier = useMemo(() => {
+    if (!form.supplierId) return null;
+    return suppliers.find((s) => getId(s) === form.supplierId) || null;
+  }, [form.supplierId, suppliers]);
+
+  const fetchPurchaseOrderOptions = useCallback(
+    async ({ search, page, limit, signal }) => {
+      try {
+        const response = await api.purchaseOrder.getAll(
+          {
+            search,
+            page,
+            limit,
+          },
+          { signal },
+        );
+        return parsePickerResponse(response, "orders");
+      } catch (err) {
+        console.error("Failed to fetch purchase orders:", err);
+        return { data: [], total: 0 };
+      }
+    },
+    [],
+  );
+
+  const fetchSupplierOptions = useCallback(
+    async ({ search, page, limit, signal }) => {
+      try {
+        const response = await api.goodsReceipt.getSuppliers(
+          {
+            search,
+            page,
+            limit,
+            status: "Active",
+          },
+          { signal },
+        );
+        return parsePickerResponse(response, "suppliers");
+      } catch (err) {
+        console.error("Failed to fetch suppliers:", err);
+        return { data: [], total: 0 };
+      }
+    },
+    [],
+  );
+
+  const fetchProductOptions = useCallback(
+    async ({ search, page, limit, signal }) => {
+      try {
+        const response = await api.goodsReceipt.getProducts(
+          {
+            search,
+            page,
+            limit,
+            status: "ACTIVE",
+          },
+          { signal },
+        );
+        return parsePickerResponse(response, "products");
+      } catch (err) {
+        console.error("Failed to fetch products:", err);
+        return { data: [], total: 0 };
+      }
+    },
+    [],
   );
 
   useEffect(() => {
@@ -259,13 +352,13 @@ function GoodsReceiptModal({
     }
   };
 
-  const loadOrder = async () => {
+  const loadOrder = async (orderNumberToLoad) => {
     if (loadingRef.current || savingRef.current || retryOnly) return;
 
-    const orderNumber = form.orderNumber.trim();
+    const orderNumber = (typeof orderNumberToLoad === "string" ? orderNumberToLoad : form.orderNumber).trim();
 
     if (!orderNumber) {
-      toast.error("Enter a Purchase Order number");
+      toast.error("Enter or select a Purchase Order number");
       return;
     }
 
@@ -643,6 +736,20 @@ function GoodsReceiptModal({
       </span>
 
       <div className="gr-footer-actions">
+        {isView && document && (
+          <>
+            <PrintDocument
+              invoice={document}
+              kind="goodsReceipt"
+              label="Print GRN"
+            />
+            <ShareInvoiceButton
+              row={document}
+              label="Share GRN"
+            />
+          </>
+        )}
+
         <Button
           type="button"
           variant="secondary"
@@ -856,52 +963,87 @@ function GoodsReceiptModal({
               />
 
               {isDirect ? (
-                loadingMasters ? (
-                  <div className="gr-inline-loading">
-                    <Loader2 size={18} className="gr-spin" />
-                    Loading suppliers and products...
-                  </div>
-                ) : (
-                  <SelectField
+                <div className="gr-supplier-select">
+                  <EntitySearchPicker
                     label="Supplier"
-                    value={form.supplierId}
-                    onChange={(event) =>
+                    placeholder="Search supplier by name or code..."
+                    fetchOptions={fetchSupplierOptions}
+                    getOptionId={(sup) => getId(sup)}
+                    getOptionLabel={(sup) =>
+                      `${sup.supplierCode ? `${sup.supplierCode} — ` : ""}${sup.supplierName || sup.name || "Supplier"}`
+                    }
+                    getOptionSubtitle={(sup) =>
+                      `${sup.phone || sup.mobile || ""} ${sup.gstin ? `· GSTIN: ${sup.gstin}` : ""}`.trim()
+                    }
+                    selectedIds={form.supplierId ? [form.supplierId] : []}
+                    selectedLabel={
+                      selectedSupplier
+                        ? `${selectedSupplier.supplierCode ? `${selectedSupplier.supplierCode} — ` : ""}${selectedSupplier.supplierName || selectedSupplier.name}`
+                        : ""
+                    }
+                    onToggle={(id, supplierOption) => {
+                      if (saving) return;
                       changeForm({
                         target: {
                           name: "supplierId",
-                          value: event.target.value,
+                          value: id || "",
                         },
-                      })
-                    }
-                    disabled={locked}
-                    required
-                  >
-                    <option value="">Select supplier</option>
-
-                    {suppliers.map((supplier) => (
-                      <option key={getId(supplier)} value={getId(supplier)}>
-                        {supplier.supplierCode} — {supplier.supplierName}
-                      </option>
-                    ))}
-                  </SelectField>
-                )
+                      });
+                      if (supplierOption) {
+                        setSuppliers((prev) => {
+                          const exists = prev.some((s) => getId(s) === getId(supplierOption));
+                          return exists ? prev : [supplierOption, ...prev];
+                        });
+                      }
+                    }}
+                    multiple={false}
+                    disabled={saving || isView}
+                    emptyMessage="No matching suppliers found."
+                  />
+                </div>
               ) : (
                 <>
-                  <div className="gr-order-search">
-                    <Input
-                      label="Purchase Order Number"
-                      name="orderNumber"
-                      value={form.orderNumber}
-                      onChange={changeForm}
-                      placeholder="Enter the exact Purchase Order number"
-                      disabled={locked}
-                      required
+                  <div className="gr-order-search" style={{ gridTemplateColumns: "minmax(0, 1fr) auto" }}>
+                    <EntitySearchPicker
+                      label="Purchase Order"
+                      placeholder="Search and select Purchase Order..."
+                      fetchOptions={fetchPurchaseOrderOptions}
+                      getOptionId={(po) => po?.orderNumber || String(po?._id || "")}
+                      getOptionLabel={(po) =>
+                        po ? `${po.orderNumber} — ${po.supplierName || po.supplier?.supplierName || po.partyName || "Purchase Order"}` : ""
+                      }
+                      getOptionSubtitle={(po) =>
+                        po ? `Date: ${formatDate(po.orderDate)} · Status: ${po.status || ""}` : ""
+                      }
+                      selectedIds={form.orderNumber ? [form.orderNumber] : []}
+                      selectedLabel={
+                        form.orderNumber
+                          ? order?.orderNumber === form.orderNumber
+                            ? `${order.orderNumber} — ${order.supplierName || "Order"}`
+                            : form.orderNumber
+                          : ""
+                      }
+                      onToggle={(id, selectedPo) => {
+                        if (saving) return;
+                        if (!id || !selectedPo) {
+                          setForm((prev) => ({ ...prev, orderNumber: "" }));
+                          setOrder(null);
+                          setOrderLines([]);
+                          return;
+                        }
+                        const orderNum = selectedPo.orderNumber || id;
+                        setForm((prev) => ({ ...prev, orderNumber: orderNum }));
+                        loadOrder(orderNum);
+                      }}
+                      multiple={false}
+                      disabled={saving || isView}
+                      emptyMessage="No matching purchase orders found."
                     />
 
                     <Button
                       type="button"
                       variant="primary"
-                      onClick={loadOrder}
+                      onClick={() => loadOrder()}
                       loading={loading}
                       disabled={locked || !form.orderNumber.trim()}
                     >
@@ -1012,25 +1154,37 @@ function GoodsReceiptModal({
 
                         <div className="gr-direct-grid">
                           <div className="gr-product-select">
-                            <SelectField
+                            <EntitySearchPicker
                               label="Product / Service"
-                              value={line.productId}
-                              onChange={(event) =>
-                                chooseProduct(line.key, event.target.value)
+                              placeholder="Search product by name or code..."
+                              fetchOptions={fetchProductOptions}
+                              getOptionId={(item) => getId(item)}
+                              getOptionLabel={(item) =>
+                                `${item.productCode ? `${item.productCode} — ` : ""}${item.name}`
                               }
-                              disabled={locked}
-                              required
-                            >
-                              <option value="">
-                                Select product or service
-                              </option>
-
-                              {products.map((item) => (
-                                <option key={getId(item)} value={getId(item)}>
-                                  {item.productCode} — {item.name}
-                                </option>
-                              ))}
-                            </SelectField>
+                              getOptionSubtitle={(item) =>
+                                `${item.unit || ""} · ${item.type === "GOODS" ? (item.trackInventory ? "Track Inventory" : "Non-stock goods") : "Service"}`
+                              }
+                              selectedIds={line.productId ? [line.productId] : []}
+                              selectedLabel={
+                                product
+                                  ? `${product.productCode ? `${product.productCode} — ` : ""}${product.name}`
+                                  : ""
+                              }
+                              onToggle={(id, prodOption) => {
+                                if (saving) return;
+                                chooseProduct(line.key, id || "");
+                                if (prodOption) {
+                                  setProducts((prev) => {
+                                    const exists = prev.some((p) => getId(p) === getId(prodOption));
+                                    return exists ? prev : [prodOption, ...prev];
+                                  });
+                                }
+                              }}
+                              multiple={false}
+                              disabled={saving || isView}
+                              emptyMessage="No matching products found."
+                            />
 
                             {product && (
                               <span

@@ -146,8 +146,89 @@
   cursor: pointer;
 }
 
+/* =========================================================
+   MOBILE – upload / scan step
+   ========================================================= */
+
 @media (max-width: 640px) {
-  .scan-card { padding: 14px; }
-  .scan-progress { grid-template-columns: auto 1fr; }
-  .scan-progress button { grid-column: 1 / -1; }
+  /* Scan card fills the screen with breathing room */
+  .scan-card {
+    padding: 14px;
+    gap: 14px;
+    border-radius: 10px;
+  }
+
+  /* Drop zone: tighter vertical padding, slightly smaller text */
+  .scan-drop {
+    padding: 24px 14px;
+    gap: 10px;
+    border-radius: 10px;
+  }
+
+  .scan-drop h2 {
+    font-size: 1rem;
+  }
+
+  .scan-drop p {
+    font-size: 0.8rem;
+  }
+
+  /* Stack the action buttons vertically and make them full-width */
+  .scan-drop-actions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 10px;
+  }
+
+  /* Every Button inside the drop zone becomes full-width */
+  .scan-drop-actions .form-button {
+    width: 100%;
+    min-height: 48px;
+    justify-content: center;
+    font-size: 1rem;
+  }
+
+  /* File list: allow filename to wrap on very small screens */
+  .scan-files strong {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  /* Progress bar: collapse to two rows (spinner+text / cancel button) */
+  .scan-progress {
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  /* Cancel button spans full width on its own row */
+  .scan-progress > .form-button {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 44px;
+  }
+
+  /* Scan bill button full-width */
+  .scan-card > .form-button {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  /* Warnings */
+  .scan-warnings {
+    font-size: 0.8rem;
+  }
+
+  /* Segmented controls: let them wrap if needed */
+  .scan-seg {
+    flex-wrap: wrap;
+  }
+
+  /* Mark-all link: full-width on its own line */
+  .scan-link {
+    display: block;
+    width: 100%;
+    text-align: center;
+  }
 }

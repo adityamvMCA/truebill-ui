@@ -325,8 +325,18 @@ function PurchaseBillScan() {
 
   /* ---------------- upload step ---------------- */
 
-  const addFiles = (incoming) => {
+  const addFiles = (incoming, inputRef) => {
     const list = Array.from(incoming || []);
+
+    // Always reset the input that triggered this call so the same
+    // file / photo can be selected again after removal.
+    if (inputRef?.current) {
+      // Defer the reset so the browser finishes reading the FileList first.
+      setTimeout(() => {
+        if (inputRef.current) inputRef.current.value = "";
+      }, 0);
+    }
+
     if (!list.length) return;
 
     const problems = [];
@@ -353,9 +363,6 @@ function PurchaseBillScan() {
     });
 
     setErrors(problems);
-
-    if (fileInputRef.current) fileInputRef.current.value = "";
-    if (cameraInputRef.current) cameraInputRef.current.value = "";
   };
 
   const removeFile = (index) => setFiles((previous) => previous.filter((_, i) => i !== index));
@@ -853,7 +860,7 @@ function PurchaseBillScan() {
                   accept={ACCEPT}
                   multiple
                   hidden
-                  onChange={(event) => addFiles(event.target.files)}
+                  onChange={(event) => addFiles(event.target.files, fileInputRef)}
                 />
 
                 <input
@@ -862,7 +869,13 @@ function PurchaseBillScan() {
                   accept="image/*"
                   capture="environment"
                   hidden
-                  onChange={(event) => addFiles(event.target.files)}
+                  onChange={(event) => {
+                    // On mobile cameras the FileList is populated synchronously
+                    // but React recycles the synthetic event. Grab the files
+                    // before yielding so we never read an empty list.
+                    const files = event.target.files;
+                    addFiles(files, cameraInputRef);
+                  }}
                 />
               </div>
 

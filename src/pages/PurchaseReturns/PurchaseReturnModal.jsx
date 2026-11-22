@@ -19,6 +19,9 @@ import Textarea from "../../components/common/Form/Textarea";
 import BoxModal from "../../components/common/Modal/BoxModal";
 import StatusField from "../../components/common/StatusField/StatusField";
 
+import { PrintDocument } from "../../invoice-templates/TemplateManager";
+import ShareInvoiceButton from "../../components/common/ShareInvoice/ShareInvoiceButton";
+
 import api from "../../services/api";
 
 import {
@@ -506,6 +509,20 @@ function PurchaseReturnModal({
       </span>
 
       <div className="pr-footer-actions">
+        {isView && document && (
+          <>
+            <PrintDocument
+              invoice={document}
+              kind="purchaseReturn"
+              label="Print Return"
+            />
+            <ShareInvoiceButton
+              row={document}
+              label="Share Return"
+            />
+          </>
+        )}
+
         <Button
           type="button"
           variant="secondary"

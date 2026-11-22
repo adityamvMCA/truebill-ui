@@ -172,6 +172,9 @@ const pick = (obj, keys) => {
 const pickContact = (source) => {
   const places = [
     source,
+    source?.supplier,
+    source?.customer,
+    source?.party,
     source?.contact,
     source?.contactPerson,
     source?.primaryContact,
@@ -330,57 +333,92 @@ export const SHARE_ACTIONS = [
 ================================================================ */
 
 export const buildShareContent = (row, action) => {
-  const customer = row.customerName || "Customer";
+  const isPurchase = Boolean(row.billNumber);
+  const isDebitNote = Boolean(row.debitNoteNumber) || (Boolean(row.returnNumber) && Boolean(row.supplierName || row.supplier));
+  const isCreditNote = Boolean(row.creditNoteNumber) || (Boolean(row.returnNumber) && Boolean(row.customerName || row.customer));
+  const isGRN = Boolean(row.grnNumber) || Boolean(row.receiptNumber);
 
-  const no = row.invoiceNumber || "";
+  const docTitle = isPurchase
+    ? "Purchase Bill"
+    : isDebitNote
+      ? "Debit Note"
+      : isCreditNote
+        ? "Credit Note"
+        : isGRN
+          ? "Goods Receipt Note"
+          : "Invoice";
 
-  const total = money(row.totalAmountPaise);
+  const customer =
+    row.customerName ||
+    row.supplierName ||
+    row.partyName ||
+    row.ledgerName ||
+    row.supplier?.supplierName ||
+    row.customer?.customerName ||
+    "Customer";
 
-  const due = money(row.outstandingAmountPaise);
+  const no =
+    row.invoiceNumber ||
+    row.billNumber ||
+    row.returnNumber ||
+    row.creditNoteNumber ||
+    row.debitNoteNumber ||
+    row.grnNumber ||
+    row.receiptNumber ||
+    "";
+
+  const totalPaise =
+    row.totalAmountPaise !== undefined
+      ? row.totalAmountPaise
+      : row.totalAmount !== undefined
+        ? Math.round(Number(row.totalAmount) * 100)
+        : 0;
+
+  const total = money(totalPaise);
+  const due = money(row.outstandingAmountPaise || 0);
 
   const dueDate = niceDate(row.dueDate);
-
-  const invDate = niceDate(row.invoiceDate);
+  const invDate = niceDate(
+    row.invoiceDate || row.billDate || row.returnDate || row.creditNoteDate || row.receiptDate || row.date
+  );
 
   const whatsapp = action.channel === "whatsapp";
-
   const bold = (text) => (whatsapp ? `*${text}*` : text);
 
-  if (action.kind === "invoice") {
+  if (action.kind === "invoice" || action.kind === "document") {
     return {
-      subject: `Invoice ${no} from TrustIQ`,
+      subject: `${docTitle} ${no} from TrustIQ`,
       body: [
         `Hello ${customer},`,
         ``,
-        `Please find attached your invoice ${bold(no)} dated ${invDate}.`,
-        ``,
-        `Invoice Total: ${bold(total)}`,
-        `Due Date: ${dueDate}`,
+        `Please find attached your ${docTitle} ${bold(no)} dated ${invDate}.`,
+        totalPaise > 0 ? `Total Amount: ${bold(total)}` : ``,
+        dueDate && dueDate !== "N/A" ? `Due Date: ${dueDate}` : ``,
         ``,
         `Thank you for your business.`,
-      ].join("\n"),
+      ].filter(Boolean).join("\n"),
     };
   }
 
   if (action.kind === "reminder") {
     return {
-      subject: `Payment reminder: Invoice ${no}`,
+      subject: `Payment reminder: ${docTitle} ${no}`,
       body: [
         `Hello ${customer},`,
         ``,
-        `This is a friendly reminder that invoice ${bold(no)} has a pending balance.`,
+        `This is a friendly reminder that ${docTitle} ${bold(no)} has a pending balance.`,
         ``,
-        `Invoice Total: ${total}`,
+        `Total: ${total}`,
         `Pending Amount: ${bold(due)}`,
-        `Due Date: ${bold(dueDate)}`,
+        dueDate && dueDate !== "N/A" ? `Due Date: ${bold(dueDate)}` : ``,
         ``,
         `Kindly arrange the payment at your earliest convenience. Please ignore this message if already paid.`,
-      ].join("\n"),
+      ].filter(Boolean).join("\n"),
     };
   }
 
   return {
-    subject: `Regarding invoice ${no}`,
+    subject: `Regarding ${docTitle} ${no}`,
     body: `Hello ${customer},\n\n`,
   };
 };
@@ -441,9 +479,9 @@ const previewSend = async (payload) => {
   const toastId = toast.loading("Preparing invoice PDF...");
 
   try {
-    const blob = await createInvoicePdf(payload.invoiceNumber);
+    const blob = await createInvoicePdf(payload.rawRow || payload.invoiceNumber);
 
-    const fileName = `${payload.invoiceNumber}.pdf`;
+    const fileName = `${payload.invoiceNumber || "document"}.pdf`;
 
     // Capacitor Android / iOS native share sheet.
     if (isNativeApp()) {
@@ -451,7 +489,7 @@ const previewSend = async (payload) => {
         blob,
         fileName,
         text: payload.message,
-        title: payload.subject || `Invoice ${payload.invoiceNumber}`,
+        title: payload.subject || `Document ${payload.invoiceNumber || ""}`,
       });
 
       if (result === "shared") {
@@ -980,11 +1018,31 @@ function ShareComposeModal({ row, action, onClose, onSend }) {
       subject: isEmail ? subject : undefined,
       message: body,
       attachInvoicePdf: attachPdf,
-      invoiceNumber: row.invoiceNumber,
+      rawRow: row,
+      invoiceNumber:
+        row.invoiceNumber ||
+        row.billNumber ||
+        row.returnNumber ||
+        row.creditNoteNumber ||
+        row.debitNoteNumber ||
+        row.grnNumber ||
+        row.receiptNumber ||
+        "",
       invoiceId: row._id,
-      customerId: row.customerId?._id || row.customerId,
-      customerCode: row.customerCode,
-      customerName: row.customerName,
+      customerId:
+        row.customerId?._id ||
+        row.customerId ||
+        row.supplierId?._id ||
+        row.supplierId ||
+        undefined,
+      customerCode: row.customerCode || row.supplierCode || "",
+      customerName:
+        row.customerName ||
+        row.supplierName ||
+        row.partyName ||
+        row.supplier?.supplierName ||
+        row.customer?.customerName ||
+        "",
       templateId: isBusiness
         ? templateId || undefined
         : undefined,
@@ -995,9 +1053,21 @@ function ShareComposeModal({ row, action, onClose, onSend }) {
       channel,
       kind: action.kind,
       to: recipient,
-      invoiceNumber: row.invoiceNumber,
-      customerCode: row.customerCode,
-      customerName: row.customerName,
+      invoiceNumber:
+        row.invoiceNumber ||
+        row.billNumber ||
+        row.returnNumber ||
+        row.creditNoteNumber ||
+        row.debitNoteNumber ||
+        row.grnNumber ||
+        row.receiptNumber ||
+        "",
+      customerCode: row.customerCode || row.supplierCode || "",
+      customerName:
+        row.customerName ||
+        row.supplierName ||
+        row.partyName ||
+        "",
     };
 
     // Email always uses backend SMTP.
@@ -1361,6 +1431,8 @@ export default function ShareInvoiceButton({
   row,
   disabled = false,
   onSend,
+  className = "",
+  label = "Share",
 }) {
   const btnRef = useRef(null);
 
@@ -1508,10 +1580,19 @@ export default function ShareInvoiceButton({
       <div className="shr-menu-title">
         <div>
           <strong>
-            {row.customerName || "Customer"}
+            {row.customerName || row.supplierName || row.partyName || "Party"}
           </strong>
 
-          <span>{row.invoiceNumber}</span>
+          <span>
+            {row.invoiceNumber ||
+              row.billNumber ||
+              row.returnNumber ||
+              row.creditNoteNumber ||
+              row.debitNoteNumber ||
+              row.grnNumber ||
+              row.receiptNumber ||
+              ""}
+          </span>
         </div>
 
         {isMobile && (
@@ -1567,16 +1648,16 @@ export default function ShareInvoiceButton({
       <button
         ref={btnRef}
         type="button"
-        className="shr-trigger"
+        className={`shr-trigger ${className}`}
         disabled={disabled}
         aria-haspopup="menu"
         aria-expanded={Boolean(menu)}
-        aria-label={`Share ${row?.invoiceNumber || "invoice"}`}
+        aria-label={`Share ${row?.invoiceNumber || row?.billNumber || row?.returnNumber || row?.receiptNumber || "document"}`}
         onClick={toggleMenu}
       >
         <Share2 size={14} strokeWidth={2.5} />
 
-        <span>Share</span>
+        <span>{label}</span>
       </button>
 
       {/* Menu portal */}

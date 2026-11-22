@@ -16,6 +16,25 @@
      grid | lines | zebra | solid | soft
    ===================================================================== */
 
+import { DELIVERY_TEMPLATES, DELIVERY_DEFAULT } from "./deliveryNote.templates";
+import { PURCHASE_BILL_TEMPLATES, PURCHASE_BILL_DEFAULT } from "./purchaseBill.templates";
+import { PURCHASE_RETURN_TEMPLATES, PURCHASE_RETURN_DEFAULT } from "./purchaseReturn.templates";
+import { SALES_RETURN_TEMPLATES, SALES_RETURN_DEFAULT } from "./salesReturn.templates";
+import { GOODS_RECEIPT_TEMPLATES, GOODS_RECEIPT_DEFAULT } from "./goodsReceipt.templates";
+
+export {
+  DELIVERY_TEMPLATES,
+  DELIVERY_DEFAULT,
+  PURCHASE_BILL_TEMPLATES,
+  PURCHASE_BILL_DEFAULT,
+  PURCHASE_RETURN_TEMPLATES,
+  PURCHASE_RETURN_DEFAULT,
+  SALES_RETURN_TEMPLATES,
+  SALES_RETURN_DEFAULT,
+  GOODS_RECEIPT_TEMPLATES,
+  GOODS_RECEIPT_DEFAULT,
+};
+
 const env = import.meta.env ?? {};
 
 /* Company priority in InvoiceTemplate:
@@ -136,8 +155,13 @@ export const DEFAULTS = {
 };
 
 export const DEFAULT_SELECTED = {
-  invoice: 'inv01',
-  eway: 'ew01',
+  invoice: "inv01",
+  eway: "ew01",
+  delivery: DELIVERY_DEFAULT || "dn01",
+  purchaseBill: PURCHASE_BILL_DEFAULT || "pb01",
+  purchaseReturn: PURCHASE_RETURN_DEFAULT || "pr01",
+  salesReturn: SALES_RETURN_DEFAULT || "sr01",
+  goodsReceipt: GOODS_RECEIPT_DEFAULT || "gr01",
 };
 
 export const STORAGE_KEY = 'billing.selectedTemplates';

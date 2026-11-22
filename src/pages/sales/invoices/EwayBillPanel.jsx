@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Download, FileText, MapPin, Send, Truck } from "lucide-react";
 
@@ -8,8 +8,10 @@ import Input from "../../../components/common/Form/Input";
 import Select from "../../../components/common/Form/Select";
 import Textarea from "../../../components/common/Form/Textarea";
 import Button from "../../../components/common/Form/Button";
+import EntitySearchPicker from "../../../components/common/EntitySearchPicker/EntitySearchPicker";
 
 import salesInvoiceApi from "../../../services/modules/salesInvoiceApi";
+import transporterApi from "../../../services/modules/transporterApi";
 
 import { formatPaise, getErrors } from "./salesInvoiceUtils";
 
@@ -203,13 +205,102 @@ export default function EwayBillPanel({ invoice, disabled, onUpdated }) {
   const locked = Boolean(disabled) || Boolean(busy);
   const fieldsLocked = locked || !canEditDetails;
   const isRoad = details.transportMode === "ROAD";
+  const [selectedTransporterId, setSelectedTransporterId] = useState("");
+  const [savingTransporter, setSavingTransporter] = useState(false);
+
+  const fetchTransporterOptions = useCallback(
+    async ({ search, page, limit, signal }) => {
+      try {
+        const response = await transporterApi.getAll(
+          {
+            search,
+            page,
+            limit,
+            status: "ACTIVE",
+          },
+          { signal },
+        );
+        const resData = response?.data || response;
+        const data = Array.isArray(resData?.data)
+          ? resData.data
+          : Array.isArray(resData)
+            ? resData
+            : [];
+        const total = resData?.pagination?.total ?? data.length;
+        return { data, total };
+      } catch (err) {
+        console.error("Failed to fetch transporters:", err);
+        return { data: [], total: 0 };
+      }
+    },
+    [],
+  );
+
+  const handleTransporterSelect = (id, transporter) => {
+    setSelectedTransporterId(id || "");
+    if (!transporter) return;
+    setDetails((previous) => ({
+      ...previous,
+      transporterName:
+        transporter.transporterName || transporter.name || "",
+      transporterId:
+        transporter.transporterId ||
+        transporter.gstin ||
+        previous.transporterId,
+      transportMode: transporter.transportMode || previous.transportMode,
+      vehicleType: transporter.vehicleType || previous.vehicleType,
+      vehicleNumber:
+        transporter.vehicleNumber || previous.vehicleNumber,
+      ...(transporter.distanceKm
+        ? { distanceKm: String(transporter.distanceKm) }
+        : {}),
+    }));
+    toast.success(
+      `Loaded details for "${transporter.transporterName || transporter.name}"`,
+    );
+  };
+
+  const saveAsTransporter = async () => {
+    if (!details.transporterName?.trim() || !details.transporterId?.trim()) {
+      toast.error(
+        "Please enter Transporter Name and GSTIN/TRANSIN to save",
+      );
+      return;
+    }
+    try {
+      setSavingTransporter(true);
+      await transporterApi.create({
+        transporterName: details.transporterName.trim(),
+        transporterId: details.transporterId.trim(),
+        transportMode: details.transportMode,
+        vehicleNumber: details.vehicleNumber?.trim() || "",
+        vehicleType: details.vehicleType,
+        distanceKm: Number(details.distanceKm) || 0,
+      });
+      toast.success("Transporter saved to master");
+    } catch (err) {
+      toast.error(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to save transporter",
+      );
+    } finally {
+      setSavingTransporter(false);
+    }
+  };
 
   const history = useMemo(
     () => [...(ewb.history || [])].reverse().slice(0, 10),
     [ewb.history],
   );
 
-  if (!goodsCount || invoice.status === "CANCELLED") return null;
+  if (
+    !goodsCount ||
+    invoice.status === "CANCELLED" ||
+    (!invoice.ewayBillRequired && ewb.status !== "GENERATED")
+  ) {
+    return null;
+  }
 
   const setDetail = (event) => {
     const { name, value } = event.target;
@@ -650,11 +741,33 @@ export default function EwayBillPanel({ invoice, disabled, onUpdated }) {
 
           <div className="box-modal-section-header-content">
             <h3>Transport Details</h3>
-            <p>Mode, vehicle, transporter and transport document</p>
+            <p>Select a transporter to auto-populate mode, vehicle & GSTIN</p>
           </div>
         </div>
 
         <fieldset className="ewb-fieldset" disabled={fieldsLocked}>
+          <div style={{ marginBottom: "16px" }}>
+            <EntitySearchPicker
+              label="Select Transporter (Autofills details)"
+              placeholder="Search transporter by name, GSTIN, or vehicle..."
+              fetchOptions={fetchTransporterOptions}
+              getOptionId={(t) => t._id}
+              getOptionLabel={(t) => t.transporterName || t.name}
+              getOptionSubtitle={(t) =>
+                [t.transporterId, t.transportMode, t.vehicleNumber]
+                  .filter(Boolean)
+                  .join(" • ")
+              }
+              selectedIds={
+                selectedTransporterId ? [selectedTransporterId] : []
+              }
+              selectedLabel={details.transporterName}
+              onToggle={(id, item) => handleTransporterSelect(id, item)}
+              multiple={false}
+              disabled={fieldsLocked}
+            />
+          </div>
+
           <div className="box-modal-form-grid">
             <Input
               label="Distance (km)"
@@ -709,15 +822,39 @@ export default function EwayBillPanel({ invoice, disabled, onUpdated }) {
               disabled={fieldsLocked}
             />
 
-            <Input
-              label="Transporter Name"
-              name="transporterName"
-              value={details.transporterName}
-              onChange={setDetail}
-              placeholder="Enter transporter name"
-              maxLength={200}
-              disabled={fieldsLocked}
-            />
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <Input
+                label="Transporter Name"
+                name="transporterName"
+                value={details.transporterName}
+                onChange={setDetail}
+                placeholder="Enter transporter name"
+                maxLength={200}
+                disabled={fieldsLocked}
+              />
+              {details.transporterName && details.transporterId && (
+                <button
+                  type="button"
+                  onClick={saveAsTransporter}
+                  disabled={fieldsLocked || savingTransporter}
+                  style={{
+                    alignSelf: "flex-end",
+                    marginTop: "4px",
+                    background: "none",
+                    border: "none",
+                    color: "var(--primary-color, #2563eb)",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    padding: "2px 4px",
+                  }}
+                >
+                  {savingTransporter
+                    ? "Saving..."
+                    : "+ Save Transporter to Master"}
+                </button>
+              )}
+            </div>
 
             <Input
               label={isRoad ? "Transport Doc No. (LR)" : "Transport Doc No."}

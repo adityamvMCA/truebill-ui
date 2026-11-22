@@ -1338,4 +1338,129 @@ a {
   }
 }
 
+/* =========================================
+   UNIVERSAL PRINT & SHARE BUTTON STYLING
+========================================= */
+
+.print-doc-btn,
+button.print-doc-btn,
+.tm-btn.primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 6px 16px;
+  border: 1px solid #2563eb !important;
+  background: #2563eb !important;
+  color: #ffffff !important;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+  transition: all 0.15s ease;
+}
+
+.print-doc-btn:hover:not(:disabled),
+button.print-doc-btn:hover:not(:disabled),
+.tm-btn.primary:hover:not(:disabled) {
+  background: #1d4ed8 !important;
+  border-color: #1d4ed8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.38);
+}
+
+.print-doc-btn:disabled,
+button.print-doc-btn:disabled,
+.tm-btn.primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.print-doc-btn svg,
+button.print-doc-btn svg,
+.tm-btn.primary svg {
+  flex-shrink: 0;
+  color: #ffffff !important;
+}
+
+/* Pill list button */
+.sip-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.sip-btn,
+button.sip-btn {
+  -webkit-appearance: none;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  margin: 0;
+  padding: 0 14px 0 5px;
+  border: 0;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  color: #ffffff !important;
+  white-space: nowrap;
+  cursor: pointer;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+.sip-btn:hover,
+button.sip-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.48);
+  filter: brightness(1.08);
+}
+
+.sip-btn:active,
+button.sip-btn:active {
+  transform: translateY(0);
+}
+
+.sip-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: #2563eb !important;
+  background: #ffffff !important;
+}
+
+.sip-btn-print,
+button.sip-btn-print {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.35) !important;
+  color: #ffffff !important;
+}
+
+.sip-btn-print:hover,
+button.sip-btn-print:hover {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.48) !important;
+}
+
+/* Ensure dropdown search picker portal renders above modals (e.g. BoxModal z-index: 99999) */
+.esp-panel.esp-panel--portal {
+  z-index: 1000005 !important;
+}
+
+
 

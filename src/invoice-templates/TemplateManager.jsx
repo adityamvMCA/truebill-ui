@@ -1,8 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { Printer } from "lucide-react";
+import ShareInvoiceButton from "../components/common/ShareInvoice/ShareInvoiceButton";
 import {
   INVOICE_TEMPLATES,
   EWAY_TEMPLATES,
+  DELIVERY_TEMPLATES,
+  PURCHASE_BILL_TEMPLATES,
+  PURCHASE_RETURN_TEMPLATES,
+  SALES_RETURN_TEMPLATES,
+  GOODS_RECEIPT_TEMPLATES,
   DEFAULT_SELECTED,
   STORAGE_KEY,
   PAPERS,
@@ -10,23 +17,69 @@ import {
 } from "./templates.config";
 import InvoiceTemplate from "./InvoiceTemplate";
 import EwayBillTemplate from "./EwayBillTemplate";
-import { SAMPLE_INVOICE } from "./sampleData";
-import { DELIVERY_TEMPLATES } from "./deliveryNote.templates";
 import DeliveryNoteTemplate from "./DeliveryNoteTemplate";
+import PurchaseBillTemplate from "./PurchaseBillTemplate";
+import PurchaseReturnTemplate from "./PurchaseReturnTemplate";
+import SalesReturnTemplate from "./SalesReturnTemplate";
+import GoodsReceiptTemplate from "./GoodsReceiptTemplate";
+import {
+  SAMPLE_INVOICE,
+  SAMPLE_PURCHASE_BILL,
+  SAMPLE_PURCHASE_RETURN,
+  SAMPLE_SALES_RETURN,
+  SAMPLE_GOODS_RECEIPT,
+} from "./sampleData";
+import toast from "react-hot-toast";
+import documentApi from "../services/modules/documentApi";
 
 const KINDS = {
   invoice: {
     label: "Sales invoice",
     list: INVOICE_TEMPLATES,
     Doc: InvoiceTemplate,
+    sample: SAMPLE_INVOICE,
   },
-  eway: { label: "E-way bill", list: EWAY_TEMPLATES, Doc: EwayBillTemplate },
-  delivery: { label: "Delivery note", list: DELIVERY_TEMPLATES, Doc: DeliveryNoteTemplate },
+  eway: {
+    label: "E-way bill",
+    list: EWAY_TEMPLATES,
+    Doc: EwayBillTemplate,
+    sample: SAMPLE_INVOICE,
+  },
+  delivery: {
+    label: "Delivery note",
+    list: DELIVERY_TEMPLATES,
+    Doc: DeliveryNoteTemplate,
+    sample: SAMPLE_INVOICE,
+  },
+  purchaseBill: {
+    label: "Purchase bill",
+    list: PURCHASE_BILL_TEMPLATES,
+    Doc: PurchaseBillTemplate,
+    sample: SAMPLE_PURCHASE_BILL,
+  },
+  purchaseReturn: {
+    label: "Purchase return",
+    list: PURCHASE_RETURN_TEMPLATES,
+    Doc: PurchaseReturnTemplate,
+    sample: SAMPLE_PURCHASE_RETURN,
+  },
+  salesReturn: {
+    label: "Sales return",
+    list: SALES_RETURN_TEMPLATES,
+    Doc: SalesReturnTemplate,
+    sample: SAMPLE_SALES_RETURN,
+  },
+  goodsReceipt: {
+    label: "Goods receipt",
+    list: GOODS_RECEIPT_TEMPLATES,
+    Doc: GoodsReceiptTemplate,
+    sample: SAMPLE_GOODS_RECEIPT,
+  },
 };
 
 const mm = (v) => (v * 96) / 25.4;
 const dims = (t) => {
-  const P = PAPERS[t.paper || DEFAULTS.paper];
+  const P = PAPERS[t.paper || DEFAULTS.paper] || PAPERS.A4;
   return { w: mm(P.w), h: mm(P.h) };
 };
 
@@ -53,6 +106,24 @@ function useMedia(query) {
   return matches;
 }
 
+/* Server copy of the selected templates, cached per tenant */
+const serverCache = new Map();
+const tenantKey = () => sessionStorage.getItem("selectedTenantId") || "current";
+
+const loadServerTemplates = () => {
+  const key = tenantKey();
+  if (!serverCache.has(key)) {
+    serverCache.set(
+      key,
+      documentApi
+        .getPrintTemplates()
+        .then((r) => r?.data?.templates || {})
+        .catch(() => ({})),
+    );
+  }
+  return serverCache.get(key);
+};
+
 export function useSelectedTemplates() {
   const [sel, setSel] = useState(() => {
     try {
@@ -64,21 +135,45 @@ export function useSelectedTemplates() {
       return DEFAULT_SELECTED;
     }
   });
+
+  // The server is the source of truth, so every device sees the same template
+  useEffect(() => {
+    let alive = true;
+    loadServerTemplates().then((server) => {
+      if (alive && Object.keys(server).length) setSel((prev) => ({ ...prev, ...server }));
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const choose = (kind, id) => {
     const next = { ...sel, [kind]: id };
     setSel(next);
+
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     } catch {
       /* ignore */
     }
+
+    serverCache.set(
+      tenantKey(),
+      loadServerTemplates().then((s) => ({ ...s, [kind]: id })),
+    );
+
+    documentApi
+      .put(`/print-templates/${kind}`, { templateId: id })
+      .catch(() => toast.error("Could not save the template on the server"));
   };
+
   return [sel, choose];
 }
 
 function PrintPortal({ children }) {
   return createPortal(<div id="print-root">{children}</div>, document.body);
 }
+
 function printWithTitle(title) {
   if (typeof window !== "undefined" && window.AndroidPrint?.print) {
     window.AndroidPrint.print(title);
@@ -116,23 +211,40 @@ function Scaled({ w, h, scale, children }) {
   );
 }
 
-export function PrintDocument({ invoice, kind = "invoice", label }) {
+const getDocNumber = (doc) =>
+  doc?.invoiceNumber ||
+  doc?.billNumber ||
+  doc?.returnNumber ||
+  doc?.creditNoteNumber ||
+  doc?.debitNoteNumber ||
+  doc?.grnNumber ||
+  doc?.receiptNumber ||
+  "Doc";
+
+export function PrintDocument({
+  invoice,
+  kind = "invoice",
+  label,
+  className = "",
+  variant = "primary",
+}) {
   const [sel] = useSelectedTemplates();
-  const { Doc } = KINDS[kind];
+  const k = KINDS[kind] || KINDS.invoice;
+  const { Doc } = k;
+  const docNum = getDocNumber(invoice);
+
   return (
     <>
       <button
-        className="tm-btn primary"
-        onClick={() =>
-          printWithTitle(
-            `${kind === "eway" ? "EWB" : "Invoice"}-${invoice.invoiceNumber}`,
-          )
-        }
+        type="button"
+        className={`print-doc-btn tm-btn primary form-button form-button-primary ${className}`}
+        onClick={() => printWithTitle(`${k.label}-${docNum}`)}
       >
-        {label || (kind === "eway" ? "Print e-way bill" : "Print invoice")}
+        <Printer size={15} />
+        <span>{label || `Print ${k.label.toLowerCase()}`}</span>
       </button>
       <PrintPortal>
-        <Doc invoice={invoice} templateId={sel[kind]} />
+        <Doc invoice={invoice} templateId={sel[kind] || k.list[0]?.id} />
       </PrintPortal>
     </>
   );
@@ -140,16 +252,18 @@ export function PrintDocument({ invoice, kind = "invoice", label }) {
 
 export function PrintInvoiceButton({
   invoiceNumber,
+  invoice,
   fetchInvoice,
   kind = "invoice",
   company,
-  label = "Print",
-  className = "tm-btn",
+  label,
+  className = "sip-btn sip-btn-print",
 }) {
   const [sel] = useSelectedTemplates();
   const [doc, setDoc] = useState(null);
   const [busy, setBusy] = useState(false);
-  const { Doc } = KINDS[kind];
+  const k = KINDS[kind] || KINDS.invoice;
+  const { Doc } = k;
 
   useEffect(() => {
     if (!doc) return undefined;
@@ -157,29 +271,47 @@ export function PrintInvoiceButton({
     window.addEventListener("afterprint", done);
     const id = requestAnimationFrame(() =>
       requestAnimationFrame(() => {
-        printWithTitle(
-          `${kind === "eway" ? "EWB" : "Invoice"}-${doc.invoiceNumber}`,
-        );
+        const docNum = getDocNumber(doc);
+        printWithTitle(`${k.label}-${docNum}`);
       }),
     );
     return () => {
       cancelAnimationFrame(id);
       window.removeEventListener("afterprint", done);
     };
-  }, [doc, kind]);
+  }, [doc, kind, k]);
 
   const handle = async (e) => {
     e.stopPropagation();
     if (busy) return;
-    setBusy(true);
-    try {
-      setDoc(await fetchInvoice(invoiceNumber));
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setBusy(false);
+    if (invoice && !fetchInvoice) {
+      setDoc(invoice);
+      return;
+    }
+    if (fetchInvoice) {
+      setBusy(true);
+      try {
+        const num = invoiceNumber || getDocNumber(invoice);
+        const res = await fetchInvoice(num, invoice);
+        setDoc(res);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setBusy(false);
+      }
+    } else if (invoice) {
+      setDoc(invoice);
     }
   };
+
+  const defaultLabel = (
+    <>
+      <span className="sip-btn-icon">
+        <Printer size={14} strokeWidth={2.5} />
+      </span>
+      <span className="sip-btn-text">Print</span>
+    </>
+  );
 
   return (
     <>
@@ -188,26 +320,27 @@ export function PrintInvoiceButton({
         className={className}
         onClick={handle}
         disabled={busy}
-        aria-label={`Print ${invoiceNumber}`}
+        aria-label={`Print ${invoiceNumber || getDocNumber(invoice)}`}
       >
-        {busy ? "Loading…" : label}
+        {busy ? "Loading…" : (label ?? defaultLabel)}
       </button>
       {doc && (
         <PrintPortal>
-          <Doc invoice={doc} templateId={sel[kind]} company={company} />
+          <Doc invoice={doc} templateId={sel[kind] || k.list[0]?.id} company={company} />
         </PrintPortal>
       )}
     </>
   );
 }
 
+export { ShareInvoiceButton };
+
 export default function TemplateManager({ invoice }) {
   const [kind, setKind] = useState("invoice");
   const [sel, choose] = useSelectedTemplates();
-  const [preview, setPreview] = useState({
-    invoice: sel.invoice,
-    eway: sel.eway,
-  });
+  const [preview, setPreview] = useState(() => ({
+    ...sel,
+  }));
   const [live, setLive] = useState(false);
   const [group, setGroup] = useState("All");
 
@@ -222,16 +355,16 @@ export default function TemplateManager({ invoice }) {
     const el = boxRef.current;
     if (!el) return undefined;
     const ro = new ResizeObserver(([entry]) => {
-      // A hidden panel reports width 0; keep the last good width instead.
       if (entry.contentRect.width > 0) setBoxW(entry.contentRect.width);
     });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
 
-  const { list, Doc } = KINDS[kind];
-  const data = live && invoice ? invoice : SAMPLE_INVOICE;
-  const current = list.find((t) => t.id === preview[kind]) || list[0];
+  const currentKindConfig = KINDS[kind] || KINDS.invoice;
+  const { list, Doc, sample } = currentKindConfig;
+  const data = live && invoice ? invoice : sample || SAMPLE_INVOICE;
+  const current = list.find((t) => t.id === preview[kind]) || list.find((t) => t.id === sel[kind]) || list[0];
   const cd = dims(current);
 
   const fitScale = Math.max(0.1, Math.min(1, (boxW - 2) / cd.w));
@@ -332,7 +465,7 @@ export default function TemplateManager({ invoice }) {
                       h={d.h}
                       scale={Math.min(thumbW / d.w, thumbH / d.h)}
                     >
-                      <Doc invoice={SAMPLE_INVOICE} templateId={t.id} />
+                      <Doc invoice={sample || SAMPLE_INVOICE} templateId={t.id} />
                     </Scaled>
                   </div>
                   <span className="tm-name">{t.name}</span>
@@ -370,7 +503,7 @@ export default function TemplateManager({ invoice }) {
                     checked={live}
                     onChange={(e) => setLive(e.target.checked)}
                   />{" "}
-                  Use my invoice
+                  Use my document
                 </label>
               )}
               <button
@@ -383,7 +516,7 @@ export default function TemplateManager({ invoice }) {
               <button
                 className="tm-btn primary"
                 onClick={() =>
-                  printWithTitle(`${current.name}-${data.invoiceNumber}`)
+                  printWithTitle(`${current.name}-${getDocNumber(data)}`)
                 }
               >
                 Print
@@ -411,12 +544,12 @@ export default function TemplateManager({ invoice }) {
 }
 
 const TM_CSS = `
-.tm{font-family:Inter,"Segoe UI",Arial,sans-serif;color:#111827;padding:20px;max-width:1280px;margin:0 auto;box-sizing:border-box}
+.tm{font-family:Inter,"Segoe UI",Arial,sans-serif;color:#111827;padding:20px;max-width:1380px;margin:0 auto;box-sizing:border-box}
 .tm *,.tm *::before,.tm *::after{box-sizing:border-box}
 .tm h2{margin:0;font-size:22px}.tm p{margin:4px 0 0;color:#6b7280;font-size:14px}
 .tm-top{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px}
-.tm-tabs{display:flex;background:#f3f4f6;border-radius:10px;padding:3px}
-.tm-tabs button{border:0;background:none;padding:8px 16px;border-radius:8px;font-size:14px;cursor:pointer;color:#4b5563}
+.tm-tabs{display:flex;background:#f3f4f6;border-radius:10px;padding:3px;flex-wrap:wrap;gap:2px}
+.tm-tabs button{border:0;background:none;padding:7px 13px;border-radius:7px;font-size:13.5px;cursor:pointer;color:#4b5563;white-space:nowrap}
 .tm-tabs button[aria-selected=true]{background:#fff;color:#111827;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.12)}
 .tm-mtabs{display:none}
 .tm-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:20px;align-items:start}
@@ -446,8 +579,8 @@ const TM_CSS = `
   .tm h2{font-size:18px}
   .tm p{font-size:13px}
   .tm-top{gap:10px;margin-bottom:10px;align-items:stretch}
-  .tm-tabs{width:100%}
-  .tm-tabs button{flex:1;padding:10px 8px}
+  .tm-tabs{width:100%;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;padding:4px}
+  .tm-tabs button{flex:none;padding:8px 12px}
 
   .tm-mtabs{display:flex;background:#f3f4f6;border-radius:10px;padding:3px;margin-bottom:12px}
   .tm-mtabs button{flex:1;border:0;background:none;padding:10px 8px;border-radius:8px;font:inherit;font-size:14px;cursor:pointer;color:#4b5563}

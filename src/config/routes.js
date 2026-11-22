@@ -42,6 +42,7 @@ const routes = {
     delivery: "/sales/delivery",
     createDelivery: "/sales/delivery/create",
     editDelivery: "/sales/delivery/edit/:id",
+    transporters: "/sales/transporters",
 
     returns: "/sales/returns",
 

@@ -28,6 +28,7 @@ import supplierQuotationApi from "./modules/supplierQuotationApi";
 import quotationComparisonApi from "./modules/quotationComparisonApi";
 import productFormApi from "./modules/productFormApi";
 import barcodeApi from "./modules/barcodeApi";
+import transporterApi from "./modules/transporterApi";
 
 export const api = {
   auth: authApi,
@@ -45,6 +46,7 @@ export const api = {
   sales: salesInvoiceApi,
   salesOrder: salesOrderApi,
   deliveryNote: deliveryNoteApi,
+  transporter: transporterApi,
   salesQuotations: salesQuotationApi,
   salesReturn: salesReturnApi,
   taxConfiguration: taxConfigurationApi,

@@ -19,6 +19,8 @@ import { saveCsvFile } from "../../components/common/DataList/fileDownload";
 
 import api from "../../services/api";
 import routes, { buildRoute } from "../../config/routes";
+import { PrintInvoiceButton } from "../../invoice-templates/TemplateManager";
+import ShareInvoiceButton from "../../components/common/ShareInvoice/ShareInvoiceButton";
 const SERVER_SORTING_ENABLED = false;
 const PAGE_SIZE_OPTIONS = [20, 50, 100];
 const SEARCH_DEBOUNCE_MS = 400;
@@ -955,6 +957,11 @@ function PurchaseBillsList() {
     }
   }, [buildParams]);
 
+  const fetchFullBill = useCallback(async (billNumber) => {
+    const res = await api.purchaseBills.getByNumber(billNumber);
+    return res?.data?.bill || res?.data?.data || res?.data || res;
+  }, []);
+
   /* ---------------------------------------------------------------- */
   /* Columns                                                           */
   /* ---------------------------------------------------------------- */
@@ -1073,6 +1080,44 @@ function PurchaseBillsList() {
           ),
       },
 
+      {
+        key: "print",
+        label: "Print",
+        sortable: false,
+        render: (_, row) =>
+          row.status === "CANCELLED" ? (
+            <span className="dl-muted-value">—</span>
+          ) : (
+            <div
+              className="sip-cell"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <PrintInvoiceButton
+                invoiceNumber={row.billNumber}
+                fetchInvoice={fetchFullBill}
+                kind="purchaseBill"
+              />
+            </div>
+          ),
+      },
+
+      {
+        key: "share",
+        label: "Share",
+        sortable: false,
+        render: (_, row) =>
+          row.status === "CANCELLED" ? (
+            <span className="dl-muted-value">—</span>
+          ) : (
+            <div
+              className="sip-cell"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <ShareInvoiceButton row={row} />
+            </div>
+          ),
+      },
+
       ...[
         ["paymentTerms", "Payment Terms"],
         ["taxMode", "Tax Mode"],
@@ -1128,7 +1173,7 @@ function PurchaseBillsList() {
           ),
       },
     ],
-    [handleView],
+    [handleView, fetchFullBill],
   );
 
   const tableFilters = useMemo(

@@ -598,6 +598,9 @@ import {
   normalizeTaxMode,
 } from "./purchaseBill.utils";
 
+import { PrintDocument } from "../../invoice-templates/TemplateManager";
+import ShareInvoiceButton from "../../components/common/ShareInvoice/ShareInvoiceButton";
+
 import "../../styles/invoice-common1.css";
 
 function DetailField({ label, children }) {
@@ -762,6 +765,21 @@ function PurchaseBillDetail() {
             >
               Record Payment
             </Button>
+          )}
+
+          {bill && (
+            <PrintDocument
+              invoice={bill}
+              kind="purchaseBill"
+              label="Print Bill"
+            />
+          )}
+
+          {bill && (
+            <ShareInvoiceButton
+              row={bill}
+              label="Share Bill"
+            />
           )}
 
           {bill && (

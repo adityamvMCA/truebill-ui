@@ -6,6 +6,8 @@ import DataList from "../../../components/common/DataList/DataList";
 import StatusField from "../../../components/common/StatusField/StatusField";
 import ConfirmModal from "../../../components/common/ConfirmModal/ConfirmModal";
 import api from "../../../services/api";
+import { PrintInvoiceButton } from "../../../invoice-templates/TemplateManager";
+import ShareInvoiceButton from "../../../components/common/ShareInvoice/ShareInvoiceButton";
 
 import SalesReturnModal from "./SalesReturnModal";
 
@@ -111,6 +113,11 @@ function SalesReturnsList() {
     loadSalesReturns();
   }, [loadSalesReturns]);
 
+  const fetchFullSalesReturn = useCallback(async (returnNumber) => {
+    const res = await api.salesReturn.getByNumber(returnNumber);
+    return res?.data?.data || res?.data?.salesReturn || res?.data || res;
+  }, []);
+
   const columns = useMemo(
     () => [
       {
@@ -182,6 +189,38 @@ function SalesReturnsList() {
       },
 
       {
+        key: "print",
+        label: "Print",
+        sortable: false,
+        render: (_, row) => (
+          <div
+            className="sip-cell"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <PrintInvoiceButton
+              invoiceNumber={getReturnNumber(row) || row.returnNumber}
+              fetchInvoice={fetchFullSalesReturn}
+              kind="salesReturn"
+            />
+          </div>
+        ),
+      },
+
+      {
+        key: "share",
+        label: "Share",
+        sortable: false,
+        render: (_, row) => (
+          <div
+            className="sip-cell"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <ShareInvoiceButton row={row} />
+          </div>
+        ),
+      },
+
+      {
         key: "updateStock",
         label: "Stock Update",
         sortable: true,
@@ -197,7 +236,7 @@ function SalesReturnsList() {
         render: (value) => value || "—",
       },
     ],
-    [],
+    [fetchFullSalesReturn],
   );
 
   const filters = [

@@ -98,29 +98,40 @@
   }
 }
 
-/* Print button (Sales invoice list) */
+/* Print button (Universal & Lists) */
 .sip-cell {
   min-width: 0;
 }
 
-.sip-cell .sip-btn-print {
-  background: linear-gradient(135deg, #334155 0%, #0f172a 100%);
-  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.28);
+.sip-cell .sip-btn-print,
+.sip-btn-print,
+button.sip-btn-print {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.35) !important;
+  color: #ffffff !important;
 }
 
-.sip-cell .sip-btn-print:hover {
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.4);
+.sip-cell .sip-btn-print:hover,
+.sip-btn-print:hover,
+button.sip-btn-print:hover {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.48) !important;
+  filter: brightness(1.08);
 }
 
-.sip-cell .sip-btn-print .sip-btn-icon {
-  color: #0f172a;
+.sip-cell .sip-btn-print .sip-btn-icon,
+.sip-btn-print .sip-btn-icon {
+  color: #2563eb !important;
+  background: #ffffff !important;
 }
 
-.sip-cell .sip-btn-print:focus-visible {
-  outline-color: #334155;
+.sip-cell .sip-btn-print:focus-visible,
+.sip-btn-print:focus-visible {
+  outline-color: #2563eb !important;
 }
 
-.sip-cell .sip-btn-print:disabled {
+.sip-cell .sip-btn-print:disabled,
+.sip-btn-print:disabled {
   opacity: 0.65;
   cursor: progress;
   transform: none;

@@ -139,7 +139,7 @@
 
 .esp-panel.esp-panel--portal {
   position: fixed;
-  z-index: 10000;
+  z-index: 1000005;
 
   display: flex;
   flex-direction: column;

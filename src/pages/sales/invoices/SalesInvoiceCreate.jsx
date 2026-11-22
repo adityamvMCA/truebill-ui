@@ -3545,17 +3545,20 @@ function SalesInvoiceForm({
           </main>
         </fieldset>
 
-        {viewing && invoice && (
-          <EwayBillPanel
-            invoice={invoice}
-            disabled={
-              saving ||
-              uncertainResult ||
-              Boolean(confirmation)
-            }
-            onUpdated={applyInvoice}
-          />
-        )}
+        {(viewing || editing) &&
+          invoice &&
+          (invoice.ewayBillRequired ||
+            invoice.ewayBill?.status === "GENERATED") && (
+            <EwayBillPanel
+              invoice={invoice}
+              disabled={
+                saving ||
+                uncertainResult ||
+                Boolean(confirmation)
+              }
+              onUpdated={applyInvoice}
+            />
+          )}
 
         <div
           className="doc-mobile-bar"

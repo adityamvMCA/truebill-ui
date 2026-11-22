@@ -43,8 +43,8 @@ function EntitySearchPicker({
   label,
   placeholder = "Search...",
   fetchOptions,
-  getOptionId,
-  getOptionLabel,
+  getOptionId = (item) => item?._id || item?.id || item?.key || item,
+  getOptionLabel = (item) => item?.name || item?.label || item?.title || String(item || ""),
   getOptionSubtitle,
   selectedIds = EMPTY_IDS,
   selectedLabel = "",
@@ -243,6 +243,7 @@ function EntitySearchPicker({
       width,
       height,
       maxHeight: height,
+      zIndex: 1000005,
     };
   }, []);
 

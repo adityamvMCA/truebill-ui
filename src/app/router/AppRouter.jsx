@@ -45,6 +45,7 @@ import SalesOrderCreation from "../../pages/sales-orders/SalesOrderCreation";
 import SalesOrdersList from "../../pages/sales-orders/SalesOrdersList";
 import DeliveryNoteCreation from "../../pages/delivery-notes/DeliveryNoteCreation";
 import DeliveryNotesList from "../../pages/delivery-notes/DeliveryNotesList";
+import TransportersList from "../../pages/transporters/TransportersList";
 import SalesQuotationsList from "../../pages/sales/Quotations/SalesQuotationsList";
 import SalesQuotationCreate from "../../pages/sales/Quotations/SalesQuotationCreate";
 import SalesQuotationDetail from "../../pages/sales/Quotations/SalesQuotationDetail";
@@ -111,6 +112,7 @@ import AuditTrail from "../../pages/accounting/report/AuditTrail";
 import ProfitLoss from "../../pages/accounting/ProfitLoss/ProfitLoss";
 import Reports from "../../pages/Reports";
 import PurchaseBillScan from "../../pages/purchase/PurchaseBillScan";
+import PublicDocumentPrint from "../../invoice-templates/PublicDocumentPrint";
 
 // import InventoryReport from "../../pages/Reportdashboard/InventoryReport";
 
@@ -133,7 +135,7 @@ const AppRouter = () => (
       ========================= */}
 
       <Route path={routes.public.login} element={<Login />} />
-
+      <Route path="/print/:docType/:token" element={<PublicDocumentPrint />} />
       <Route path={routes.public.notFound} element={<NotFound />} />
 
       {/* =========================
@@ -190,6 +192,14 @@ const AppRouter = () => (
           <Route
             path={routes.sales.delivery}
             element={gated("sales", <DeliveryNotesList />)}
+          />
+          <Route
+            path={routes.sales.transporters}
+            element={gated("sales", <TransportersList />)}
+          />
+          <Route
+            path="/transporters"
+            element={gated("sales", <TransportersList />)}
           />
           <Route
             path={routes.sales.quotations}
@@ -344,11 +354,8 @@ const AppRouter = () => (
             path={routes.purchase.createInvoice}
             element={<PurchaseBillCreate1 />}
           />
-        
-          <Route
-            path={routes.purchase.scan}
-            element={<PurchaseBillScan />}
-          />
+
+          <Route path={routes.purchase.scan} element={<PurchaseBillScan />} />
           <Route
             path={routes.purchase.viewInvoice}
             element={gated("purchase.invoices", <PurchaseBillDetail />)}
@@ -622,7 +629,7 @@ const AppRouter = () => (
             path={routes.reports.audittrail}
             element={gated("ledger.view", <AuditTrail />)}
           />
-           <Route
+          <Route
             path={routes.reports.index}
             element={gated("ledger.view", <Reports />)}
           />
@@ -711,7 +718,7 @@ const AppRouter = () => (
             path="/settings/print-templates"
             element={<TemplateSettingsPage />}
           />
-        
+
           <Route path="/settings/messaging" element={<MessagingSettings />} />
           <Route path="/scanner" element={<MobileScannerPage />} />
           <Route

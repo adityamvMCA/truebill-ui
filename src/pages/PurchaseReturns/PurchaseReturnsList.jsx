@@ -5,6 +5,8 @@ import toast from "react-hot-toast";
 import DataList from "../../components/common/DataList/DataList";
 import StatusField from "../../components/common/StatusField/StatusField";
 import api from "../../services/api";
+import { PrintInvoiceButton } from "../../invoice-templates/TemplateManager";
+import ShareInvoiceButton from "../../components/common/ShareInvoice/ShareInvoiceButton";
 
 import PurchaseReturnModal from "./PurchaseReturnModal";
 
@@ -80,6 +82,11 @@ function PurchaseReturnsList() {
     [purchaseReturns],
   );
 
+  const fetchFullReturn = useCallback(async (returnNumber) => {
+    const res = await api.purchaseReturn.getByNumber(returnNumber);
+    return res?.data?.purchaseReturn || res?.data?.data || res?.data || res;
+  }, []);
+
   const columns = useMemo(
     () => [
       {
@@ -140,6 +147,38 @@ function PurchaseReturnsList() {
       },
 
       {
+        key: "print",
+        label: "Print",
+        sortable: false,
+        render: (_, row) => (
+          <div
+            className="sip-cell"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <PrintInvoiceButton
+              invoiceNumber={row.returnNumber}
+              fetchInvoice={fetchFullReturn}
+              kind="purchaseReturn"
+            />
+          </div>
+        ),
+      },
+
+      {
+        key: "share",
+        label: "Share",
+        sortable: false,
+        render: (_, row) => (
+          <div
+            className="sip-cell"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <ShareInvoiceButton row={row} />
+          </div>
+        ),
+      },
+
+      {
         key: "reason",
         label: "Reason",
         sortable: false,
@@ -147,7 +186,7 @@ function PurchaseReturnsList() {
         render: (value) => value || "—",
       },
     ],
-    [],
+    [fetchFullReturn],
   );
 
   const openModal = (mode, row = null) => {

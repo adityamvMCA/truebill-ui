@@ -82,39 +82,91 @@ export const buildInvoicePdf = (inv) => {
   const margin = 40;
   const right = pageWidth - margin;
 
+  const isPurchase = Boolean(inv.billNumber) || Boolean(inv.supplierInvoiceNumber);
+  const isDebitNote = Boolean(inv.debitNoteNumber) || (Boolean(inv.returnNumber) && Boolean(inv.supplierName || inv.supplier));
+  const isCreditNote = Boolean(inv.creditNoteNumber) || (Boolean(inv.returnNumber) && Boolean(inv.customerName || inv.customer));
+  const isGRN = Boolean(inv.grnNumber) || Boolean(inv.receiptNumber);
+
+  const docTitle = isPurchase
+    ? "PURCHASE BILL"
+    : isDebitNote
+      ? "DEBIT NOTE"
+      : isCreditNote
+        ? "CREDIT NOTE"
+        : isGRN
+          ? "GOODS RECEIPT NOTE"
+          : "TAX INVOICE";
+
+  const docNo =
+    inv.invoiceNumber ||
+    inv.billNumber ||
+    inv.debitNoteNumber ||
+    inv.creditNoteNumber ||
+    inv.returnNumber ||
+    inv.grnNumber ||
+    inv.receiptNumber ||
+    "N/A";
+
+  const docDate =
+    inv.invoiceDate ||
+    inv.billDate ||
+    inv.returnDate ||
+    inv.creditNoteDate ||
+    inv.debitNoteDate ||
+    inv.receiptDate ||
+    inv.date;
+
   /* Header */
   doc.setFont("helvetica", "bold");
   doc.setFontSize(20);
   doc.text(COMPANY_NAME, margin, 52);
 
   doc.setFontSize(16);
-  doc.text("TAX INVOICE", right, 52, { align: "right" });
+  doc.text(docTitle, right, 52, { align: "right" });
 
   doc.setDrawColor(203, 213, 225);
   doc.line(margin, 66, right, 66);
 
-  /* Invoice meta */
+  /* Document meta */
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text(`Invoice No: ${inv.invoiceNumber}`, right, 86, { align: "right" });
-  doc.text(`Date: ${dt(inv.invoiceDate)}`, right, 100, { align: "right" });
-  doc.text(`Due Date: ${dt(inv.dueDate)}`, right, 114, { align: "right" });
-  doc.text(`Terms: ${inv.paymentTerms || "N/A"}`, right, 128, {
-    align: "right",
-  });
+  doc.text(`Doc No: ${docNo}`, right, 86, { align: "right" });
+  doc.text(`Date: ${dt(docDate)}`, right, 100, { align: "right" });
+  if (inv.dueDate) {
+    doc.text(`Due Date: ${dt(inv.dueDate)}`, right, 114, { align: "right" });
+  }
+  if (inv.paymentTerms) {
+    doc.text(`Terms: ${inv.paymentTerms}`, right, 128, { align: "right" });
+  }
 
-  /* Bill to */
+  /* Party details */
+  const partyLabel = isPurchase || isGRN || isDebitNote ? "Supplier" : "Bill To";
   doc.setFont("helvetica", "bold");
-  doc.text("Bill To", margin, 86);
+  doc.text(partyLabel, margin, 86);
   doc.setFont("helvetica", "normal");
 
+  const partyName =
+    inv.customerName ||
+    inv.supplierName ||
+    inv.partyName ||
+    inv.ledgerName ||
+    inv.supplier?.supplierName ||
+    inv.customer?.customerName ||
+    "";
+  const partyCode = inv.customerCode || inv.supplierCode || inv.supplier?.supplierCode || "";
+  const partyGst = inv.customerGstNo || inv.supplierGstNo || inv.gstNo || inv.gstin || inv.supplier?.gstNo || "";
+  const partyAddress =
+    inv.billingAddress ||
+    inv.shippingAddress ||
+    inv.supplierAddress ||
+    inv.supplier?.billingAddress ||
+    "";
+
   const billTo = [
-    inv.customerName,
-    inv.customerCode ? `Code: ${inv.customerCode}` : "",
-    inv.customerGstNo ? `GSTIN: ${inv.customerGstNo}` : "",
-    ...(inv.billingAddress
-      ? doc.splitTextToSize(String(inv.billingAddress), 240)
-      : []),
+    partyName,
+    partyCode ? `Code: ${partyCode}` : "",
+    partyGst ? `GSTIN: ${partyGst}` : "",
+    ...(partyAddress ? doc.splitTextToSize(String(partyAddress), 240) : []),
   ].filter(Boolean);
 
   doc.text(billTo, margin, 100);
@@ -202,8 +254,11 @@ export const buildInvoicePdf = (inv) => {
   return doc.output("blob");
 };
 
-export const createInvoicePdf = async (invoiceNumber) => {
-  const invoice = await loadInvoice(invoiceNumber);
+export const createInvoicePdf = async (docOrNumber) => {
+  if (docOrNumber && typeof docOrNumber === "object") {
+    return buildInvoicePdf(docOrNumber);
+  }
+  const invoice = await loadInvoice(docOrNumber);
   return buildInvoicePdf(invoice);
 };
 
