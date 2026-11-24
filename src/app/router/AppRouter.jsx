@@ -42,6 +42,7 @@ import OutstandingPage from "../../components/reports/OutstandingReport/Outstand
 import BankLedger from "../../pages/accounting/BankLedger";
 import SalesInvoiceCreate from "../../pages/sales/invoices/SalesInvoiceCreate";
 import SalesInvoicesList from "../../pages/sales/invoices/SalesInvoicesList";
+import PosBilling from "../../pages/sales/pos/PosBilling";
 import SalesOrderCreation from "../../pages/sales-orders/SalesOrderCreation";
 import SalesOrdersList from "../../pages/sales-orders/SalesOrdersList";
 import DeliveryNoteCreation from "../../pages/delivery-notes/DeliveryNoteCreation";
@@ -407,6 +408,11 @@ const AppRouter = () => (
           <Route
             path={routes.sales.invoices}
             element={gated("sales.invoices", <SalesInvoicesList />)}
+          />
+
+          <Route
+            path={routes.sales.pos}
+            element={gated("sales.invoices", <PosBilling />)}
           />
 
           <Route

@@ -23,10 +23,15 @@
   border-radius: 16px;
   width: 100%;
   max-width: 840px;
-  overflow: hidden;
+  max-height: calc(100dvh - 32px);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   position: relative;
   animation: uabSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
 }
 
 @keyframes uabSlideUp {
@@ -396,3 +401,94 @@
   color: #64748b;
   text-decoration: underline;
 }
+
+/* Comprehensive Mobile Adjustments (< 768px) */
+@media (max-width: 768px) {
+  .uab-overlay {
+    padding: 10px;
+    align-items: center;
+  }
+
+  .uab-modal {
+    max-height: calc(100dvh - 20px);
+    border-radius: 14px;
+  }
+
+  .uab-close-corner {
+    top: 10px;
+    right: 10px;
+    width: 34px;
+    height: 34px;
+    background: #f1f5f9;
+  }
+
+  .uab-col-left {
+    padding: 20px 16px 16px;
+    border-right: none;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .uab-illustration-box {
+    padding: 10px 8px;
+    margin-bottom: 14px;
+    overflow-x: auto;
+  }
+
+  .uab-org-tree {
+    gap: 8px;
+  }
+
+  .uab-tree-node {
+    padding: 6px 8px;
+    gap: 4px;
+  }
+
+  .uab-node-label {
+    font-size: 10px;
+  }
+
+  .uab-tree-connector {
+    width: 14px;
+  }
+
+  .uab-main-title {
+    font-size: 1.15rem;
+    line-height: 1.3;
+  }
+
+  .uab-main-desc {
+    font-size: 0.825rem;
+    line-height: 1.4;
+    margin-bottom: 14px;
+  }
+
+  .uab-bullets-head {
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+  }
+
+  .uab-bullet-item {
+    font-size: 0.8rem;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .uab-col-right {
+    padding: 18px 16px 20px;
+    gap: 14px;
+  }
+
+  .uab-plan-box {
+    padding: 16px 14px 12px;
+  }
+
+  .uab-plan-price-large {
+    font-size: 1.75rem;
+  }
+
+  .uab-main-cta {
+    padding: 12px 16px;
+    font-size: 0.95rem;
+  }
+}
+

@@ -10,7 +10,10 @@
 
 .app-container {
   width: 100%;
+  max-width: 100vw;
   min-height: 100dvh;
+  overflow-x: hidden;
+  position: relative;
 
   background: var(--page-bg);
 }
@@ -1236,6 +1239,9 @@
   .main-section,
   .main-section-collapsed {
     width: 100%;
+    max-width: 100vw;
+    min-width: 0;
+    overflow-x: hidden;
 
     margin-left: 0;
   }
@@ -1246,6 +1252,8 @@
 
   .header {
     height: 58px;
+    max-width: 100vw;
+    box-sizing: border-box;
 
     padding:
       env(safe-area-inset-top)
@@ -1276,19 +1284,23 @@
   .header-right {
     margin-left: auto;
 
-    gap: 3px;
+    gap: 4px;
+    flex-shrink: 0;
   }
 
   /* Company icon only */
   .company-selector {
-    width: 40px;
-    min-width: 40px;
+    width: 38px;
+    min-width: 38px;
 
     height: 38px;
 
     padding: 0;
 
+    display: inline-flex;
+    align-items: center;
     justify-content: center;
+    border-radius: 8px;
   }
 
   .company-selector span,
@@ -1325,8 +1337,12 @@
 
   .main-content {
     width: 100%;
+    max-width: 100vw;
+    box-sizing: border-box;
+    overflow-x: hidden;
+    min-width: 0;
 
-    padding: 16px 12px;
+    padding: 14px 10px;
 
     padding-bottom:
       calc(
@@ -1409,18 +1425,40 @@
 @media (max-width: 399px) {
   .header {
     padding-left: 8px;
-
     padding-right: 8px;
+    gap: 4px;
   }
 
   .main-content {
-    padding-left: 10px;
-
-    padding-right: 10px;
+    padding-left: 8px;
+    padding-right: 8px;
   }
 
+  /* Keep company selector visible as compact button */
   .company-selector {
-    display: none;
+    display: inline-flex !important;
+    width: 34px !important;
+    min-width: 34px !important;
+    height: 34px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+
+  /* Hide decorative Help button on small screens so Company + Notifications + Avatar fit */
+  .header-icon-button[aria-label="Help"] {
+    display: none !important;
+  }
+
+  .header-icon-button {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .user-avatar {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
   }
 
   .page-header h1 {

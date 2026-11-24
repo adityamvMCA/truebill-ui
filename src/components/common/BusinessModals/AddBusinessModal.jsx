@@ -66,8 +66,13 @@ export default function AddBusinessModal({ isOpen, onClose, onSuccess, onLimitRe
           borderRadius: 12,
           width: "100%",
           maxWidth: 480,
+          maxHeight: "calc(100dvh - 32px)",
+          maxHeight: "calc(100vh - 32px)",
+          overflowY: "auto",
+          overflowX: "hidden",
+          WebkitOverflowScrolling: "touch",
           boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)",
-          overflow: "hidden",
+          boxSizing: "border-box",
         }}
         onClick={(e) => e.stopPropagation()}
       >

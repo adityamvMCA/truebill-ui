@@ -325,12 +325,16 @@ function CompanySettings() {
       const res = await businessApi.switchBusiness(targetId);
       if (res.data?.success && res.data.token) {
         localStorage.setItem("token", res.data.token);
+        if (res.data.tenant) {
+          localStorage.setItem("tenant", JSON.stringify(res.data.tenant));
+        }
         if (res.data.user) {
           localStorage.setItem("user", JSON.stringify(res.data.user));
         }
       }
       sessionStorage.setItem("selectedTenantId", targetId);
       sessionStorage.setItem("selectedTenant", JSON.stringify({ _id: targetId, businessName: name }));
+      localStorage.setItem("selectedTenantId", targetId);
       window.dispatchEvent(new Event("tenantChanged"));
       window.dispatchEvent(new Event("userChanged"));
       toast.success(`Switched to ${name}`);

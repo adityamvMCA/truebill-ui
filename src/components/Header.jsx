@@ -294,6 +294,10 @@ function Header({ onMenuClick }) {
         const res = await businessApi.switchBusiness(item._id);
         if (res.data?.success && res.data.token) {
           localStorage.setItem("token", res.data.token);
+          if (res.data.tenant) {
+            localStorage.setItem("tenant", JSON.stringify(res.data.tenant));
+            setSelectedTenant(res.data.tenant);
+          }
           if (res.data.user) {
             localStorage.setItem("user", JSON.stringify(res.data.user));
             setUser(res.data.user);
@@ -304,6 +308,7 @@ function Header({ onMenuClick }) {
       sessionStorage.setItem("selectedTenantId", item._id);
       sessionStorage.setItem("selectedClientCode", item.clientCode || "");
       sessionStorage.setItem("selectedTenant", JSON.stringify(item));
+      localStorage.setItem("selectedTenantId", item._id);
 
       window.dispatchEvent(new Event("tenantChanged"));
       window.dispatchEvent(new Event("userChanged"));
@@ -312,7 +317,7 @@ function Header({ onMenuClick }) {
       setTenantSearch("");
 
       toast.success(`Switched to ${item.businessName}`);
-      navigate("/dashboard");
+      window.location.reload();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to switch company");
     }

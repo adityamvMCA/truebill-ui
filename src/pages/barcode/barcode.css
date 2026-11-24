@@ -93,3 +93,136 @@ body.barcode-scanner-active .bcx-frame,body.barcode-scanner-active .bcx-laser{vi
 .bcx-row-actions{white-space:nowrap}.bcx-pager{display:flex;gap:12px;align-items:center;justify-content:flex-end;margin-top:10px}
 
 @media (max-width:560px){.bcx-row{flex-direction:column}.bcx-modal{max-width:100%}}
+
+/* ==========================================================================
+   myBillBook Style Barcode Scanner Modal Extensions
+   ========================================================================== */
+.mbb-scanner-container {
+  position: relative;
+  width: 100%;
+  height: 280px;
+  background: #0f172a;
+  overflow: hidden;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#mbb-html5-qrcode-reader {
+  width: 100% !important;
+  height: 100% !important;
+  border: none !important;
+}
+
+#mbb-html5-qrcode-reader video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+.mbb-scan-reticle {
+  position: absolute;
+  width: 260px;
+  height: 170px;
+  border: 2px dashed rgba(255, 255, 255, 0.75);
+  border-radius: 12px;
+  pointer-events: none;
+  z-index: 10;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+}
+
+.mbb-scan-reticle::before,
+.mbb-scan-reticle::after {
+  content: "";
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-color: #22c55e;
+  border-style: solid;
+}
+
+.mbb-scan-reticle::before {
+  top: -2px;
+  left: -2px;
+  border-width: 4px 0 0 4px;
+  border-top-left-radius: 12px;
+}
+
+.mbb-scan-reticle::after {
+  bottom: -2px;
+  right: -2px;
+  border-width: 0 4px 4px 0;
+  border-bottom-right-radius: 12px;
+}
+
+.mbb-scan-laser {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #ef4444;
+  box-shadow: 0 0 8px 2px rgba(239, 68, 68, 0.85);
+  animation: mbbLaserScan 2s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 11;
+}
+
+@keyframes mbbLaserScan {
+  0% { top: 6%; opacity: 0.95; }
+  100% { top: 94%; opacity: 0.95; }
+}
+
+.mbb-scan-live-banner {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
+  background: rgba(22, 163, 74, 0.92);
+  color: #ffffff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  backdrop-filter: blur(4px);
+  z-index: 20;
+  animation: mbbSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes mbbSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.mbb-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  border: 1px solid var(--border-color, #e2e8f0);
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s;
+}
+
+.mbb-mode-toggle.active {
+  background: #dcfce7;
+  color: #15803d;
+  border-color: #86efac;
+}
+
+.mbb-scan-counter-pill {
+  background: #1e293b;
+  color: #f8fafc;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+}

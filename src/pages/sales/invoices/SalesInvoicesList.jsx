@@ -2066,6 +2066,7 @@ import {
   Receipt,
   Printer,
   Send,
+  ShoppingCart,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
@@ -3997,21 +3998,37 @@ function SalesInvoicesListContent() {
         }}
         onExport={handleExport}
         addButton={
-          <button
-            type="button"
-            className="so-primary-button"
-            disabled={actionsDisabled}
-            onClick={() =>
-              navigate(
-                SALES_PATHS.create,
-              )
-            }
-          >
-            <Plus size={16} />
-            <span>
-              New Sales Invoice
-            </span>
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button
+              type="button"
+              className="so-primary-button"
+              style={{
+                background: "#16a34a",
+                borderColor: "#15803d",
+              }}
+              disabled={actionsDisabled}
+              onClick={() => navigate(routes.sales?.pos || "/sales/pos")}
+              title="Open Fast POS Counter Billing (myBillBook style)"
+            >
+              <ShoppingCart size={16} />
+              <span>POS Billing</span>
+            </button>
+            <button
+              type="button"
+              className="so-primary-button"
+              disabled={actionsDisabled}
+              onClick={() =>
+                navigate(
+                  SALES_PATHS.create,
+                )
+              }
+            >
+              <Plus size={16} />
+              <span>
+                New Sales Invoice
+              </span>
+            </button>
+          </div>
         }
       />
 

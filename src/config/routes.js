@@ -47,6 +47,7 @@ const routes = {
     returns: "/sales/returns",
 
     invoices: "/sales/invoices",
+    pos: "/sales/pos",
     createInvoice: "/sales/invoices/create",
     viewInvoice: "/sales/invoices/view/:invoiceNumber",
     editInvoice: "/sales/invoices/edit/:invoiceNumber",

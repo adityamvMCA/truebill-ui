@@ -1,15 +1,18 @@
-/* Trial Expired Banner Strip */
+/* Trial Expired Banner Strip - Mobile-First Responsive Design */
 .trial-expired-banner-strip {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   background: linear-gradient(90deg, #fff1f2 0%, #fee2e2 100%);
   border-bottom: 1.5px solid #fecdd3;
   padding: 10px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 14px;
   z-index: 50;
   box-shadow: 0 2px 4px rgba(225, 29, 72, 0.04);
+  overflow: hidden;
 }
 
 .trial-expired-banner-left {
@@ -17,11 +20,13 @@
   align-items: center;
   gap: 12px;
   flex: 1;
+  min-width: 0;
 }
 
 .trial-expired-banner-icon {
   width: 32px;
   height: 32px;
+  min-width: 32px;
   border-radius: 8px;
   background: #f43f5e;
   color: #ffffff;
@@ -39,21 +44,25 @@
   flex-wrap: wrap;
   font-size: 13.5px;
   color: #881337;
+  min-width: 0;
 }
 
 .trial-expired-banner-badge {
   background: #be123c;
   color: #ffffff;
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 700;
-  padding: 2px 8px;
+  padding: 2px 7px;
   border-radius: 6px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .trial-expired-banner-msg {
   color: #4c0519;
+  word-break: break-word;
 }
 
 .trial-expired-banner-msg strong {
@@ -64,24 +73,26 @@
 .trial-expired-banner-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-shrink: 0;
 }
 
 .trial-expired-banner-btn-upgrade {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   background: #4f46e5;
   color: #ffffff;
   border: none;
   border-radius: 7px;
-  padding: 6px 14px;
+  padding: 7px 14px;
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .trial-expired-banner-btn-upgrade:hover {
@@ -92,16 +103,18 @@
 .trial-expired-banner-btn-view {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
   background: #ffffff;
   color: #475569;
   border: 1px solid #cbd5e1;
   border-radius: 7px;
-  padding: 6px 12px;
+  padding: 7px 12px;
   font-size: 12.5px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .trial-expired-banner-btn-view:hover {
@@ -109,15 +122,64 @@
   color: #0f172a;
 }
 
-@media (max-width: 860px) {
+/* Tablet & Mobile Screens (<= 768px) */
+@media (max-width: 768px) {
   .trial-expired-banner-strip {
     flex-direction: column;
+    align-items: stretch;
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .trial-expired-banner-left {
     align-items: flex-start;
-    padding: 12px 16px;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .trial-expired-banner-icon {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    border-radius: 6px;
+  }
+
+  .trial-expired-banner-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .trial-expired-banner-text {
+    font-size: 12.5px;
+    line-height: 1.35;
+    gap: 6px;
   }
 
   .trial-expired-banner-actions {
     width: 100%;
-    justify-content: flex-end;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .trial-expired-banner-btn-upgrade,
+  .trial-expired-banner-btn-view {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 12px;
+    min-height: 36px;
+  }
+}
+
+/* Very Small Mobile (< 380px) */
+@media (max-width: 380px) {
+  .trial-expired-banner-actions {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .trial-expired-banner-btn-upgrade,
+  .trial-expired-banner-btn-view {
+    width: 100%;
   }
 }

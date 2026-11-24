@@ -21,6 +21,7 @@ import {
   Send,
   StickyNote,
   Trash2,
+  ScanBarcode,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
@@ -39,6 +40,7 @@ import api from "../../../services/api";
 import salesInvoiceApi from "../../../services/modules/salesInvoiceApi";
 
 import EwayBillPanel from "./EwayBillPanel";
+import ScanBarcodeModal from "../../barcode/ScanBarcodeModal";
 
 import {
   SALES_PATHS,
@@ -627,6 +629,8 @@ function SalesInvoiceForm({
   const [items, setItems] = useState(
     () => [newItem()],
   );
+
+  const [scanOpen, setScanOpen] = useState(false);
 
   const [invoice, setInvoice] =
     useState(null);
@@ -1473,6 +1477,49 @@ function SalesInvoiceForm({
     ]);
 
     setErrors([]);
+  };
+
+  const handleBarcodeFound = ({ product } = {}) => {
+    if (!product?._id) return;
+    const pId = String(product._id);
+
+    setItems((previous) => {
+      const existingIdx = previous.findIndex(
+        (it) => it.productId === pId
+      );
+      if (existingIdx !== -1) {
+        return previous.map((it, idx) =>
+          idx === existingIdx
+            ? { ...it, quantity: String((Number(it.quantity) || 0) + 1) }
+            : it
+        );
+      }
+
+      const hasOnlyEmptyRow =
+        previous.length === 1 && !previous[0].productId;
+
+      const newRow = {
+        ...newItem(),
+        productId: pId,
+        productName: product.name || "",
+        productCode: product.productCode || "",
+        productType: product.type || "GOODS",
+        unit: product.unit || "NOS",
+        hsnSacCode: product.hsnSacCode || "",
+        quantity: "1",
+        unitRate: String(product.salePrice ?? 0),
+        discountPercent: "0",
+        gstRate: form.taxMode === "NONE" ? 0 : (product.gstRate ?? 18),
+      };
+
+      if (hasOnlyEmptyRow) {
+        return [newRow];
+      }
+
+      return [...previous, newRow];
+    });
+
+    toast.success(`Scanned: ${product.name}`);
   };
 
   const removeItem = (rowId) => {
@@ -3308,10 +3355,11 @@ function SalesInvoiceForm({
               </div>
 
               {!fixedLines && (
-                <div className="doc-add-item-row">
+                <div className="doc-add-item-row" style={{ display: "flex", gap: 10, alignItems: "center" }}>
                   <button
                     type="button"
                     className="doc-dashed-line"
+                    style={{ flex: 1 }}
                     disabled={
                       formDisabled ||
                       items.length >=
@@ -3321,6 +3369,27 @@ function SalesInvoiceForm({
                   >
                     <Plus size={15} />
                     Add Item
+                  </button>
+                  <button
+                    type="button"
+                    className="doc-dashed-line"
+                    style={{
+                      width: "auto",
+                      padding: "0 18px",
+                      background: "#eff6ff",
+                      color: "#2563eb",
+                      borderColor: "#93c5fd",
+                      fontWeight: 600,
+                    }}
+                    disabled={
+                      formDisabled ||
+                      items.length >=
+                        200
+                    }
+                    onClick={() => setScanOpen(true)}
+                  >
+                    <ScanBarcode size={15} />
+                    Scan Barcode
                   </button>
                 </div>
               )}
@@ -3613,6 +3682,12 @@ function SalesInvoiceForm({
         onConfirm={
           handleConfirmation
         }
+      />
+
+      <ScanBarcodeModal
+        open={scanOpen}
+        onClose={() => setScanOpen(false)}
+        onFound={handleBarcodeFound}
       />
     </div>
   );

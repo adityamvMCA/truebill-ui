@@ -687,14 +687,38 @@ const getMenuItems = (responseData) => {
                 Number(b.order ?? 0),
             );
 
+          let finalChildren = children;
+          if (
+            (String(item.label).toLowerCase() === "sales" || String(item.group || "").toLowerCase() === "sales") &&
+            !children.some((c) => c.path === "/sales/pos")
+          ) {
+            const posItem = {
+              _id: "pos-billing-menu-item",
+              label: "POS Billing",
+              path: "/sales/pos",
+              icon: ShoppingCart,
+              order: 0.5,
+            };
+            const invIdx = children.findIndex((c) => c.path === "/sales/invoices");
+            if (invIdx !== -1) {
+              finalChildren = [
+                ...children.slice(0, invIdx + 1),
+                posItem,
+                ...children.slice(invIdx + 1),
+              ];
+            } else {
+              finalChildren = [posItem, ...children];
+            }
+          }
+
           return {
             ...item,
             group: item.group || group.group,
             label: String(item.label ?? "").trim(),
             path: normalizePath(item.path),
             icon: getIcon(item.icon),
-            children,
-            hadChildren: originalChildren.length > 0,
+            children: finalChildren,
+            hadChildren: originalChildren.length > 0 || finalChildren.length > 0,
           };
         });
     })

@@ -356,3 +356,62 @@
   color: #94a3b8;
   font-size: 0.775rem;
 }
+
+/* Mobile Responsiveness for Billing Renew Page */
+@media (max-width: 768px) {
+  .renew-container {
+    padding: 16px 12px 40px;
+  }
+
+  .renew-header h1 {
+    font-size: 1.45rem;
+  }
+
+  .renew-header p {
+    font-size: 0.875rem;
+  }
+
+  .current-sub-bar {
+    padding: 12px 14px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .current-sub-actions {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .plans-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .plan-card {
+    padding: 20px 16px;
+  }
+
+  .cycle-selector {
+    margin-bottom: 24px;
+  }
+
+  .cycle-pills {
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .trial-footer-banner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .trial-footer-btn {
+    width: 100%;
+    text-align: center;
+  }
+}
+

@@ -33,7 +33,6 @@ import EntitySearchPicker from "../../components/common/EntitySearchPicker/Entit
 import useKeyboardOpen from "../../hooks/useKeyboardOpen";
 
 import ScanBarcodeModal from "../barcode/ScanBarcodeModal";
-import ScanSessionPanel from "../barcode/ScanSessionPanel";
 import ScanConfirmSheet from "../barcode/ScanConfirmSheet";
 import { barcodeApi } from "../barcode/barcodeApi";
 
@@ -1404,28 +1403,18 @@ const SalesOrderCreation = () => {
           </div>
         </section>
 
-        {/* BARCODE: mobile app → camera; web browser → phone sync panel */}
+        {/* BARCODE: myBillBook style camera & handheld scanner */}
         <section className="sales-order-scan-section">
-          {IS_NATIVE ? (
-            <button
-              type="button"
-              className="bcx-btn is-primary"
-              style={{ width: "100%" }}
-              disabled={disabled}
-              onClick={openScanner}
-            >
-              <ScanBarcode size={16} />
-              Scan product
-            </button>
-          ) : (
-            <ScanSessionPanel
-              key={panelKey}
-              documentType="SALES"
-              disabled={disabled}
-              onItemsChange={applyScanLines}
-              onEnd={endScanSession}
-            />
-          )}
+          <button
+            type="button"
+            className="bcx-btn is-primary"
+            style={{ width: "100%", padding: "10px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
+            disabled={disabled}
+            onClick={() => setScanOpen(true)}
+          >
+            <ScanBarcode size={18} />
+            <span>Scan Barcode</span>
+          </button>
         </section>
 
         <section className="sales-order-items-section">
