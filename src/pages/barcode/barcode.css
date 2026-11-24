@@ -22,9 +22,9 @@ body.barcode-scanner-active .bcx-frame,body.barcode-scanner-active .bcx-laser{vi
 .bcx-chip{display:inline-flex;gap:5px;align-items:center;border:1px solid var(--bcx-border);background:transparent;color:inherit;border-radius:999px;padding:4px 10px;font-size:12px}
 .spin{animation:bcx-spin 1s linear infinite}@keyframes bcx-spin{to{transform:rotate(360deg)}}
 
-.bcx-viewport{flex:1;min-height:200px;position:relative;display:flex;align-items:center;justify-content:center;background:transparent}
+.bcx-viewport{flex:1;min-height:200px;position:relative;display:flex;align-items:center;justify-content:center;background:#000;overflow:hidden}
 .bcx-viewport--modal{height:260px;flex:none}
-.bcx-frame{width:78%;max-width:340px;aspect-ratio:1.6;border:3px solid rgba(255,255,255,.9);border-radius:16px;box-shadow:0 0 0 9999px rgba(0,0,0,.35);position:relative;transition:border-color .15s}
+.bcx-frame{width:78%;max-width:340px;aspect-ratio:1.6;border:3px solid rgba(255,255,255,.9);border-radius:16px;box-shadow:0 0 0 9999px rgba(0,0,0,.4);position:relative;transition:border-color .15s;z-index:2}
 .flash-ok .bcx-frame{border-color:var(--bcx-ok)}.flash-bad .bcx-frame{border-color:var(--bcx-bad)}
 .bcx-laser{position:absolute;left:8px;right:8px;top:50%;height:2px;background:rgba(239,68,68,.85);animation:bcx-laser 1.8s ease-in-out infinite alternate}
 @keyframes bcx-laser{from{top:12%}to{top:88%}}
