@@ -1,0 +1,398 @@
+/* UpgradeAdBanner.css - Exact MyBillBook-style Multi-Company Modal */
+
+.uab-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: uabFadeIn 0.2s ease-out;
+}
+
+@keyframes uabFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.uab-modal {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 840px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  position: relative;
+  animation: uabSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes uabSlideUp {
+  from { transform: translateY(20px) scale(0.98); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.uab-close-corner {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  border: none;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.2s;
+}
+
+.uab-close-corner:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+/* 2-Column Layout */
+.uab-body-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  min-height: 440px;
+}
+
+@media (max-width: 768px) {
+  .uab-body-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Left Column */
+.uab-col-left {
+  padding: 24px 28px 28px;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-right: 1px solid #f1f5f9;
+}
+
+/* Banner Illustration Card */
+.uab-illustration-box {
+  background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  position: relative;
+  overflow: hidden;
+}
+
+.uab-org-tree {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 2;
+}
+
+.uab-tree-node {
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.uab-tree-node.active-node {
+  border-color: #10b981;
+  background: #f0fdf4;
+}
+
+.uab-node-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #334155;
+  text-align: center;
+}
+
+.uab-tree-connector {
+  height: 2px;
+  width: 16px;
+  background: #94a3b8;
+}
+
+/* Left Texts */
+.uab-tagline {
+  font-size: 11px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+
+.uab-main-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.3;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.01em;
+}
+
+.uab-main-desc {
+  font-size: 0.85rem;
+  color: #64748b;
+  line-height: 1.45;
+  margin: 0 0 16px 0;
+}
+
+.uab-bullets-head {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.uab-bullets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.uab-bullet-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: #334155;
+  line-height: 1.35;
+}
+
+.uab-green-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #dcfce7;
+  color: #15803d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* Right Column */
+.uab-col-right {
+  padding: 28px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: #fafafa;
+}
+
+/* Recommended Plan Box */
+.uab-plan-box {
+  background: #ffffff;
+  border: 1.5px solid #059669; /* MyBillBook Green Outline */
+  border-radius: 14px;
+  padding: 20px 18px 16px;
+  position: relative;
+  text-align: center;
+  margin-bottom: 18px;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);
+}
+
+.uab-plan-pill {
+  position: absolute;
+  top: -11px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ffffff;
+  border: 1.5px solid #059669;
+  color: #059669;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 12px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.uab-plan-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #065f46;
+  margin-bottom: 6px;
+}
+
+.uab-plan-price-large {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #0f172a;
+  line-height: 1.1;
+}
+
+.uab-plan-price-large span {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.uab-plan-subtext {
+  font-size: 0.775rem;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+/* Middle Divider Widget: "ALL YOUR BUSINESSES. ONE ACCOUNT." */
+.uab-switch-divider {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #059669;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.uab-switch-divider::before,
+.uab-switch-divider::after {
+  content: "";
+  display: inline-block;
+  width: 20px;
+  height: 1px;
+  background: #cbd5e1;
+  vertical-align: middle;
+  margin: 0 8px;
+}
+
+/* Interactive Switcher Preview Card */
+.uab-switch-widget {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.uab-switch-avatars {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.uab-co-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 11px;
+}
+
+.uab-co-badge.a {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.uab-co-badge.b {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.uab-co-sub {
+  font-size: 6px;
+  letter-spacing: 0.02em;
+}
+
+.uab-switch-arrow {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffedd5;
+  color: #ea580c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.uab-switch-text strong {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.uab-switch-text span {
+  display: block;
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+/* Large CTA Button */
+.uab-main-cta {
+  width: 100%;
+  padding: 14px 18px;
+  background: #00ab55; /* Official MyBillBook Green */
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 800;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(0, 171, 85, 0.35);
+  transition: all 0.2s ease;
+}
+
+.uab-main-cta:hover {
+  background: #00964b;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 171, 85, 0.45);
+}
+
+.uab-maybe-later {
+  text-align: center;
+  margin-top: 8px;
+}
+
+.uab-maybe-later-btn {
+  background: transparent;
+  border: none;
+  font-size: 0.775rem;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.uab-maybe-later-btn:hover {
+  color: #64748b;
+  text-decoration: underline;
+}

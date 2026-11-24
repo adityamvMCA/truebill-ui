@@ -39,6 +39,7 @@ import { useAppVersionCheck } from "./hooks/useAppVersionCheck";
 import AppUpdateModal from "./components/common/AppUpdateModal";
 import BiometricLock from "./components/common/BiometricLock";
 import RateLimitModal from "./components/common/RateLimitModal/RateLimitModal";
+import TrialExpiredModal from "./components/common/TrialExpiredModal/TrialExpiredModal";
 import { SubscriptionProvider } from "./context/SubscriptionContext";
 import { registerFcmToken } from "./services/fcmService";
 import "./components/common/biometric.css";
@@ -66,6 +67,9 @@ function App() {
 
       {/* Global 429 "Too many requests" modal */}
       <RateLimitModal />
+
+      {/* Global Trial Expired Modal matching MyBillBook UI */}
+      <TrialExpiredModal />
     </SubscriptionProvider>
   );
 }

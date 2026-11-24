@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom";
 
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
+import TrialExpiredBanner from "../components/common/TrialExpiredBanner/TrialExpiredBanner";
 
 function MainLayout() {
   const [collapsed, setCollapsed] = useState(false);
@@ -52,6 +53,9 @@ function MainLayout() {
         }`}
       >
         <Header onMenuClick={handleMenuClick} />
+
+        {/* Read-Only Warning Banner shown across app when trial expires */}
+        <TrialExpiredBanner />
 
         <main className="main-content">
           <Outlet />

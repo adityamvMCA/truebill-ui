@@ -302,6 +302,16 @@ const useCustomerContact = (row) => {
 
 export const SHARE_ACTIONS = [
   {
+    key: "link-whatsapp",
+    label: "Share via WhatsApp",
+    hint: "Click & View Link (No download)",
+    icon: MessageCircle,
+    channel: "whatsapp",
+    kind: "invoice",
+    mode: "link",
+    tone: "green",
+  },
+  {
     key: "open-browser",
     label: "Open in Web Browser",
     hint: "View, Print or Download",
@@ -313,10 +323,11 @@ export const SHARE_ACTIONS = [
   {
     key: "pdf-whatsapp",
     label: "Share Invoice PDF",
-    hint: "Send via WhatsApp",
+    hint: "Send PDF file attachment",
     icon: FileText,
     channel: "whatsapp",
     kind: "invoice",
+    mode: "file",
     tone: "green",
   },
   {
@@ -326,6 +337,7 @@ export const SHARE_ACTIONS = [
     icon: FileText,
     channel: "email",
     kind: "invoice",
+    mode: "file",
     tone: "red",
   },
   {
@@ -361,7 +373,7 @@ export const SHARE_ACTIONS = [
    MESSAGE CONTENT
 ================================================================ */
 
-export const buildShareContent = (row, action) => {
+export const buildShareContent = (row, action, docLink = "") => {
   const isPurchase = Boolean(row.billNumber);
   const isDebitNote = Boolean(row.debitNoteNumber) || (Boolean(row.returnNumber) && Boolean(row.supplierName || row.supplier));
   const isCreditNote = Boolean(row.creditNoteNumber) || (Boolean(row.returnNumber) && Boolean(row.customerName || row.customer));
@@ -415,21 +427,32 @@ export const buildShareContent = (row, action) => {
   const bold = (text) => (whatsapp ? `*${text}*` : text);
 
   if (action.kind === "invoice" || action.kind === "document") {
+    const isLinkMode = action.mode !== "file";
+    const linkSection = docLink
+      ? `\n👉 ${bold("View & Print Online (No download needed):")}\n${docLink}\n`
+      : "";
+
     return {
       subject: `${docTitle} ${no} from TrustIQ`,
       body: [
         `Hello ${customer},`,
         ``,
-        `Please find attached your ${docTitle} ${bold(no)} dated ${invDate}.`,
+        isLinkMode
+          ? `Your ${docTitle} ${bold(no)} dated ${invDate} is ready.`
+          : `Please find attached your ${docTitle} ${bold(no)} dated ${invDate}.`,
         totalPaise > 0 ? `Total Amount: ${bold(total)}` : ``,
         dueDate && dueDate !== "N/A" ? `Due Date: ${dueDate}` : ``,
-        ``,
+        linkSection,
         `Thank you for your business.`,
       ].filter(Boolean).join("\n"),
     };
   }
 
   if (action.kind === "reminder") {
+    const linkSection = docLink
+      ? `\n👉 ${bold("View & Print Online:")}\n${docLink}\n`
+      : "";
+
     return {
       subject: `Payment reminder: ${docTitle} ${no}`,
       body: [
@@ -440,7 +463,7 @@ export const buildShareContent = (row, action) => {
         `Total: ${total}`,
         `Pending Amount: ${bold(due)}`,
         dueDate && dueDate !== "N/A" ? `Due Date: ${bold(dueDate)}` : ``,
-        ``,
+        linkSection,
         `Kindly arrange the payment at your earliest convenience. Please ignore this message if already paid.`,
       ].filter(Boolean).join("\n"),
     };
@@ -837,10 +860,9 @@ function ShareComposeModal({ row, action, onClose, onSend }) {
 
   const { settings } = useMessagingStore();
 
-  const initial = useMemo(
-    () => buildShareContent(row, action),
-    [row, action]
-  );
+  const [docLink, setDocLink] = useState("");
+  const [attachPdf, setAttachPdf] = useState(action.mode === "file");
+  const [bodyEdited, setBodyEdited] = useState(false);
 
   const [channel, setChannel] = useState(action.channel);
 
@@ -848,9 +870,9 @@ function ShareComposeModal({ row, action, onClose, onSend }) {
 
   const [touched, setTouched] = useState(false);
 
-  const [subject, setSubject] = useState(initial.subject);
+  const [subject, setSubject] = useState("");
 
-  const [body, setBody] = useState(initial.body);
+  const [body, setBody] = useState("");
 
   const [sending, setSending] = useState(false);
 
@@ -861,8 +883,6 @@ function ShareComposeModal({ row, action, onClose, onSend }) {
   const [templatesLoading, setTemplatesLoading] = useState(false);
 
   const isEmail = channel === "email";
-
-  const attachPdf = action.kind === "invoice";
 
   const canSwitch = action.kind === "message";
 
@@ -875,6 +895,29 @@ function ShareComposeModal({ row, action, onClose, onSend }) {
   useBodyLock(true);
 
   const isMobileView = useIsMobile();
+
+  /* Fetch online document view link on mount */
+  useEffect(() => {
+    const no =
+      row.invoiceNumber ||
+      row.billNumber ||
+      row.returnNumber ||
+      row.creditNoteNumber ||
+      row.debitNoteNumber ||
+      row.grnNumber ||
+      row.receiptNumber ||
+      "";
+    if (!no) return;
+    const docType = row.billNumber ? "purchaseBill" : "invoice";
+    shareApi
+      .getDocumentLink(docType, no)
+      .then((res) => {
+        if (res?.data?.url) {
+          setDocLink(res.data.url);
+        }
+      })
+      .catch(() => {});
+  }, [row]);
 
   /* Load tenant-scoped templates */
 
@@ -918,7 +961,9 @@ function ShareComposeModal({ row, action, onClose, onSend }) {
           if (
             channel === "whatsapp" &&
             action.kind === "invoice" &&
-            template.attachPdf !== true
+            attachPdf &&
+            template.attachPdf !== true &&
+            !template.name?.includes("pdf")
           ) {
             return false;
           }
@@ -952,7 +997,7 @@ function ShareComposeModal({ row, action, onClose, onSend }) {
     return () => {
       cancelled = true;
     };
-  }, [isBusiness, channel, action.kind]);
+  }, [isBusiness, channel, action.kind, attachPdf]);
 
   /* Prefill customer contact */
 
@@ -962,19 +1007,24 @@ function ShareComposeModal({ row, action, onClose, onSend }) {
     setTo(savedValue || "");
   }, [savedValue, touched]);
 
-  /* Update message when channel changes */
+  /* Update message when channel, format, or docLink changes */
 
   useEffect(() => {
-    if (action.kind === "message") return;
+    if (action.kind === "message" || bodyEdited) return;
 
-    const next = buildShareContent(row, {
-      ...action,
-      channel,
-    });
+    const next = buildShareContent(
+      row,
+      {
+        ...action,
+        channel,
+        mode: attachPdf ? "file" : "link",
+      },
+      docLink
+    );
 
     setSubject(next.subject);
     setBody(next.body);
-  }, [channel, row, action]);
+  }, [channel, row, action, attachPdf, docLink, bodyEdited]);
 
   /* Escape key */
 
@@ -1246,6 +1296,73 @@ function ShareComposeModal({ row, action, onClose, onSend }) {
             </div>
           )}
 
+          {/* Share Format Selector */}
+          {action.kind === "invoice" && (
+            <div
+              style={{
+                display: "flex",
+                gap: "8px",
+                background: "#f1f5f9",
+                padding: "4px",
+                borderRadius: "8px",
+                marginBottom: "12px",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setAttachPdf(false);
+                  setBodyEdited(false);
+                }}
+                style={{
+                  flex: 1,
+                  padding: "7px 10px",
+                  borderRadius: "6px",
+                  border: "none",
+                  background: !attachPdf ? "#ffffff" : "transparent",
+                  color: !attachPdf ? "#1e293b" : "#64748b",
+                  fontWeight: !attachPdf ? "600" : "500",
+                  boxShadow: !attachPdf ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  fontSize: "12.5px",
+                }}
+              >
+                <ExternalLink size={14} color={!attachPdf ? "#2563eb" : "#64748b"} />
+                <span>Online View Link (No Download)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAttachPdf(true);
+                  setBodyEdited(false);
+                }}
+                style={{
+                  flex: 1,
+                  padding: "7px 10px",
+                  borderRadius: "6px",
+                  border: "none",
+                  background: attachPdf ? "#ffffff" : "transparent",
+                  color: attachPdf ? "#1e293b" : "#64748b",
+                  fontWeight: attachPdf ? "600" : "500",
+                  boxShadow: attachPdf ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  fontSize: "12.5px",
+                }}
+              >
+                <Paperclip size={14} color={attachPdf ? "#2563eb" : "#64748b"} />
+                <span>Attach PDF File</span>
+              </button>
+            </div>
+          )}
+
           {/* Templates */}
 
           {isBusiness && (
@@ -1370,9 +1487,9 @@ function ShareComposeModal({ row, action, onClose, onSend }) {
             )}
           </label>
 
-          {/* Attachment */}
+          {/* Attachment / Link Preview */}
 
-          {attachPdf && (
+          {attachPdf ? (
             <div className="shr-attachment">
               <Paperclip size={15} />
 
@@ -1384,7 +1501,17 @@ function ShareComposeModal({ row, action, onClose, onSend }) {
                   : "attach manually in manual mode"}
               </small>
             </div>
-          )}
+          ) : docLink ? (
+            <div className="shr-attachment" style={{ background: "#f0fdf4", borderColor: "#bbf7d0" }}>
+              <ExternalLink size={15} color="#16a34a" />
+
+              <span style={{ color: "#166534", fontWeight: "600" }}>Online View Link</span>
+
+              <small style={{ color: "#15803d" }}>
+                Recipient clicks link to view directly in browser (no download)
+              </small>
+            </div>
+          ) : null}
         </div>
 
         {/* Footer */}

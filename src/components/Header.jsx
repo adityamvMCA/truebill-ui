@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 import {
   Menu,
@@ -10,11 +10,16 @@ import {
   Palette,
   Check,
   LogOut,
+  Plus,
+  Crown,
 } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../services/api";
+import businessApi from "../services/modules/businessApi";
+import AddBusinessModal from "./common/BusinessModals/AddBusinessModal";
+import { UpgradeAdModal } from "./common/UpgradeAdBanner/UpgradeAdBanner";
 
 const themes = [
   { id: "blue", name: "Ocean Blue", color: "#2563eb" },
@@ -29,14 +34,15 @@ const themes = [
   { id: "slate", name: "Slate", color: "#475569" },
 ];
 
-const isTraderAccessible = (item) => {
-  if (!item?.isActive) return false;
-
+const isTraderAccessible = (item, currentTenantId) => {
+  if (!item) return false;
+  if (currentTenantId && String(item._id || item.id) === String(currentTenantId)) return true;
+  if (item.isActive === false) return false;
+  if (item.status === "suspended" || item.status === "expired") return false;
   if (item.subscriptionEnd && new Date(item.subscriptionEnd) <= new Date()) {
     return false;
   }
-
-  return item.status === "active" || item.status === "trial";
+  return true;
 };
 
 function Header({ onMenuClick }) {
@@ -122,7 +128,13 @@ function Header({ onMenuClick }) {
 
   const isSupport = user?.platformRole === "support";
 
-  const canSwitchTenant = isDeveloper || isSupport;
+  // Allow all users to view and switch between their companies
+  const canSwitchTenant = true;
+
+  // Multi-Company management states
+  const [isAddBizOpen, setIsAddBizOpen] = useState(false);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [myBizLimits, setMyBizLimits] = useState(null);
 
   /* =========================================
      LOAD THEME
@@ -193,18 +205,14 @@ function Header({ onMenuClick }) {
   }, []);
 
   /* =========================================
-     LOAD TRADERS FOR SWITCHER
+     LOAD COMPANIES FOR SWITCHER
   ========================================= */
 
-  useEffect(() => {
-    if (!tenantOpen || !canSwitchTenant) return;
+  const loadTenants = useCallback(async () => {
+    try {
+      setTenantLoading(true);
 
-    let cancelled = false;
-
-    const timer = setTimeout(async () => {
-      try {
-        setTenantLoading(true);
-
+      if (isDeveloper || isSupport) {
         const response = await api.tenants.getAll({
           params: {
             page: 1,
@@ -212,62 +220,67 @@ function Header({ onMenuClick }) {
             search: tenantSearch.trim() || undefined,
           },
         });
-
-        if (!cancelled) {
-          setTenantList(response?.data?.tenants || []);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          console.error("Unable to load traders:", error);
-          toast.error("Unable to load traders");
-          setTenantList([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setTenantLoading(false);
+        setTenantList(response?.data?.tenants || []);
+      } else {
+        const response = await businessApi.getMyBusinesses();
+        if (response.data?.success) {
+          const list = response.data.businesses || [];
+          const filtered = tenantSearch.trim()
+            ? list.filter((b) =>
+                b.businessName?.toLowerCase().includes(tenantSearch.toLowerCase().trim())
+              )
+            : list;
+          setTenantList(filtered);
+          setMyBizLimits(response.data.planLimits || null);
         }
       }
-    }, 300);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [tenantOpen, tenantSearch, canSwitchTenant]);
-
-  /* =========================================
-     CLOSE DROPDOWNS
-  ========================================= */
+    } catch (error) {
+      console.error("Unable to load companies:", error);
+      setTenantList([]);
+    } finally {
+      setTenantLoading(false);
+    }
+  }, [isDeveloper, isSupport, tenantSearch]);
 
   useEffect(() => {
-    const handleOutsideClick = (event) => {
-      if (themeRef.current && !themeRef.current.contains(event.target)) {
-        setThemeOpen(false);
-      }
+    if (!tenantOpen) return;
+    const timer = setTimeout(() => {
+      loadTenants();
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [tenantOpen, tenantSearch, loadTenants]);
 
-      if (profileRef.current && !profileRef.current.contains(event.target)) {
-        setProfileOpen(false);
-      }
+  /* =========================================
+     ADD COMPANY CLICK
+  ========================================= */
 
-      if (tenantRef.current && !tenantRef.current.contains(event.target)) {
-        setTenantOpen(false);
-      }
-    };
+  const handleAddCompanyClick = () => {
+    setTenantOpen(false);
+    const plan = (myBizLimits?.plan || user?.tenant?.subscriptionPlan || "basic").toLowerCase();
 
-    document.addEventListener("mousedown", handleOutsideClick);
+    // Premium: unlimited companies
+    if (plan === "premium") {
+      setIsAddBizOpen(true);
+      return;
+    }
 
-    return () => {
-      document.removeEventListener("mousedown", handleOutsideClick);
-    };
-  }, []);
+    // Standard: allows up to 3 companies
+    if (plan === "standard" && tenantList.length < 3) {
+      setIsAddBizOpen(true);
+      return;
+    }
+
+    // Basic / Trial (or limit reached): Show MyBillBook-style Upgrade Ad Banner Modal!
+    setIsUpgradeModalOpen(true);
+  };
 
   /* =========================================
      SWITCH TENANT
   ========================================= */
 
-  const handleSwitchTenant = (item) => {
+  const handleSwitchTenant = async (item) => {
     if (!isTraderAccessible(item)) {
-      toast.error("This trader subscription is not active");
+      toast.error("This company subscription is not active");
       return;
     }
 
@@ -276,18 +289,33 @@ function Header({ onMenuClick }) {
       return;
     }
 
-    sessionStorage.setItem("selectedTenantId", item._id);
-    sessionStorage.setItem("selectedClientCode", item.clientCode || "");
-    sessionStorage.setItem("selectedTenant", JSON.stringify(item));
+    try {
+      if (!isDeveloper && !isSupport) {
+        const res = await businessApi.switchBusiness(item._id);
+        if (res.data?.success && res.data.token) {
+          localStorage.setItem("token", res.data.token);
+          if (res.data.user) {
+            localStorage.setItem("user", JSON.stringify(res.data.user));
+            setUser(res.data.user);
+          }
+        }
+      }
 
-    window.dispatchEvent(new Event("tenantChanged"));
+      sessionStorage.setItem("selectedTenantId", item._id);
+      sessionStorage.setItem("selectedClientCode", item.clientCode || "");
+      sessionStorage.setItem("selectedTenant", JSON.stringify(item));
 
-    setTenantOpen(false);
-    setTenantSearch("");
+      window.dispatchEvent(new Event("tenantChanged"));
+      window.dispatchEvent(new Event("userChanged"));
 
-    toast.success(`${item.businessName} selected`);
+      setTenantOpen(false);
+      setTenantSearch("");
 
-    navigate("/dashboard");
+      toast.success(`Switched to ${item.businessName}`);
+      navigate("/dashboard");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to switch company");
+    }
   };
 
   /* =========================================
@@ -399,10 +427,53 @@ function Header({ onMenuClick }) {
                   <input
                     type="text"
                     autoFocus
-                    placeholder="Search traders..."
+                    placeholder="Search companies..."
                     value={tenantSearch}
                     onChange={(event) => setTenantSearch(event.target.value)}
                   />
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "8px 12px",
+                    background: "#f8fafc",
+                    borderBottom: "1px solid #e2e8f0",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      color: "#64748b",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.04em",
+                    }}
+                  >
+                    Companies ({tenantList.length})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleAddCompanyClick}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      color: "#16a34a",
+                      background: "#dcfce7",
+                      border: "1px solid #bbf7d0",
+                      borderRadius: 6,
+                      padding: "4px 9px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <Plus size={13} strokeWidth={2.5} />
+                    Add Company
+                  </button>
                 </div>
 
                 <div className="tenant-dropdown-list">
@@ -414,12 +485,12 @@ function Header({ onMenuClick }) {
                     </div>
                   ) : (
                     tenantList.map((item) => {
-                      const isCurrent = item._id === tenant?._id;
-                      const accessible = isTraderAccessible(item);
+                      const isCurrent = String(item._id || item.id) === String(tenant?._id);
+                      const accessible = isTraderAccessible(item, tenant?._id);
 
                       return (
                         <button
-                          key={item._id}
+                          key={item._id || item.id}
                           type="button"
                           className={`tenant-option ${
                             isCurrent ? "tenant-option-current" : ""
@@ -437,6 +508,7 @@ function Header({ onMenuClick }) {
 
                             <span>
                               {item.clientCode}
+                              {item.city ? ` · ${item.city}` : ""}
                               {!accessible ? " · inactive" : ""}
                             </span>
                           </span>
@@ -448,16 +520,18 @@ function Header({ onMenuClick }) {
                   )}
                 </div>
 
-                <button
-                  type="button"
-                  className="tenant-dropdown-footer"
-                  onClick={() => {
-                    setTenantOpen(false);
-                    navigate("/traders");
-                  }}
-                >
-                  View all traders
-                </button>
+                {(isDeveloper || isSupport) && (
+                  <button
+                    type="button"
+                    className="tenant-dropdown-footer"
+                    onClick={() => {
+                      setTenantOpen(false);
+                      navigate("/traders");
+                    }}
+                  >
+                    View all traders
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -636,6 +710,23 @@ function Header({ onMenuClick }) {
           )}
         </div>
       </div>
+
+      {/* Add Business / Company Modal */}
+      <AddBusinessModal
+        isOpen={isAddBizOpen}
+        onClose={() => setIsAddBizOpen(false)}
+        onSuccess={() => {
+          loadTenants();
+          window.dispatchEvent(new Event("tenantChanged"));
+        }}
+        onLimitReached={() => setIsUpgradeModalOpen(true)}
+      />
+
+      {/* Upgrade Ad Banner Modal (MyBillBook style) */}
+      <UpgradeAdModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+      />
     </header>
   );
 }

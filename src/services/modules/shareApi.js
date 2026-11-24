@@ -4,6 +4,10 @@ const shareApi = {
   // Send invoice through Email or WhatsApp
   send: (payload) => apiClient.post("/share/send", payload),
 
+  // Public document link for viewing without downloading
+  getDocumentLink: (docType, ref) =>
+    apiClient.get(`/documents/${encodeURIComponent(docType)}/${encodeURIComponent(ref)}/link`),
+
   // Dashboard statistics
   stats: (period = "30d") =>
     apiClient.get("/share/stats", {

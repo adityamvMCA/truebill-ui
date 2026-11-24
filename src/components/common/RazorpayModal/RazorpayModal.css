@@ -1,0 +1,302 @@
+/* RazorpayModal.css - Realistic Razorpay Gateway Styling */
+
+.rzp-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: rzpFadeIn 0.2s ease-out;
+}
+
+@keyframes rzpFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.rzp-container {
+  background: #ffffff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 480px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  animation: rzpSlideUp 0.25s ease-out;
+}
+
+@keyframes rzpSlideUp {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Razorpay Header */
+.rzp-header {
+  background: #0c2340; /* Razorpay Brand Navy */
+  color: #ffffff;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rzp-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rzp-logo-badge {
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 0.95rem;
+  letter-spacing: -0.03em;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.rzp-header-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.rzp-header-subtitle {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.rzp-close-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  border-radius: 6px;
+}
+
+.rzp-close-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Order Summary Strip */
+.rzp-summary-bar {
+  background: #f8fafc;
+  padding: 12px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rzp-plan-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #0f172a;
+}
+
+.rzp-amount {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #2563eb;
+}
+
+/* Tabs */
+.rzp-tabs {
+  display: flex;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f1f5f9;
+}
+
+.rzp-tab-btn {
+  flex: 1;
+  padding: 12px 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #64748b;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.rzp-tab-btn.active {
+  background: #ffffff;
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+  font-weight: 700;
+}
+
+/* Tab Contents */
+.rzp-body {
+  padding: 20px;
+  min-height: 250px;
+}
+
+/* UPI Section */
+.rzp-upi-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.rzp-qr-box {
+  width: 140px;
+  height: 140px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.rzp-qr-img {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+}
+
+.rzp-apps-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  margin-bottom: 14px;
+}
+
+.rzp-app-pill {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+}
+
+.rzp-upi-input-group {
+  width: 100%;
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.rzp-upi-input {
+  flex: 1;
+  padding: 9px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.rzp-upi-input:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+/* Card Section */
+.rzp-card-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rzp-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rzp-form-group label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.rzp-form-group input {
+  padding: 9px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.rzp-card-row {
+  display: flex;
+  gap: 10px;
+}
+
+.rzp-test-card-btn {
+  background: #f0fdf4;
+  border: 1px dashed #16a34a;
+  color: #15803d;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+}
+
+/* Footer & CTA */
+.rzp-footer {
+  padding: 16px 20px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.rzp-pay-btn {
+  width: 100%;
+  padding: 12px;
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.2s;
+}
+
+.rzp-pay-btn:hover {
+  background: #1d4ed8;
+}
+
+.rzp-pay-btn:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
+.rzp-security-note {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 0.725rem;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}

@@ -12,6 +12,13 @@ import {
   Palette,
   RefreshCw,
   Save,
+  GitBranch,
+  MapPin,
+  Plus,
+  Crown,
+  Phone,
+  Mail,
+  FileText,
 } from "lucide-react";
 
 import Input from "../../components/common/Form/Input";
@@ -20,6 +27,10 @@ import Textarea from "../../components/common/Form/Textarea";
 import Button from "../../components/common/Form/Button";
 
 import api from "../../services/api";
+import businessApi from "../../services/modules/businessApi";
+import AddBranchModal from "../../components/common/BusinessModals/AddBranchModal";
+import AddBusinessModal from "../../components/common/BusinessModals/AddBusinessModal";
+import { UpgradeAdModal } from "../../components/common/UpgradeAdBanner/UpgradeAdBanner";
 
 import {
   getCurrentTenantContext,
@@ -131,6 +142,18 @@ function CompanySettings() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Branch & Multi-Company management state
+  const [branches, setBranches] = useState([]);
+  const [branchesLoading, setBranchesLoading] = useState(false);
+  const [branchLimits, setBranchLimits] = useState(null);
+  const [isAddBranchOpen, setIsAddBranchOpen] = useState(false);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [upgradeBannerData, setUpgradeBannerData] = useState(null);
+
+  // Multi-Company list & modal state
+  const [myBusinesses, setMyBusinesses] = useState([]);
+  const [isAddCompanyOpen, setIsAddCompanyOpen] = useState(false);
 
   const [theme, setTheme] = useState(
     () =>
@@ -255,13 +278,115 @@ function CompanySettings() {
       }
     }, []);
 
+  const fetchBranches = useCallback(async () => {
+    setBranchesLoading(true);
+    try {
+      const [branchRes, bizRes] = await Promise.allSettled([
+        businessApi.getBranches(),
+        businessApi.getMyBusinesses(),
+      ]);
+
+      if (branchRes.status === "fulfilled" && branchRes.value.data?.success) {
+        setBranches(branchRes.value.data.branches || []);
+      }
+      if (bizRes.status === "fulfilled" && bizRes.value.data?.success) {
+        setBranchLimits(bizRes.value.data.planLimits || null);
+        setMyBusinesses(bizRes.value.data.businesses || []);
+      }
+    } catch (err) {
+      console.error("Error loading branches/companies:", err);
+    } finally {
+      setBranchesLoading(false);
+    }
+  }, []);
+
+  const handleAddCompanyClick = () => {
+    const currentPlan = (branchLimits?.plan || tenant?.subscriptionPlan || "basic").toLowerCase();
+
+    // Premium: unlimited companies
+    if (currentPlan === "premium") {
+      setIsAddCompanyOpen(true);
+      return;
+    }
+
+    // Standard: allows up to 3 companies
+    if (currentPlan === "standard" && myBusinesses.length < 3) {
+      setIsAddCompanyOpen(true);
+      return;
+    }
+
+    // Basic / Trial (or limit reached): Show MyBillBook-style Upgrade Ad Modal!
+    setIsUpgradeModalOpen(true);
+  };
+
+  const handleSwitchCompany = async (targetId, name) => {
+    if (targetId === tenant?._id) return;
+    try {
+      const res = await businessApi.switchBusiness(targetId);
+      if (res.data?.success && res.data.token) {
+        localStorage.setItem("token", res.data.token);
+        if (res.data.user) {
+          localStorage.setItem("user", JSON.stringify(res.data.user));
+        }
+      }
+      sessionStorage.setItem("selectedTenantId", targetId);
+      sessionStorage.setItem("selectedTenant", JSON.stringify({ _id: targetId, businessName: name }));
+      window.dispatchEvent(new Event("tenantChanged"));
+      window.dispatchEvent(new Event("userChanged"));
+      toast.success(`Switched to ${name}`);
+      window.location.reload();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to switch company");
+    }
+  };
+
+  const handleAddBranchClick = () => {
+    const currentPlan = (branchLimits?.plan || tenant?.subscriptionPlan || "basic").toLowerCase();
+
+    // 1. Premium subscription has UNLIMITED branches: Never block, never show upgrade banner
+    if (currentPlan === "premium") {
+      setIsAddBranchOpen(true);
+      return;
+    }
+
+    // 2. Standard subscription allows up to 5 branches
+    if (currentPlan === "standard") {
+      if (branches.length < 5) {
+        setIsAddBranchOpen(true);
+        return;
+      }
+    }
+
+    // 3. Basic / Trial (or limit reached): Show in-app Upgrade Ad Modal on the page
+    // (Stays on Company Settings page without navigating away until user clicks Upgrade to Pro)
+    setUpgradeBannerData({
+      badge: "PRO FEATURE",
+      title: "Unlock Multiple Branches & Locations",
+      subtitle: `Your current ${currentPlan.toUpperCase()} plan allows ${currentPlan === "standard" ? 5 : 1} branch. Upgrade to TrueBill Standard or Premium to add multiple showrooms and warehouses!`,
+      highlights: [
+        "Create unlimited branches and warehouses",
+        "Dedicated branch codes, GSTINs and invoices",
+        "Branch-wise inventory and sales tracking",
+        "Seamless 1-click branch switching",
+      ],
+      plans: [
+        { name: "Standard", price: "₹4,999/yr", features: "Up to 5 Branches" },
+        { name: "Premium", price: "₹8,999/yr", features: "Unlimited Branches" },
+      ],
+      actionText: "Upgrade to Pro",
+      actionUrl: "/billing/renew",
+    });
+    setIsUpgradeModalOpen(true);
+  };
+
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
 
   useEffect(() => {
     loadCompanySettings();
-  }, [loadCompanySettings]);
+    fetchBranches();
+  }, [loadCompanySettings, fetchBranches]);
 
   const validateForm = () => {
     const normalizedEmail = formData.email
@@ -489,6 +614,166 @@ function CompanySettings() {
         </div>
       ) : (
         <div className="company-settings-content">
+          {/* My Companies & Sub-Companies Card */}
+          <div className="settings-card">
+            <div
+              className="settings-card-header"
+              style={{
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: 12,
+              }}
+            >
+              <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <div
+                  className="settings-card-icon"
+                  style={{ background: "#ede9fe", color: "#6d28d9" }}
+                >
+                  <Building2 size={18} />
+                </div>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <h2>My Companies ({myBusinesses.length})</h2>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        padding: "2px 8px",
+                        borderRadius: 12,
+                        background: "#ede9fe",
+                        color: "#6d28d9",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {branchLimits?.plan?.toUpperCase() || "PLAN"}
+                    </span>
+                  </div>
+                  <p>
+                    Manage all your business entities and sub-companies under your account with separate books
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                {branchLimits && (
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "#64748b",
+                      fontWeight: 500,
+                    }}
+                  >
+                    Limit:{" "}
+                    {branchLimits.businesses === null
+                      ? "Unlimited"
+                      : `${myBusinesses.length} / ${branchLimits.businesses}`}
+                  </span>
+                )}
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={handleAddCompanyClick}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "8px 14px",
+                    fontSize: "0.875rem",
+                    background: "#00ab55",
+                    borderColor: "#00ab55",
+                  }}
+                >
+                  <Plus size={15} />
+                  Add Company
+                </Button>
+              </div>
+            </div>
+
+            {myBusinesses.length > 0 && (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                  gap: 12,
+                  marginTop: 8,
+                }}
+              >
+                {myBusinesses.map((b) => {
+                  const isCurrent = String(b.id || b._id) === String(tenant?._id);
+                  return (
+                    <div
+                      key={b.id || b._id}
+                      style={{
+                        border: isCurrent ? "1.5px solid #6d28d9" : "1px solid #e2e8f0",
+                        background: isCurrent ? "#fbfbfe" : "#ffffff",
+                        borderRadius: 10,
+                        padding: "14px 16px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 8,
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontWeight: 700, fontSize: "0.95rem", color: "#0f172a" }}>
+                              {b.businessName}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: 2 }}>
+                            Code: {b.clientCode} {b.businessType ? `· ${b.businessType}` : ""}
+                          </div>
+                        </div>
+
+                        {isCurrent ? (
+                          <span
+                            style={{
+                              fontSize: "0.7rem",
+                              background: "#ede9fe",
+                              color: "#6d28d9",
+                              fontWeight: 700,
+                              padding: "2px 8px",
+                              borderRadius: 12,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            <CheckCircle2 size={11} />
+                            Active
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleSwitchCompany(b.id || b._id, b.businessName)}
+                            style={{
+                              fontSize: "0.72rem",
+                              fontWeight: 700,
+                              padding: "4px 9px",
+                              borderRadius: 6,
+                              background: "#f1f5f9",
+                              color: "#334155",
+                              border: "1px solid #cbd5e1",
+                              cursor: "pointer",
+                            }}
+                          >
+                            Switch to this
+                          </button>
+                        )}
+                      </div>
+
+                      {b.gstNo && (
+                        <div style={{ fontSize: "0.78rem", color: "#64748b" }}>
+                          GST: <strong>{b.gstNo}</strong>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           <form onSubmit={handleSubmit}>
             <div className="settings-card">
               <div className="settings-card-header">
@@ -622,6 +907,355 @@ function CompanySettings() {
             </div>
           </form>
 
+          {/* Branches & Multiple Locations */}
+          <div className="settings-card">
+            <div
+              className="settings-card-header"
+              style={{
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: 12,
+              }}
+            >
+              <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <div
+                  className="settings-card-icon"
+                  style={{ background: "#f0fdf4", color: "#16a34a" }}
+                >
+                  <GitBranch size={18} />
+                </div>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <h2>Branches & Locations</h2>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        padding: "2px 8px",
+                        borderRadius: 12,
+                        background: "#f1f5f9",
+                        color: "#475569",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {branches.length} {branches.length === 1 ? "Branch" : "Branches"}
+                    </span>
+                  </div>
+                  <p>
+                    Manage physical branches, warehouses, showrooms, and city stores for this company
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                {branchLimits && (
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "#64748b",
+                      fontWeight: 500,
+                    }}
+                  >
+                    Limit:{" "}
+                    {branchLimits.branches === null
+                      ? "Unlimited"
+                      : `${branches.length} / ${branchLimits.branches}`}{" "}
+                    ({branchLimits.plan?.toUpperCase()})
+                  </span>
+                )}
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={handleAddBranchClick}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "8px 14px",
+                    fontSize: "0.875rem",
+                  }}
+                >
+                  <Plus size={15} />
+                  Add Branch
+                </Button>
+              </div>
+            </div>
+
+            {branchesLoading ? (
+              <div
+                style={{
+                  padding: "24px 0",
+                  textAlign: "center",
+                  color: "#64748b",
+                  fontSize: "0.875rem",
+                }}
+              >
+                <RefreshCw
+                  size={18}
+                  className="spin-icon"
+                  style={{
+                    display: "inline-block",
+                    marginRight: 8,
+                    verticalAlign: "middle",
+                  }}
+                />
+                Loading branches...
+              </div>
+            ) : branches.length === 0 ? (
+              <div
+                style={{
+                  padding: "32px 16px",
+                  textAlign: "center",
+                  background: "#f8fafc",
+                  borderRadius: 8,
+                  border: "1px dashed #cbd5e1",
+                }}
+              >
+                <GitBranch
+                  size={28}
+                  style={{ color: "#94a3b8", margin: "0 auto 8px" }}
+                />
+                <p
+                  style={{
+                    margin: "0 0 4px",
+                    fontWeight: 600,
+                    color: "#334155",
+                  }}
+                >
+                  No branches found
+                </p>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "0.8125rem",
+                    color: "#64748b",
+                  }}
+                >
+                  Create your first branch to organize multiple outlets and locations.
+                </p>
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns:
+                    "repeat(auto-fill, minmax(280px, 1fr))",
+                  gap: 12,
+                  marginTop: 8,
+                }}
+              >
+                {branches.map((b) => (
+                  <div
+                    key={b._id}
+                    style={{
+                      border: b.isMain
+                        ? "1.5px solid #16a34a"
+                        : "1px solid #e2e8f0",
+                      background: b.isMain ? "#f0fdf4" : "#ffffff",
+                      borderRadius: 10,
+                      padding: "14px 16px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                      position: "relative",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        justifyContent: "space-between",
+                        gap: 8,
+                      }}
+                    >
+                      <div>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontWeight: 700,
+                              fontSize: "0.95rem",
+                              color: "#0f172a",
+                            }}
+                          >
+                            {b.name}
+                          </span>
+                          {b.code && (
+                            <span
+                              style={{
+                                fontSize: "0.7rem",
+                                background: "#e2e8f0",
+                                color: "#475569",
+                                padding: "1px 6px",
+                                borderRadius: 4,
+                                fontWeight: 600,
+                              }}
+                            >
+                              {b.code}
+                            </span>
+                          )}
+                        </div>
+                        {b.isMain && (
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                              fontSize: "0.7rem",
+                              background: "#dcfce7",
+                              color: "#15803d",
+                              padding: "2px 8px",
+                              borderRadius: 12,
+                              fontWeight: 700,
+                              marginTop: 4,
+                            }}
+                          >
+                            <CheckCircle2 size={11} />
+                            Main Head Branch
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: "0.8125rem",
+                        color: "#475569",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 4,
+                        marginTop: 4,
+                      }}
+                    >
+                      {(b.phone || b.email) && (
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          {b.phone && (
+                            <span
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 4,
+                              }}
+                            >
+                              <Phone size={12} color="#64748b" />
+                              {b.phone}
+                            </span>
+                          )}
+                          {b.email && (
+                            <span
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 4,
+                              }}
+                            >
+                              <Mail size={12} color="#64748b" />
+                              {b.email}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {b.gstNo && (
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
+                        >
+                          <FileText size={12} color="#64748b" />
+                          <span>GST: {b.gstNo}</span>
+                        </div>
+                      )}
+
+                      {(b.address?.city || b.address?.state) && (
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
+                        >
+                          <MapPin size={12} color="#64748b" />
+                          <span>
+                            {[
+                              b.address?.street,
+                              b.address?.city,
+                              b.address?.state,
+                              b.address?.pincode,
+                            ]
+                              .filter(Boolean)
+                              .join(", ")}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Plan limit upgrade banner prompt if basic */}
+            {branchLimits?.plan === "basic" && (
+              <div
+                style={{
+                  marginTop: 14,
+                  padding: "10px 14px",
+                  borderRadius: 8,
+                  background: "#fffbeb",
+                  border: "1px solid #fef3c7",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Crown size={16} color="#d97706" />
+                  <span
+                    style={{
+                      fontSize: "0.8125rem",
+                      color: "#92400e",
+                      fontWeight: 500,
+                    }}
+                  >
+                    Basic Plan allows 1 branch. Upgrade to Standard or Premium to add multiple branches & warehouses!
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddBranchClick}
+                  style={{
+                    background: "#d97706",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: 6,
+                    padding: "4px 10px",
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  View Plans
+                </button>
+              </div>
+            )}
+          </div>
+
           <div className="settings-card">
             <div className="settings-card-header">
               <div className="settings-card-icon">
@@ -740,6 +1374,35 @@ function CompanySettings() {
           )}
         </div>
       )}
+
+      {/* Add Business / Company Modal */}
+      <AddBusinessModal
+        isOpen={isAddCompanyOpen}
+        onClose={() => setIsAddCompanyOpen(false)}
+        onSuccess={() => {
+          fetchBranches();
+          loadCompanySettings();
+        }}
+        onLimitReached={() => setIsUpgradeModalOpen(true)}
+      />
+
+      {/* Add Branch Modal */}
+      <AddBranchModal
+        isOpen={isAddBranchOpen}
+        onClose={() => setIsAddBranchOpen(false)}
+        onSuccess={fetchBranches}
+        onLimitReached={(banner) => {
+          setUpgradeBannerData(banner);
+          setIsUpgradeModalOpen(true);
+        }}
+      />
+
+      {/* Upgrade Ad Modal (shown when Basic plan limit reached) */}
+      <UpgradeAdModal
+        isOpen={isUpgradeModalOpen}
+        banner={upgradeBannerData}
+        onClose={() => setIsUpgradeModalOpen(false)}
+      />
     </div>
   );
 }

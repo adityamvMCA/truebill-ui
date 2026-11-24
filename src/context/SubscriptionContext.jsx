@@ -6,9 +6,16 @@ import {
   useState,
 } from "react";
 import apiClient from "../services/apiClient";
+import {
+  isSubscriptionOrTrialExpired,
+  assertCanCreateRecord,
+} from "../utils/trialExpired";
 
 const SubscriptionContext = createContext({
   subscription: null,
+  isTrialExpired: false,
+  canCreateRecords: true,
+  assertCanCreate: () => true,
   hasFeature: () => true,
   refresh: async () => {},
 });
@@ -61,11 +68,24 @@ export const SubscriptionProvider = ({ children }) => {
     [subscription]
   );
 
+  const isTrialExpired = isSubscriptionOrTrialExpired(subscription);
+  const canCreateRecords = !isTrialExpired;
+
+  const assertCanCreate = useCallback(
+    (triggerModal = true) => {
+      return assertCanCreateRecord(subscription, triggerModal);
+    },
+    [subscription]
+  );
+
   return (
     <SubscriptionContext.Provider
       value={{
         subscription,
         setSubscription,
+        isTrialExpired,
+        canCreateRecords,
+        assertCanCreate,
         hasFeature,
         refresh,
       }}
