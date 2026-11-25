@@ -125,11 +125,12 @@ function Header({ onMenuClick }) {
   const tenantClientCode = tenant?.clientCode || user?.clientCode || null;
 
   const isDeveloper = user?.platformRole === "developer";
-
   const isSupport = user?.platformRole === "support";
+  const isAdmin = user?.role === "admin" || !user?.role;
 
-  // Allow all users to view and switch between their companies
-  const canSwitchTenant = true;
+  // Only allow company switcher for platform staff or company admin
+  // Non-admin employees/staff stay strictly locked to their assigned company!
+  const canSwitchTenant = isDeveloper || isSupport || isAdmin;
 
   // Multi-Company management states
   const [isAddBizOpen, setIsAddBizOpen] = useState(false);
@@ -509,7 +510,39 @@ function Header({ onMenuClick }) {
                           </span>
 
                           <span className="tenant-option-text">
-                            <strong>{item.businessName}</strong>
+                            <strong style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              {item.businessName}
+                              {item.isSubCompany && (
+                                <span
+                                  style={{
+                                    fontSize: "10px",
+                                    fontWeight: 700,
+                                    padding: "1px 6px",
+                                    borderRadius: "4px",
+                                    background: "#f1f5f9",
+                                    color: "#475569",
+                                    border: "1px solid #cbd5e1",
+                                  }}
+                                >
+                                  Sub-Company
+                                </span>
+                              )}
+                              {item.isMainCompany && (
+                                <span
+                                  style={{
+                                    fontSize: "10px",
+                                    fontWeight: 700,
+                                    padding: "1px 6px",
+                                    borderRadius: "4px",
+                                    background: "#ecfdf5",
+                                    color: "#059669",
+                                    border: "1px solid #a7f3d0",
+                                  }}
+                                >
+                                  Main
+                                </span>
+                              )}
+                            </strong>
 
                             <span>
                               {item.clientCode}

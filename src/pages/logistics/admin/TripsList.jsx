@@ -1,236 +1,259 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Truck,
-  Plus,
-  Search,
-  MapPin,
-  ExternalLink,
-  Share2,
-  RotateCw,
-  Navigation,
-  CheckCircle2,
-  Clock,
-  Radio,
-} from "lucide-react";
+import { Truck, Navigation, Share2, MapPin, ExternalLink } from "lucide-react";
 import toast from "react-hot-toast";
+
+import DataList from "../../../components/common/DataList/DataList";
+import StatusField from "../../../components/common/StatusField/StatusField";
 import logisticsApi from "../../../services/modules/logisticsApi";
 
+const filters = [
+  {
+    key: "status",
+    label: "Status",
+    type: "select",
+    options: ["STARTED", "SCHEDULED", "COMPLETED", "CANCELLED"],
+  },
+];
+
+const quickFilters = [
+  { key: "status", value: "", label: "All Trips" },
+  { key: "status", value: "STARTED", label: "In Transit" },
+  { key: "status", value: "SCHEDULED", label: "Scheduled" },
+  { key: "status", value: "COMPLETED", label: "Delivered" },
+];
+
 export default function TripsList() {
-  const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [trips, setTrips] = useState([]);
   const navigate = useNavigate();
+  const requestVersion = useRef(0);
+
+  const loadTrips = useCallback(async () => {
+    const version = ++requestVersion.current;
+    setLoading(true);
+
+    try {
+      const response = await logisticsApi.getTrips();
+      if (version !== requestVersion.current) return;
+
+      const list = response?.data?.data || response?.data || [];
+      setTrips(Array.isArray(list) ? list : []);
+    } catch (error) {
+      if (version !== requestVersion.current) return;
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Failed to load trips list",
+      );
+      setTrips([]);
+    } finally {
+      if (version === requestVersion.current) {
+        setLoading(false);
+      }
+    }
+  }, []);
 
   useEffect(() => {
-    fetchTrips();
-  }, [statusFilter]);
-
-  const fetchTrips = async () => {
-    try {
-      setLoading(true);
-      const params = {};
-      if (statusFilter) params.status = statusFilter;
-      const res = await logisticsApi.getTrips(params);
-      if (res.data?.success) {
-        setTrips(res.data.data || []);
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to load trips");
-    } finally {
-      setLoading(false);
-    }
-  };
+    loadTrips();
+  }, [loadTrips]);
 
   const copyTrackingLink = (token) => {
+    if (!token) {
+      toast.error("Tracking token not available");
+      return;
+    }
     const url = `${window.location.origin}/track/${token}`;
     navigator.clipboard.writeText(url);
     toast.success("Customer tracking link copied to clipboard!");
   };
 
-  const filtered = trips.filter(
-    (t) =>
-      t.tripNumber?.toLowerCase().includes(search.toLowerCase()) ||
-      t.customerName?.toLowerCase().includes(search.toLowerCase()) ||
-      t.driverName?.toLowerCase().includes(search.toLowerCase()) ||
-      t.destination?.address?.toLowerCase().includes(search.toLowerCase())
+  const columns = useMemo(
+    () => [
+      {
+        key: "tripNumber",
+        label: "Trip #",
+        sortable: true,
+        render: (value) => (
+          <span
+            style={{
+              fontFamily: "monospace",
+              fontWeight: 700,
+              fontSize: "12px",
+              padding: "2px 6px",
+              borderRadius: "4px",
+              backgroundColor: "var(--bg-tag, #f1f5f9)",
+              color: "var(--text-main, #334155)",
+            }}
+          >
+            {value || "TRP"}
+          </span>
+        ),
+      },
+      {
+        key: "customerName",
+        label: "Customer & Destination",
+        sortable: true,
+        render: (value, row) => (
+          <div className="dl-customer">
+            <strong style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <Truck size={14} className="text-muted" />
+              {value || "Unknown Customer"}
+            </strong>
+            <span
+              style={{
+                fontSize: "12px",
+                color: "var(--text-muted, #64748b)",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+              }}
+            >
+              <MapPin size={11} />
+              {row.destination?.address || "No address provided"}
+            </span>
+          </div>
+        ),
+      },
+      {
+        key: "driverName",
+        label: "Driver / Vehicle",
+        sortable: true,
+        render: (value, row) => (
+          <div>
+            <strong>{value || "Unassigned"}</strong>
+            <div
+              style={{
+                fontSize: "11px",
+                color: "var(--text-muted, #64748b)",
+                marginTop: "2px",
+              }}
+            >
+              {row.vehicleNumber || row.vehicleType || "Fleet Vehicle"}
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: "status",
+        label: "Trip Status",
+        sortable: true,
+        render: (value) => <StatusField value={value || "SCHEDULED"} />,
+      },
+      {
+        key: "distanceCoveredKm",
+        label: "Distance Covered",
+        sortable: true,
+        render: (value) => (
+          <span style={{ fontWeight: 600 }}>{value ? `${value} km` : "0 km"}</span>
+        ),
+      },
+      {
+        key: "createdAt",
+        label: "Date & Time",
+        sortable: true,
+        render: (value, row) => {
+          const dateStr = value ? new Date(value).toLocaleDateString() : "—";
+          const timeStr = row.startedAt
+            ? `Started: ${new Date(row.startedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+            : row.completedAt
+              ? `Delivered: ${new Date(row.completedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+              : "Not started";
+
+          return (
+            <div>
+              <div style={{ fontSize: "12px", fontWeight: 600 }}>{dateStr}</div>
+              <div style={{ fontSize: "11px", color: "var(--text-muted, #64748b)" }}>
+                {timeStr}
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        key: "trackingToken",
+        label: "Actions",
+        sortable: false,
+        render: (token, row) => (
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <button
+              type="button"
+              onClick={() => copyTrackingLink(token)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                padding: "4px 8px",
+                borderRadius: "6px",
+                fontSize: "11px",
+                fontWeight: 600,
+                border: "1px solid var(--border-color, #e2e8f0)",
+                backgroundColor: "#fff",
+                cursor: "pointer",
+                color: "var(--text-main, #334155)",
+              }}
+              title="Copy customer tracking URL"
+            >
+              <Share2 size={12} />
+              <span>Share</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate(`/track/${token}`)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                padding: "4px 8px",
+                borderRadius: "6px",
+                fontSize: "11px",
+                fontWeight: 600,
+                border: "1px solid var(--border-color, #e2e8f0)",
+                backgroundColor: "#fff",
+                cursor: "pointer",
+                color: "var(--text-main, #334155)",
+              }}
+              title="Preview Customer Live Map"
+            >
+              <ExternalLink size={12} />
+              <span>View</span>
+            </button>
+          </div>
+        ),
+      },
+    ],
+    [navigate],
   );
 
   return (
-    <div className="p-4 sm:p-6 bg-slate-950 min-h-[calc(100vh-65px)] text-slate-100 font-sans">
-      {/* HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <Truck className="w-6 h-6 text-emerald-400" />
-            Logistics Trips & Dispatch History
-          </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Track and monitor delivery dispatches, receiver confirmations, and active routes
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigate("/logistics/fleet")}
-            className="py-2 px-3.5 bg-slate-900 border border-slate-700 hover:bg-slate-800 text-emerald-400 font-bold text-xs rounded-xl flex items-center gap-1.5 transition"
-          >
-            <Navigation className="w-4 h-4" />
-            Live Fleet Map
-          </button>
-          <button
-            onClick={fetchTrips}
-            className="p-2.5 bg-slate-900 border border-slate-800 hover:bg-slate-800 rounded-xl text-slate-300 transition"
-            title="Refresh"
-          >
-            <RotateCw className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* SEARCH & FILTERS */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by trip #, customer, driver, address..."
-            className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-emerald-500"
-          />
-        </div>
-
-        <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
-          {[
-            { id: "", label: "All" },
-            { id: "STARTED", label: "Moving / Started" },
-            { id: "SCHEDULED", label: "Scheduled" },
-            { id: "COMPLETED", label: "Completed" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setStatusFilter(tab.id)}
-              className={`py-1.5 px-3 rounded-lg font-semibold transition ${
-                statusFilter === tab.id
-                  ? "bg-emerald-500 text-slate-950 shadow-sm"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* TRIPS TABLE */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-slate-950/60 border-b border-slate-800 text-slate-400 uppercase font-bold tracking-wider text-[11px]">
-                <th className="py-3.5 px-4">Trip Number</th>
-                <th className="py-3.5 px-4">Customer & Destination</th>
-                <th className="py-3.5 px-4">Driver & Vehicle</th>
-                <th className="py-3.5 px-4">Status</th>
-                <th className="py-3.5 px-4">Distance</th>
-                <th className="py-3.5 px-4">Started / Delivered</th>
-                <th className="py-3.5 px-4 text-right">Customer Link</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60 font-medium">
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400">
-                    <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                    Loading trips...
-                  </td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400">
-                    No trips found for the selected filter.
-                  </td>
-                </tr>
-              ) : (
-                filtered.map((t) => {
-                  const isStarted = t.status === "STARTED";
-
-                  return (
-                    <tr key={t._id} className="hover:bg-slate-800/40 transition">
-                      <td className="py-3.5 px-4 font-mono font-bold text-white">
-                        {t.tripNumber}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <div className="font-bold text-white">
-                          {t.customerName}
-                        </div>
-                        <div className="text-[11px] text-slate-400 max-w-xs truncate">
-                          {t.destination?.address}
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <div className="font-semibold text-slate-200">
-                          {t.driverName}
-                        </div>
-                        <div className="text-[11px] text-slate-400 font-mono">
-                          {t.vehicleNumber || t.vehicleType}
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                            isStarted
-                              ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
-                              : t.status === "COMPLETED"
-                              ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/30"
-                              : "bg-slate-800 text-slate-400"
-                          }`}
-                        >
-                          {isStarted && (
-                            <Radio className="w-3 h-3 animate-pulse" />
-                          )}
-                          {t.status}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 font-bold text-slate-300">
-                        {t.distanceCoveredKm || 0} km
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-400 text-[11px]">
-                        {t.startedAt ? (
-                          <div>
-                            Started: {new Date(t.startedAt).toLocaleTimeString()}
-                          </div>
-                        ) : (
-                          <div>
-                            Created: {new Date(t.createdAt).toLocaleDateString()}
-                          </div>
-                        )}
-                        {t.completedAt && (
-                          <div className="text-emerald-400">
-                            Delivered: {new Date(t.completedAt).toLocaleTimeString()}
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <button
-                          onClick={() => copyTrackingLink(t.trackingToken)}
-                          className="py-1 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-emerald-400 text-xs font-semibold inline-flex items-center gap-1.5 transition"
-                          title="Copy tracking URL for customer"
-                        >
-                          <Share2 className="w-3.5 h-3.5" /> Share
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+    <DataList
+      title="Logistics Trips & Dispatches"
+      subtitle="Track delivery dispatches, receiver confirmations, distance traveled and active GPS routes"
+      columns={columns}
+      data={trips}
+      loading={loading}
+      rowKey="_id"
+      showCase="list"
+      searchable
+      filterable
+      sortable
+      columnVisibility
+      pagination
+      filters={filters}
+      quickFilters={quickFilters}
+      storageKey="trustiq-logistics-trips"
+      searchPlaceholder="Search trip #, customer, driver, address..."
+      onRefresh={loadTrips}
+      addButton={
+        <button
+          type="button"
+          className="so-primary-button"
+          onClick={() => navigate("/logistics/fleet")}
+        >
+          <Navigation size={16} />
+          <span>Live Fleet Map</span>
+        </button>
+      }
+    />
   );
 }

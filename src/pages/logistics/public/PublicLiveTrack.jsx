@@ -16,6 +16,7 @@ import "leaflet/dist/leaflet.css";
 
 import logisticsApi from "../../../services/modules/logisticsApi";
 import { createLogisticsSocket } from "../../../services/modules/logisticsSocket";
+import "../logistics.css";
 
 export default function PublicLiveTrack() {
   const { token } = useParams();
@@ -180,121 +181,127 @@ export default function PublicLiveTrack() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white font-sans">
-        <div className="w-10 h-10 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-slate-400 font-medium">Connecting to Live Tracking...</p>
+      <div className="driver-login-page">
+        <div style={{ textAlign: "center" }}>
+          <div className="driver-logo-box" style={{ animation: "pulse 2s infinite" }}>
+            <Truck size={32} />
+          </div>
+          <p style={{ color: "#94a3b8", fontWeight: 600 }}>Connecting to Live Tracking...</p>
+        </div>
       </div>
     );
   }
 
   if (errorMsg) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white px-4 font-sans">
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 max-w-md w-full text-center shadow-2xl">
-          <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-3" />
-          <h2 className="text-lg font-bold text-white mb-1">
-            Tracking Link Unavailable
-          </h2>
-          <p className="text-sm text-slate-400">{errorMsg}</p>
+      <div className="login-container">
+        <div className="login-card" style={{ textAlign: "center" }}>
+          <AlertCircle size={44} color="var(--danger, #dc2626)" style={{ margin: "0 auto 12px" }} />
+          <h1>Tracking Link Unavailable</h1>
+          <p className="login-subtitle" style={{ marginBottom: 0 }}>{errorMsg}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+    <div className="driver-portal-layout" style={{ minHeight: "100vh" }}>
       {/* Top Banner */}
-      <header className="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold">
-            <Truck className="w-5 h-5 stroke-[2.5]" />
+      <header className="driver-header">
+        <div className="driver-header-left">
+          <div className="driver-avatar-box">
+            <Truck size={22} strokeWidth={2.5} />
           </div>
           <div>
-            <h1 className="text-sm font-bold text-white leading-tight">
-              Live Order Delivery Tracking
-            </h1>
-            <p className="text-xs text-slate-400">Order: {trip.tripNumber}</p>
+            <h1 className="driver-title-text">Live Delivery Tracking</h1>
+            <div style={{ fontSize: 11, color: "#64748b" }}>Order #{trip.tripNumber}</div>
           </div>
         </div>
 
         <span
-          className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider flex items-center gap-1.5 ${
-            trip.status === "COMPLETED"
-              ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
-              : trip.status === "STARTED"
-              ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-              : "bg-slate-800 text-slate-400"
-          }`}
+          className={
+            trip.status === "STARTED"
+              ? "driver-badge-started"
+              : "driver-badge-scheduled"
+          }
         >
-          {trip.status === "STARTED" && (
-            <Radio className="w-3.5 h-3.5 animate-pulse" />
-          )}
+          {trip.status === "STARTED" && <Radio size={14} />}
           {trip.status === "STARTED" ? "OUT FOR DELIVERY" : trip.status}
         </span>
       </header>
 
       {/* Main Container */}
-      <div className="flex-1 flex flex-col md:flex-row relative">
-        {/* Info Drawer */}
-        <div className="w-full md:w-80 bg-slate-900/90 border-r border-slate-800 p-4 space-y-4 z-20 shrink-0">
-          <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-3.5 space-y-2">
-            <span className="text-[10px] uppercase font-bold text-slate-400">
-              Delivery Recipient
-            </span>
-            <p className="text-sm font-bold text-white">{trip.customerName}</p>
-            <p className="text-xs text-slate-300 leading-snug">
-              {trip.destination?.address}
-            </p>
+      <div style={{ display: "flex", flex: 1, flexDirection: "column", position: "relative" }}>
+        {/* Info Box */}
+        <div style={{ padding: 16, maxWidth: 580, margin: "0 auto", width: "100%" }}>
+          <div className="driver-card" style={{ marginBottom: 12 }}>
+            <span className="driver-trip-label">Recipient</span>
+            <h4 style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", margin: "4px 0 2px" }}>
+              {trip.customerName}
+            </h4>
+            <p style={{ fontSize: 12, color: "#475569", margin: 0 }}>{trip.destination?.address}</p>
           </div>
 
-          <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-3.5 space-y-2 text-xs">
-            <span className="text-[10px] uppercase font-bold text-slate-400">
-              Assigned Vehicle & Driver
+          <div className="driver-card" style={{ marginBottom: 12, fontSize: 12 }}>
+            <span className="driver-trip-label" style={{ display: "block", marginBottom: 8 }}>
+              Vehicle & Driver
             </span>
-            <div className="flex justify-between">
-              <span className="text-slate-400">Driver:</span>
-              <span className="font-bold text-white">{trip.driverName}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+              <span style={{ color: "#64748b" }}>Driver:</span>
+              <strong style={{ color: "#0f172a" }}>{trip.driverName}</strong>
             </div>
-            <div className="flex justify-between">
-              <span className="text-slate-400">Vehicle No:</span>
-              <span className="font-bold text-white font-mono">
-                {trip.vehicleNumber || trip.vehicleType}
-              </span>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+              <span style={{ color: "#64748b" }}>Vehicle:</span>
+              <strong style={{ color: "#0f172a" }}>{trip.vehicleNumber || trip.vehicleType}</strong>
             </div>
             {trip.driverPhone && (
-              <div className="pt-2 border-t border-slate-800">
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #e2e8f0" }}>
                 <a
                   href={`tel:${trip.driverPhone}`}
-                  className="w-full py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 font-bold rounded-lg transition inline-flex items-center justify-center gap-2"
+                  className="driver-call-btn"
+                  style={{ width: "100%", justifyContent: "center", padding: 8 }}
                 >
-                  <Phone className="w-3.5 h-3.5" /> Call Driver
+                  <Phone size={14} /> Call Driver ({trip.driverPhone})
                 </a>
               </div>
             )}
           </div>
 
           {trip.status === "STARTED" && (
-            <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-xl p-3 text-center text-xs">
-              <span className="text-emerald-400 font-bold flex items-center justify-center gap-1 mb-1">
-                <Radio className="w-3.5 h-3.5 animate-pulse" /> Live Telemetry
+            <div
+              style={{
+                background: "#ecfdf5",
+                border: "1px solid #a7f3d0",
+                borderRadius: 12,
+                padding: "10px 14px",
+                textAlign: "center",
+                fontSize: 12,
+                color: "#059669",
+                marginBottom: 12,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+              }}
+            >
+              <Radio size={14} />
+              <span>
+                Vehicle is moving live &bull; Speed:{" "}
+                <strong>{liveLocation?.speed || 0} km/h</strong> &bull; Distance:{" "}
+                <strong>{trip.distanceCoveredKm || 0} km</strong>
               </span>
-              <p className="text-slate-300 text-[11px]">
-                Driver is on the way. Speed:{" "}
-                <span className="font-bold text-white">
-                  {liveLocation?.speed || 0} km/h
-                </span>{" "}
-                &bull; Covered:{" "}
-                <span className="font-bold text-white">
-                  {trip.distanceCoveredKm || 0} km
-                </span>
-              </p>
             </div>
           )}
-        </div>
 
-        {/* Leaflet Map */}
-        <div className="flex-1 relative min-h-[400px]">
-          <div ref={mapContainerRef} className="w-full h-full" />
+          {/* Map */}
+          <div className="driver-map-wrapper">
+            <div className="driver-map-header">
+              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <Navigation size={14} color="#059669" /> OpenStreetMap Vehicle Route
+              </span>
+            </div>
+            <div ref={mapContainerRef} style={{ height: 320, width: "100%" }} />
+          </div>
         </div>
       </div>
     </div>

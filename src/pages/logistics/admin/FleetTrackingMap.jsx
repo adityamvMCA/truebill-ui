@@ -5,27 +5,28 @@ import {
   Navigation,
   RefreshCw,
   Search,
-  Filter,
   Plus,
   Radio,
   Phone,
   Clock,
-  Compass,
-  CheckCircle2,
   ExternalLink,
   ChevronRight,
-  Maximize2,
-  Minimize2,
-  Layers,
-  Activity,
-  AlertCircle,
+  ChevronLeft,
   X,
   Share2,
+  Activity,
+  CheckCircle2,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
+import BoxModal from "../../../components/common/Modal/BoxModal";
+import Button from "../../../components/common/Form/Button";
+import Input from "../../../components/common/Form/Input";
+import Select from "../../../components/common/Form/Select";
+import Textarea from "../../../components/common/Form/Textarea";
+import StatusField from "../../../components/common/StatusField/StatusField";
 import logisticsApi from "../../../services/modules/logisticsApi";
 import { createLogisticsSocket } from "../../../services/modules/logisticsSocket";
 
@@ -64,12 +65,12 @@ export default function FleetTrackingMap() {
 
     socket.on("connect", () => {
       setIsSocketConnected(true);
-      // Join tenant room so all driver updates for this company stream here
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       const tenantId =
-        localStorage.getItem("selectedTenantId") ||
-        sessionStorage.getItem("selectedTenantId") ||
-        user.tenantId;
+        user?.activeTenantId ||
+        user?.primaryTenantId ||
+        user?.tenantId ||
+        user?.tenant?._id;
 
       if (tenantId) {
         socket.emit("trip:join", { tenantId });
@@ -80,36 +81,48 @@ export default function FleetTrackingMap() {
       setIsSocketConnected(false);
     });
 
-    // Real-time location stream from moving vehicles
-    socket.on("fleet:driver_update", ({ driverId, tripId, location, distanceCoveredKm }) => {
-      if (!location?.lat || !location?.lng) return;
+    // Real-time Driver GPS update broadcasted across tenant
+    socket.on("fleet:driver_update", (data) => {
+      const { tripId, location, driverId } = data;
+      if (!tripId || !location) return;
 
-      // Update state in trips
       setTrips((prevTrips) =>
         prevTrips.map((t) => {
-          if (t._id === tripId || (driverId && t.driverId === driverId && t.status === "STARTED")) {
-            const updatedPath = [...(t.path || []), { ...location, timestamp: new Date() }];
+          if (t._id === tripId) {
+            const updatedBreadcrumbs = [
+              ...(t.locationBreadcrumbs || []),
+              {
+                lat: location.lat,
+                lng: location.lng,
+                timestamp: location.timestamp || new Date(),
+                speed: location.speed || 0,
+              },
+            ];
+
             return {
               ...t,
               status: "STARTED",
-              currentLocation: location,
-              distanceCoveredKm: distanceCoveredKm !== undefined ? distanceCoveredKm : t.distanceCoveredKm,
-              path: updatedPath,
+              currentLocation: {
+                lat: location.lat,
+                lng: location.lng,
+                speed: location.speed || 0,
+                heading: location.heading || 0,
+                updatedAt: location.timestamp || new Date(),
+              },
+              locationBreadcrumbs: updatedBreadcrumbs,
             };
           }
           return t;
-        })
+        }),
       );
 
-      // Smoothly update marker on map
       updateVehicleMarkerOnMap(tripId, location, driverId);
     });
 
-    // Real-time status changes (STARTED, COMPLETED)
-    socket.on("fleet:status_update", ({ tripId, status, trip }) => {
-      toast.success(
-        `Trip ${trip?.tripNumber || "delivery"} status changed to ${status}`,
-        { id: `status-${tripId}`, duration: 3000 }
+    // Real-time trip status changes
+    socket.on("trip:status_change", ({ tripId, status }) => {
+      setTrips((prev) =>
+        prev.map((t) => (t._id === tripId ? { ...t, status } : t)),
       );
       loadAllData(false);
     });
@@ -128,26 +141,50 @@ export default function FleetTrackingMap() {
   const loadAllData = async (showSpinner = true) => {
     try {
       if (showSpinner) setLoading(true);
-      else setRefreshing(true);
+      setRefreshing(true);
 
-      const [tripsRes, statsRes, driversRes] = await Promise.all([
-        logisticsApi.getTrips({ limit: 100 }),
-        logisticsApi.getFleetStats().catch(() => ({ data: { success: false } })),
-        logisticsApi.getDrivers().catch(() => ({ data: { success: false } })),
+      const [tripsRes, driversRes, statsRes] = await Promise.allSettled([
+        logisticsApi.getTrips(),
+        logisticsApi.getDrivers(),
+        logisticsApi.getFleetStats(),
       ]);
 
-      if (tripsRes.data?.success) {
-        setTrips(tripsRes.data.data || []);
-      }
-      if (statsRes.data?.success) {
-        setStats(statsRes.data.data);
-      }
-      if (driversRes.data?.success) {
-        setDrivers(driversRes.data.data || []);
+      const tripsList =
+        tripsRes.status === "fulfilled"
+          ? tripsRes.value?.data?.data || tripsRes.value?.data || []
+          : [];
+      const driversList =
+        driversRes.status === "fulfilled"
+          ? driversRes.value?.data?.data || driversRes.value?.data || []
+          : [];
+      const dashStats =
+        statsRes.status === "fulfilled"
+          ? statsRes.value?.data?.data || {}
+          : {};
+
+      setTrips(Array.isArray(tripsList) ? tripsList : []);
+      setDrivers(Array.isArray(driversList) ? driversList : []);
+      setStats({
+        activeTrips:
+          dashStats.activeTrips ??
+          (Array.isArray(tripsList) ? tripsList.filter((t) => t.status === "STARTED").length : 0),
+        totalDrivers:
+          dashStats.totalDrivers ?? (Array.isArray(driversList) ? driversList.length : 0),
+        onTripDrivers:
+          dashStats.onTripDrivers ??
+          (Array.isArray(driversList) ? driversList.filter((d) => d.status === "ON_TRIP").length : 0),
+        completedToday:
+          dashStats.completedToday ??
+          (Array.isArray(tripsList) ? tripsList.filter((t) => t.status === "COMPLETED").length : 0),
+      });
+
+      if (tripsRes.status === "rejected" && driversRes.status === "rejected") {
+        const err = tripsRes.reason || driversRes.reason;
+        toast.error(err?.response?.data?.message || "Failed to load fleet tracking data");
       }
     } catch (err) {
       console.error("Failed to load fleet data:", err);
-      toast.error("Failed to refresh fleet tracking data");
+      toast.error(err?.response?.data?.message || "Failed to refresh fleet tracking data");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -161,7 +198,6 @@ export default function FleetTrackingMap() {
     if (!mapContainerRef.current) return;
 
     if (!mapInstanceRef.current) {
-      // Initialize OpenStreetMap via Leaflet
       const map = L.map(mapContainerRef.current, {
         zoomControl: true,
         attributionControl: false,
@@ -182,20 +218,20 @@ export default function FleetTrackingMap() {
   const createVehicleIcon = (t, isSelected = false) => {
     const isMoving = t.status === "STARTED";
     const speed = t.currentLocation?.speed || 0;
-    const bgCol = isMoving ? "#10b981" : "#64748b";
-    const borderCol = isSelected ? "#3b82f6" : "#ffffff";
+    const bgCol = isMoving ? "#0ea5e9" : "#64748b";
+    const borderCol = isSelected ? "#0284c7" : "#ffffff";
 
     return L.divIcon({
       className: `vehicle-marker-${t._id}`,
       html: `
-        <div style="position:relative;width:44px;height:44px;cursor:pointer;">
+        <div style="position:relative;width:40px;height:40px;cursor:pointer;">
           ${
             isMoving
-              ? `<span style="position:absolute;inset:0;border-radius:50%;background:#10b981;opacity:0.35;animation:ping 1.8s cubic-bezier(0,0,0.2,1) infinite;"></span>`
+              ? `<span style="position:absolute;inset:0;border-radius:50%;background:#0ea5e9;opacity:0.35;animation:ping 1.8s cubic-bezier(0,0,0.2,1) infinite;"></span>`
               : ""
           }
-          <div style="position:relative;background:${bgCol};width:44px;height:44px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;box-shadow:0 3px 12px rgba(0,0,0,0.35);border:3px solid ${borderCol};">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <div style="position:relative;background:${bgCol};width:40px;height:40px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;box-shadow:0 3px 10px rgba(0,0,0,0.2);border:3px solid ${borderCol};">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <rect x="1" y="3" width="15" height="13"></rect>
               <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
               <circle cx="5.5" cy="18.5" r="2.5"></circle>
@@ -204,16 +240,16 @@ export default function FleetTrackingMap() {
           </div>
           ${
             isMoving && speed > 0
-              ? `<div style="position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);background:#0f172a;color:#34d399;font-size:9px;font-weight:900;padding:1px 5px;border-radius:6px;border:1px solid #10b981;white-space:nowrap;box-shadow:0 2px 4px rgba(0,0,0,0.3);">
+              ? `<div style="position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);background:#0f172a;color:#38bdf8;font-size:9px;font-weight:800;padding:1px 5px;border-radius:6px;border:1px solid #0ea5e9;white-space:nowrap;box-shadow:0 2px 4px rgba(0,0,0,0.2);">
                   ${speed} km/h
                 </div>`
               : ""
           }
         </div>
       `,
-      iconSize: [44, 44],
-      iconAnchor: [22, 22],
-      popupAnchor: [0, -22],
+      iconSize: [40, 40],
+      iconAnchor: [20, 20],
+      popupAnchor: [0, -20],
     });
   };
 
@@ -221,7 +257,6 @@ export default function FleetTrackingMap() {
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    // Filter relevant trips
     const filtered = trips.filter((t) => {
       if (statusFilter === "STARTED") return t.status === "STARTED";
       if (statusFilter === "SCHEDULED") return t.status === "SCHEDULED";
@@ -231,7 +266,7 @@ export default function FleetTrackingMap() {
 
     const currentTripIds = new Set(filtered.map((t) => t._id));
 
-    // Remove markers that are no longer in the filter
+    // Remove obsolete markers
     Object.keys(markersRef.current).forEach((tid) => {
       if (!currentTripIds.has(tid)) {
         map.removeLayer(markersRef.current[tid]);
@@ -252,10 +287,10 @@ export default function FleetTrackingMap() {
       const icon = createVehicleIcon(t, isSelected);
 
       const popupContent = `
-        <div style="font-family:sans-serif;min-width:200px;padding:4px;">
+        <div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;min-width:210px;padding:4px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
             <strong style="color:#0f172a;font-size:13px;">${t.tripNumber}</strong>
-            <span style="background:${t.status === "STARTED" ? "#d1fae5" : "#f1f5f9"};color:${t.status === "STARTED" ? "#065f46" : "#475569"};font-size:10px;font-weight:700;padding:2px 6px;border-radius:99px;">
+            <span style="background:${t.status === "STARTED" ? "#e0f2fe" : "#f1f5f9"};color:${t.status === "STARTED" ? "#0369a1" : "#475569"};font-size:10px;font-weight:700;padding:2px 6px;border-radius:99px;">
               ${t.status}
             </span>
           </div>
@@ -263,7 +298,7 @@ export default function FleetTrackingMap() {
             <div><b>Driver:</b> ${t.driverName || "Assigned"} (${t.vehicleNumber || "VAN"})</div>
             <div><b>Customer:</b> ${t.customerName}</div>
             <div style="margin-top:4px;color:#64748b;font-size:11px;">${t.destination?.address || ""}</div>
-            ${t.status === "STARTED" ? `<div style="margin-top:6px;font-weight:bold;color:#059669;">Speed: ${t.currentLocation?.speed || 0} km/h &bull; Covered: ${t.distanceCoveredKm || 0} km</div>` : ""}
+            ${t.status === "STARTED" ? `<div style="margin-top:6px;font-weight:bold;color:#0284c7;">Speed: ${t.currentLocation?.speed || 0} km/h &bull; Covered: ${t.distanceCoveredKm || 0} km</div>` : ""}
           </div>
         </div>
       `;
@@ -285,7 +320,6 @@ export default function FleetTrackingMap() {
       }
     });
 
-    // Auto-fit bounds if we have points and no specific vehicle is selected
     if (validBounds.length > 0 && !selectedTripId) {
       try {
         map.fitBounds(validBounds, { padding: [50, 50], maxZoom: 14 });
@@ -306,13 +340,11 @@ export default function FleetTrackingMap() {
       renderAllMarkersOnMap();
     }
 
-    // If currently selected, draw or update polyline
     if (selectedTripId === tripId) {
       drawRouteForSelectedTrip(tripId);
     }
   };
 
-  // Draw breadcrumbs route line for the selected trip
   const drawRouteForSelectedTrip = useCallback(
     (tripId) => {
       const map = mapInstanceRef.current;
@@ -330,26 +362,39 @@ export default function FleetTrackingMap() {
       if (trip.origin?.lat && trip.origin?.lng) {
         points.push([trip.origin.lat, trip.origin.lng]);
       }
-      if (trip.path && trip.path.length > 0) {
-        trip.path.forEach((p) => {
-          if (p.lat && p.lng) points.push([p.lat, p.lng]);
+
+      if (Array.isArray(trip.locationBreadcrumbs)) {
+        trip.locationBreadcrumbs.forEach((pt) => {
+          if (pt.lat && pt.lng) points.push([pt.lat, pt.lng]);
         });
       }
+
       if (trip.currentLocation?.lat && trip.currentLocation?.lng) {
         points.push([trip.currentLocation.lat, trip.currentLocation.lng]);
       }
 
-      if (points.length >= 2) {
-        polylineRef.current = L.polyline(points, {
-          color: "#059669",
+      if (points.length > 1) {
+        const polyline = L.polyline(points, {
+          color: "#0284c7",
           weight: 4,
           opacity: 0.85,
-          dashArray: "6, 8",
+          smoothFactor: 1,
         }).addTo(map);
+
+        polylineRef.current = polyline;
       }
     },
-    [trips]
+    [trips],
   );
+
+  useEffect(() => {
+    if (selectedTripId) {
+      drawRouteForSelectedTrip(selectedTripId);
+    } else if (polylineRef.current && mapInstanceRef.current) {
+      mapInstanceRef.current.removeLayer(polylineRef.current);
+      polylineRef.current = null;
+    }
+  }, [selectedTripId, drawRouteForSelectedTrip]);
 
   const focusTripOnMap = (trip) => {
     setSelectedTripId(trip._id);
@@ -360,162 +405,308 @@ export default function FleetTrackingMap() {
     const lng = trip.currentLocation?.lng || trip.destination?.lng;
 
     if (lat && lng) {
-      map.flyTo([lat, lng], 15, { animate: true, duration: 1.2 });
+      map.setView([lat, lng], 15, { animate: true });
       if (markersRef.current[trip._id]) {
         markersRef.current[trip._id].openPopup();
       }
-    } else {
-      toast("No GPS coordinate available yet for this vehicle", { icon: "ℹ️" });
     }
-
-    drawRouteForSelectedTrip(trip._id);
   };
 
-  // Filtered trips list for sidebar
   const filteredTrips = useMemo(() => {
     return trips.filter((t) => {
-      const matchesStatus =
-        statusFilter === "ALL" || t.status === statusFilter;
-      const q = searchQuery.toLowerCase().trim();
-      const matchesSearch =
-        !q ||
-        t.tripNumber?.toLowerCase().includes(q) ||
-        t.customerName?.toLowerCase().includes(q) ||
-        t.driverName?.toLowerCase().includes(q) ||
-        t.vehicleNumber?.toLowerCase().includes(q) ||
-        t.destination?.address?.toLowerCase().includes(q);
+      if (statusFilter === "STARTED" && t.status !== "STARTED") return false;
+      if (statusFilter === "SCHEDULED" && t.status !== "SCHEDULED") return false;
+      if (statusFilter === "COMPLETED" && t.status !== "COMPLETED") return false;
 
-      return matchesStatus && matchesSearch;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchTrip = t.tripNumber?.toLowerCase().includes(q);
+        const matchDriver = t.driverName?.toLowerCase().includes(q);
+        const matchCust = t.customerName?.toLowerCase().includes(q);
+        const matchVeh = t.vehicleNumber?.toLowerCase().includes(q);
+        const matchDest = t.destination?.address?.toLowerCase().includes(q);
+        return matchTrip || matchDriver || matchCust || matchVeh || matchDest;
+      }
+
+      return true;
     });
   }, [trips, statusFilter, searchQuery]);
 
-  // Selected trip details
-  const activeSelectedTrip = useMemo(() => {
-    return trips.find((t) => t._id === selectedTripId) || null;
-  }, [trips, selectedTripId]);
+  const activeSelectedTrip = trips.find((t) => t._id === selectedTripId);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-65px)] bg-slate-950 text-slate-100 overflow-hidden font-sans">
-      {/* 1. TOP STATS BAR */}
-      <section className="bg-slate-900 border-b border-slate-800 px-4 py-2.5 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-6 overflow-x-auto py-1 scrollbar-none">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold">
-              <Truck className="w-5 h-5 stroke-[2.5]" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-sm font-bold text-white tracking-tight">
-                  Fleet Tracking Command
-                </h1>
-                <span
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                    isSocketConnected
-                      ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
-                      : "bg-rose-500/15 text-rose-400 border border-rose-500/30"
-                  }`}
-                >
-                  <span
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      isSocketConnected ? "bg-emerald-400 animate-pulse" : "bg-rose-400"
-                    }`}
-                  ></span>
-                  {isSocketConnected ? "Live Socket" : "Offline"}
-                </span>
-              </div>
-              <p className="text-xs text-slate-400">
-                Real-time OpenStreetMap Telemetry
-              </p>
-            </div>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "calc(100vh - 65px)",
+        backgroundColor: "var(--bg-main, #f8fafc)",
+        color: "var(--text-main, #0f172a)",
+        overflow: "hidden",
+      }}
+    >
+      {/* 1. TOP HEADER & METRICS BAR */}
+      <header
+        style={{
+          backgroundColor: "#ffffff",
+          borderBottom: "1px solid var(--border-color, #e2e8f0)",
+          padding: "12px 20px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "12px",
+          zIndex: 20,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <div
+            style={{
+              width: "40px",
+              height: "40px",
+              borderRadius: "10px",
+              backgroundColor: "rgba(14, 165, 233, 0.1)",
+              color: "#0284c7",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Truck size={22} strokeWidth={2.2} />
           </div>
 
-          <div className="h-7 w-px bg-slate-800 hidden sm:block"></div>
-
-          {/* Quick Metrics */}
-          <div className="flex items-center gap-4 text-xs font-medium">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-              <span className="text-slate-400">Moving Vehicles:</span>
-              <span className="font-extrabold text-emerald-400 text-sm">
-                {stats.activeTrips || trips.filter((t) => t.status === "STARTED").length}
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <h1
+                style={{
+                  margin: 0,
+                  fontSize: "18px",
+                  fontWeight: 700,
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                Fleet Tracking Command
+              </h1>
+              <span
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  padding: "2px 8px",
+                  borderRadius: "99px",
+                  backgroundColor: isSocketConnected ? "#ecfdf5" : "#fef2f2",
+                  color: isSocketConnected ? "#059669" : "#dc2626",
+                  border: `1px solid ${isSocketConnected ? "#a7f3d0" : "#fecaca"}`,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
+                <span
+                  style={{
+                    width: "6px",
+                    height: "6px",
+                    borderRadius: "50%",
+                    backgroundColor: isSocketConnected ? "#10b981" : "#ef4444",
+                  }}
+                />
+                {isSocketConnected ? "Live GPS Connected" : "Connecting..."}
               </span>
             </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-slate-400">Drivers:</span>
-              <span className="font-bold text-white text-sm">
-                {stats.totalDrivers || drivers.length}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-slate-400">Delivered Today:</span>
-              <span className="font-bold text-cyan-400 text-sm">
-                {stats.completedToday || trips.filter((t) => t.status === "COMPLETED").length}
-              </span>
-            </div>
+            <p
+              style={{
+                margin: "2px 0 0 0",
+                fontSize: "12px",
+                color: "var(--text-muted, #64748b)",
+              }}
+            >
+              Real-time OpenStreetMap telemetry & vehicle tracking stream
+            </p>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Quick Stats & Action Buttons */}
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              fontSize: "12px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "4px 10px",
+                borderRadius: "8px",
+                backgroundColor: "#f0fdf4",
+                border: "1px solid #bbf7d0",
+              }}
+            >
+              <span style={{ color: "#166534" }}>In Transit:</span>
+              <strong style={{ color: "#15803d" }}>
+                {stats.activeTrips || trips.filter((t) => t.status === "STARTED").length}
+              </strong>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "4px 10px",
+                borderRadius: "8px",
+                backgroundColor: "#f8fafc",
+                border: "1px solid #e2e8f0",
+              }}
+            >
+              <span style={{ color: "#64748b" }}>Drivers:</span>
+              <strong style={{ color: "#0f172a" }}>
+                {stats.totalDrivers || drivers.length}
+              </strong>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "4px 10px",
+                borderRadius: "8px",
+                backgroundColor: "#f0fdfa",
+                border: "1px solid #ccfbf1",
+              }}
+            >
+              <span style={{ color: "#0f766e" }}>Delivered Today:</span>
+              <strong style={{ color: "#0d9488" }}>
+                {stats.completedToday ||
+                  trips.filter((t) => t.status === "COMPLETED").length}
+              </strong>
+            </div>
+          </div>
+
           <button
+            type="button"
             onClick={() => loadAllData(false)}
             disabled={refreshing}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition active:scale-95"
+            style={{
+              padding: "7px 10px",
+              borderRadius: "8px",
+              border: "1px solid var(--border-color, #e2e8f0)",
+              backgroundColor: "#fff",
+              cursor: "pointer",
+              color: "var(--text-main, #334155)",
+              display: "inline-flex",
+              alignItems: "center",
+            }}
             title="Refresh Fleet Data"
           >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+            <RefreshCw
+              size={14}
+              style={{
+                animation: refreshing ? "spin 1s linear infinite" : "none",
+              }}
+            />
           </button>
 
           <button
+            type="button"
+            className="so-primary-button"
             onClick={() => setShowDispatchModal(true)}
-            className="py-1.5 px-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
           >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            Dispatch Trip
+            <Plus size={16} />
+            <span>Dispatch Trip</span>
           </button>
         </div>
-      </section>
+      </header>
 
-      {/* 2. MAIN SPLIT INTERFACE */}
-      <div className="flex flex-1 relative overflow-hidden">
-        {/* LEFT / SLIDE-OVER FLEET PANEL */}
+      {/* 2. SPLIT INTERFACE: SIDEBAR + LEAFLET MAP */}
+      <div style={{ display: "flex", flex: 1, position: "relative", overflow: "hidden" }}>
+        {/* SIDEBAR PANEL */}
         <aside
-          className={`${
-            sidePanelOpen ? "w-full sm:w-96" : "w-0"
-          } transition-all duration-200 ease-in-out bg-slate-900 border-r border-slate-800 flex flex-col z-20 shrink-0 overflow-hidden`}
+          style={{
+            width: sidePanelOpen ? "380px" : "0px",
+            minWidth: sidePanelOpen ? "380px" : "0px",
+            transition: "width 0.2s ease",
+            backgroundColor: "#ffffff",
+            borderRight: "1px solid var(--border-color, #e2e8f0)",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+            zIndex: 10,
+          }}
         >
-          {/* Filters & Search */}
-          <div className="p-3 border-b border-slate-800 space-y-2.5 shrink-0">
-            {/* Search Input */}
-            <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          {/* Search & Tabs */}
+          <div
+            style={{
+              padding: "12px",
+              borderBottom: "1px solid var(--border-color, #e2e8f0)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "8px",
+            }}
+          >
+            <div style={{ position: "relative" }}>
+              <Search
+                size={14}
+                style={{
+                  position: "absolute",
+                  left: "10px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "#94a3b8",
+                }}
+              />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search trip, driver, vehicle..."
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 outline-none focus:border-emerald-500"
+                placeholder="Search trip #, driver, customer..."
+                style={{
+                  width: "100%",
+                  padding: "7px 10px 7px 30px",
+                  fontSize: "12px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--border-color, #cbd5e1)",
+                  outline: "none",
+                }}
               />
             </div>
 
-            {/* Status Tabs */}
-            <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+            <div
+              style={{
+                display: "flex",
+                gap: "4px",
+                backgroundColor: "#f1f5f9",
+                padding: "3px",
+                borderRadius: "8px",
+              }}
+            >
               {[
                 { id: "STARTED", label: "Moving" },
                 { id: "SCHEDULED", label: "Queued" },
-                { id: "COMPLETED", label: "Done" },
+                { id: "COMPLETED", label: "Delivered" },
                 { id: "ALL", label: "All" },
               ].map((tab) => (
                 <button
                   key={tab.id}
+                  type="button"
                   onClick={() => setStatusFilter(tab.id)}
-                  className={`flex-1 py-1 text-[11px] font-bold rounded-lg transition ${
-                    statusFilter === tab.id
-                      ? "bg-emerald-500 text-slate-950 shadow-sm"
-                      : "text-slate-400 hover:text-slate-200"
-                  }`}
+                  style={{
+                    flex: 1,
+                    padding: "5px 0",
+                    fontSize: "11px",
+                    fontWeight: 600,
+                    borderRadius: "6px",
+                    border: "none",
+                    cursor: "pointer",
+                    backgroundColor: statusFilter === tab.id ? "#ffffff" : "transparent",
+                    color: statusFilter === tab.id ? "#0284c7" : "#64748b",
+                    boxShadow:
+                      statusFilter === tab.id ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                  }}
                 >
                   {tab.label}
                 </button>
@@ -524,14 +715,22 @@ export default function FleetTrackingMap() {
           </div>
 
           {/* Trips List */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
+          <div style={{ flex: 1, overflowY: "auto", padding: "10px" }}>
             {filteredTrips.length === 0 ? (
-              <div className="text-center py-12 px-4 text-slate-400">
-                <Truck className="w-10 h-10 stroke-1 mx-auto mb-2 opacity-40" />
-                <p className="text-xs font-semibold">No trips found matching filter</p>
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Dispatch a trip or switch status tabs.
-                </p>
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "40px 16px",
+                  color: "var(--text-muted, #94a3b8)",
+                }}
+              >
+                <Truck size={32} strokeWidth={1.5} style={{ margin: "0 auto 8px" }} />
+                <div style={{ fontSize: "13px", fontWeight: 600 }}>
+                  No trips in this view
+                </div>
+                <div style={{ fontSize: "11px", marginTop: "4px" }}>
+                  Switch filters or click &quot;Dispatch Trip&quot;
+                </div>
               </div>
             ) : (
               filteredTrips.map((trip) => {
@@ -542,66 +741,120 @@ export default function FleetTrackingMap() {
                   <div
                     key={trip._id}
                     onClick={() => focusTripOnMap(trip)}
-                    className={`p-3 rounded-xl border transition cursor-pointer ${
-                      isSelected
-                        ? "bg-slate-800/90 border-emerald-500 shadow-md ring-1 ring-emerald-500/30"
-                        : "bg-slate-950/60 hover:bg-slate-800/50 border-slate-800"
-                    }`}
+                    style={{
+                      padding: "10px 12px",
+                      borderRadius: "10px",
+                      marginBottom: "8px",
+                      border: isSelected
+                        ? "1.5px solid #0284c7"
+                        : "1px solid var(--border-color, #e2e8f0)",
+                      backgroundColor: isSelected ? "#f0f9ff" : "#ffffff",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                      boxShadow: isSelected
+                        ? "0 2px 6px rgba(2, 132, 199, 0.12)"
+                        : "0 1px 2px rgba(0,0,0,0.03)",
+                    }}
                   >
-                    <div className="flex items-start justify-between gap-2 mb-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-white text-xs">
-                          {trip.tripNumber}
-                        </span>
-                        <span
-                          className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
-                            isStarted
-                              ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                              : trip.status === "COMPLETED"
-                              ? "bg-cyan-500/20 text-cyan-400"
-                              : "bg-slate-800 text-slate-400"
-                          }`}
-                        >
-                          {trip.status}
-                        </span>
-                      </div>
-
-                      {isStarted && (
-                        <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
-                          <Radio className="w-3 h-3 animate-pulse" />
-                          {trip.currentLocation?.speed || 0} km/h
-                        </span>
-                      )}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      <strong
+                        style={{
+                          fontFamily: "monospace",
+                          fontSize: "12px",
+                          color: "#0f172a",
+                        }}
+                      >
+                        {trip.tripNumber}
+                      </strong>
+                      <StatusField value={trip.status} size={11} />
                     </div>
 
-                    {/* Driver & Vehicle */}
-                    <div className="flex items-center justify-between text-xs text-slate-300 font-medium">
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        color: "#1e293b",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
                       <span>{trip.driverName || "Driver Assigned"}</span>
-                      <span className="text-slate-400 font-mono text-[11px]">
-                        {trip.vehicleNumber || "VAN"}
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: 500,
+                          color: "#64748b",
+                        }}
+                      >
+                        {trip.vehicleNumber || trip.vehicleType || "VAN"}
                       </span>
                     </div>
 
-                    {/* Destination Address */}
-                    <p className="text-[11px] text-slate-400 mt-1 line-clamp-1 flex items-center gap-1">
-                      <MapPin className="w-3 h-3 text-rose-400 shrink-0" />
-                      {trip.customerName} &bull; {trip.destination?.address}
-                    </p>
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        color: "var(--text-muted, #64748b)",
+                        marginTop: "4px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      <MapPin size={11} style={{ flexShrink: 0, color: "#ef4444" }} />
+                      <span
+                        style={{
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {trip.customerName} &bull; {trip.destination?.address}
+                      </span>
+                    </div>
 
-                    {/* Footer Info */}
-                    <div className="mt-2 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-500 font-medium">
-                      <span>Dist: {trip.distanceCoveredKm || 0} km</span>
+                    <div
+                      style={{
+                        marginTop: "6px",
+                        paddingTop: "6px",
+                        borderTop: "1px solid var(--border-color, #f1f5f9)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        fontSize: "10px",
+                        color: "#64748b",
+                      }}
+                    >
+                      <span>Covered: {trip.distanceCoveredKm || 0} km</span>
                       <button
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           const url = `${window.location.origin}/track/${trip.trackingToken}`;
                           navigator.clipboard.writeText(url);
                           toast.success("Customer tracking link copied to clipboard!");
                         }}
-                        className="hover:text-emerald-400 flex items-center gap-1"
-                        title="Copy Public Tracking Link"
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          color: "#0284c7",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "3px",
+                          fontWeight: 600,
+                        }}
                       >
-                        <Share2 className="w-3 h-3" /> Copy Link
+                        <Share2 size={11} /> Copy Link
                       </button>
                     </div>
                   </div>
@@ -613,130 +866,165 @@ export default function FleetTrackingMap() {
 
         {/* TOGGLE SIDE PANEL BUTTON */}
         <button
+          type="button"
           onClick={() => setSidePanelOpen(!sidePanelOpen)}
-          className="absolute left-2 top-3 z-30 bg-slate-900 border border-slate-700 hover:bg-slate-800 text-slate-300 p-2 rounded-xl shadow-xl transition"
-          title={sidePanelOpen ? "Collapse Panel" : "Expand Panel"}
+          style={{
+            position: "absolute",
+            left: sidePanelOpen ? "390px" : "10px",
+            top: "10px",
+            zIndex: 30,
+            backgroundColor: "#ffffff",
+            border: "1px solid var(--border-color, #e2e8f0)",
+            padding: "6px 8px",
+            borderRadius: "8px",
+            cursor: "pointer",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+            color: "var(--text-main, #334155)",
+            transition: "left 0.2s ease",
+          }}
+          title={sidePanelOpen ? "Collapse List" : "Show List"}
         >
-          {sidePanelOpen ? <ChevronRight className="w-4 h-4 rotate-180" /> : <ChevronRight className="w-4 h-4" />}
+          {sidePanelOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
         </button>
 
-        {/* MAIN LEAFLET MAP VIEW */}
-        <main className="flex-1 relative h-full">
-          <div ref={mapContainerRef} className="w-full h-full z-10" />
+        {/* MAP CONTAINER */}
+        <main style={{ flex: 1, position: "relative", height: "100%" }}>
+          <div ref={mapContainerRef} style={{ width: "100%", height: "100%", zIndex: 1 }} />
 
-          {/* ACTIVE TRIP FLOATING CARD (When a vehicle is selected) */}
+          {/* ACTIVE VEHICLE FLOATING FOCUS CARD */}
           {activeSelectedTrip && (
-            <div className="absolute bottom-5 right-5 z-30 bg-slate-900/95 border border-slate-700 backdrop-blur-md rounded-2xl p-4 shadow-2xl max-w-sm w-full">
-              <div className="flex items-start justify-between gap-2 mb-2">
+            <div
+              style={{
+                position: "absolute",
+                bottom: "20px",
+                right: "20px",
+                zIndex: 30,
+                backgroundColor: "#ffffff",
+                border: "1px solid var(--border-color, #e2e8f0)",
+                borderRadius: "14px",
+                padding: "16px",
+                maxWidth: "340px",
+                width: "100%",
+                boxShadow: "0 10px 25px -5px rgba(0,0,0,0.15)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: "8px",
+                }}
+              >
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400">
-                    Live Telemetry Focus
-                  </span>
-                  <h3 className="text-base font-black text-white">
+                  <div
+                    style={{
+                      fontSize: "10px",
+                      textTransform: "uppercase",
+                      fontWeight: 700,
+                      color: "#64748b",
+                    }}
+                  >
+                    Vehicle Focus
+                  </div>
+                  <strong style={{ fontSize: "15px", color: "#0f172a" }}>
                     {activeSelectedTrip.tripNumber}
-                  </h3>
+                  </strong>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setSelectedTripId(null)}
-                  className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="space-y-1.5 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Driver:</span>
-                  <span className="font-bold text-white">
-                    {activeSelectedTrip.driverName} ({activeSelectedTrip.driverPhone})
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Vehicle:</span>
-                  <span className="font-bold text-white">
-                    {activeSelectedTrip.vehicleNumber} ({activeSelectedTrip.vehicleType})
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Customer:</span>
-                  <span className="font-bold text-white">
-                    {activeSelectedTrip.customerName}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Destination:</span>
-                  <span className="font-medium text-slate-200 text-right max-w-[200px] truncate">
-                    {activeSelectedTrip.destination?.address}
-                  </span>
-                </div>
-                <div className="flex justify-between pt-1 border-t border-slate-800">
-                  <span className="text-slate-400">Speed / Distance:</span>
-                  <span className="font-bold text-emerald-400">
-                    {activeSelectedTrip.currentLocation?.speed || 0} km/h &bull;{" "}
-                    {activeSelectedTrip.distanceCoveredKm || 0} km
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-3 pt-2 border-t border-slate-800 flex items-center gap-2">
-                <a
-                  href={`/track/${activeSelectedTrip.trackingToken}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex-1 py-1.5 text-center bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition inline-flex items-center justify-center gap-1"
-                >
-                  Customer View <ExternalLink className="w-3 h-3" />
-                </a>
-                <button
-                  onClick={() => {
-                    const url = `${window.location.origin}/track/${activeSelectedTrip.trackingToken}`;
-                    navigator.clipboard.writeText(url);
-                    toast.success("Tracking link copied!");
+                  style={{
+                    border: "none",
+                    background: "none",
+                    cursor: "pointer",
+                    color: "#94a3b8",
                   }}
-                  className="p-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30"
-                  title="Copy Tracking Link"
                 >
-                  <Share2 className="w-4 h-4" />
+                  <X size={16} />
                 </button>
+              </div>
+
+              <div style={{ fontSize: "12px", lineHeight: "1.6", color: "#334155" }}>
+                <div>
+                  <b>Driver:</b> {activeSelectedTrip.driverName} (
+                  {activeSelectedTrip.vehicleNumber || "VAN"})
+                </div>
+                <div>
+                  <b>Customer:</b> {activeSelectedTrip.customerName}
+                </div>
+                <div style={{ color: "#64748b", fontSize: "11px", marginTop: "2px" }}>
+                  {activeSelectedTrip.destination?.address}
+                </div>
+                <div
+                  style={{
+                    marginTop: "6px",
+                    paddingTop: "6px",
+                    borderTop: "1px solid #f1f5f9",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontWeight: 600,
+                    color: "#0284c7",
+                  }}
+                >
+                  <span>Speed: {activeSelectedTrip.currentLocation?.speed || 0} km/h</span>
+                  <span>Covered: {activeSelectedTrip.distanceCoveredKm || 0} km</span>
+                </div>
               </div>
             </div>
           )}
         </main>
       </div>
 
-      {/* 3. DISPATCH TRIP MODAL */}
-      {showDispatchModal && (
-        <DispatchTripModal
-          drivers={drivers}
-          onClose={() => setShowDispatchModal(false)}
-          onSuccess={() => {
-            setShowDispatchModal(false);
-            loadAllData(false);
-          }}
-        />
-      )}
+      {/* DISPATCH TRIP MODAL */}
+      <DispatchTripModal
+        isOpen={showDispatchModal}
+        drivers={drivers}
+        onClose={() => setShowDispatchModal(false)}
+        onSuccess={() => {
+          setShowDispatchModal(false);
+          loadAllData(false);
+        }}
+      />
     </div>
   );
 }
 
 // -------------------------------------------------------------
-// DISPATCH TRIP MODAL COMPONENT
+// DISPATCH TRIP MODAL USING BOXMODAL & FORM SYSTEM
 // -------------------------------------------------------------
-function DispatchTripModal({ drivers, onClose, onSuccess }) {
+function DispatchTripModal({ isOpen, drivers, onClose, onSuccess }) {
   const [driverId, setDriverId] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [destinationAddress, setDestinationAddress] = useState("");
-  const [destinationLat, setDestinationLat] = useState("");
-  const [destinationLng, setDestinationLng] = useState("");
   const [originAddress, setOriginAddress] = useState("Central Warehouse");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (isOpen) {
+      setDriverId("");
+      setCustomerName("");
+      setCustomerPhone("");
+      setDestinationAddress("");
+      setOriginAddress("Central Warehouse");
+      setNotes("");
+    }
+  }, [isOpen]);
+
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!driverId || !customerName.trim() || !destinationAddress.trim()) {
-      toast.error("Please fill in Driver, Customer name, and Destination address");
+    e?.preventDefault();
+    if (!driverId) {
+      toast.error("Please select a driver for this dispatch");
+      return;
+    }
+    if (!customerName.trim()) {
+      toast.error("Please enter the customer / consignee name");
+      return;
+    }
+    if (!destinationAddress.trim()) {
+      toast.error("Please enter the delivery destination address");
       return;
     }
 
@@ -747,8 +1035,6 @@ function DispatchTripModal({ drivers, onClose, onSuccess }) {
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
         destinationAddress: destinationAddress.trim(),
-        destinationLat: destinationLat ? Number(destinationLat) : null,
-        destinationLng: destinationLng ? Number(destinationLng) : null,
         originAddress: originAddress.trim(),
         notes: notes.trim(),
       });
@@ -767,135 +1053,137 @@ function DispatchTripModal({ drivers, onClose, onSuccess }) {
     }
   };
 
+  const driverOptions = drivers.map((d) => ({
+    value: d._id,
+    label: `${d.name} (${d.phone}) - ${d.vehicleNumber || d.vehicleType || "Vehicle"} [${d.status}]`,
+  }));
+
+  const footer = (
+    <div className="box-modal-footer-actions">
+      <Button
+        type="button"
+        variant="secondary"
+        onClick={onClose}
+        disabled={submitting}
+      >
+        Cancel
+      </Button>
+      <Button
+        type="button"
+        variant="primary"
+        onClick={handleSubmit}
+        loading={submitting}
+        disabled={submitting}
+      >
+        {submitting ? "Dispatching..." : "Confirm & Dispatch"}
+      </Button>
+    </div>
+  );
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-800">
-          <div className="flex items-center gap-2">
-            <Truck className="w-5 h-5 text-emerald-400" />
-            <h3 className="text-base font-bold text-white">
-              Dispatch New Logistics Delivery
-            </h3>
+    <BoxModal
+      show={isOpen}
+      onClose={onClose}
+      title="Dispatch Delivery Trip"
+      subtitle="Assign a driver, vehicle, and destination address for live GPS tracking"
+      width="780px"
+      footer={footer}
+    >
+      {/* SECTION 1: Driver & Vehicle */}
+      <div className="box-modal-section">
+        <div className="box-modal-section-header">
+          <div className="box-modal-section-icon">
+            <Truck size={17} />
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="box-modal-section-header-content">
+            <h3>Driver Assignment</h3>
+            <p>Select which driver and vehicle will carry out this dispatch</p>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-          {/* Driver Selection */}
-          <div>
-            <label className="block font-semibold text-slate-300 mb-1">
-              Select Fleet Driver *
-            </label>
-            <select
+        <div className="box-modal-form-grid">
+          <div className="box-modal-form-full">
+            <Select
+              label="Fleet Driver"
+              name="driverId"
               value={driverId}
               onChange={(e) => setDriverId(e.target.value)}
+              options={driverOptions}
+              placeholder="-- Select Assigned Driver --"
               required
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none focus:border-emerald-500"
-            >
-              <option value="">-- Choose Driver --</option>
-              {drivers.map((d) => (
-                <option key={d._id} value={d._id}>
-                  {d.name} ({d.phone}) - {d.vehicleNumber || d.vehicleType} [{d.status}]
-                </option>
-              ))}
-            </select>
+              disabled={submitting}
+            />
           </div>
 
-          {/* Customer Details */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold text-slate-300 mb-1">
-                Customer / Consignee Name *
-              </label>
-              <input
-                type="text"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="e.g. Acme Corporation"
-                required
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none focus:border-emerald-500"
-              />
-            </div>
-            <div>
-              <label className="block font-semibold text-slate-300 mb-1">
-                Customer Phone
-              </label>
-              <input
-                type="tel"
-                value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
-                placeholder="e.g. 9876543210"
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none focus:border-emerald-500"
-              />
-            </div>
-          </div>
+          <Input
+            label="Pickup / Origin Address"
+            name="originAddress"
+            value={originAddress}
+            onChange={(e) => setOriginAddress(e.target.value)}
+            placeholder="Central Warehouse"
+            disabled={submitting}
+          />
+        </div>
+      </div>
 
-          {/* Destination Address */}
-          <div>
-            <label className="block font-semibold text-slate-300 mb-1">
-              Destination Delivery Address *
-            </label>
-            <textarea
+      {/* SECTION 2: Customer & Delivery Destination */}
+      <div className="box-modal-section">
+        <div className="box-modal-section-header">
+          <div className="box-modal-section-icon">
+            <MapPin size={17} />
+          </div>
+          <div className="box-modal-section-header-content">
+            <h3>Customer & Destination</h3>
+            <p>Consignee details and destination delivery address</p>
+          </div>
+        </div>
+
+        <div className="box-modal-form-grid">
+          <Input
+            label="Customer / Consignee Name"
+            name="customerName"
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+            placeholder="e.g. Acme Corporation / Rajesh Motors"
+            required
+            disabled={submitting}
+          />
+
+          <Input
+            label="Customer Phone (for SMS/WhatsApp tracking link)"
+            name="customerPhone"
+            type="tel"
+            value={customerPhone}
+            onChange={(e) => setCustomerPhone(e.target.value)}
+            placeholder="e.g. 9876543210"
+            disabled={submitting}
+          />
+
+          <div className="box-modal-form-full">
+            <Textarea
+              label="Delivery Destination Address"
+              name="destinationAddress"
               value={destinationAddress}
               onChange={(e) => setDestinationAddress(e.target.value)}
-              placeholder="e.g. 45 Industrial Area, Phase II, Bengaluru"
+              placeholder="Full delivery street address, building, city, and pincode..."
               rows={2}
               required
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none focus:border-emerald-500"
+              disabled={submitting}
             />
           </div>
 
-          {/* Origin Address */}
-          <div>
-            <label className="block font-semibold text-slate-300 mb-1">
-              Pickup / Origin Location
-            </label>
-            <input
-              type="text"
-              value={originAddress}
-              onChange={(e) => setOriginAddress(e.target.value)}
-              placeholder="Central Warehouse"
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none focus:border-emerald-500"
-            />
-          </div>
-
-          {/* Dispatch Notes */}
-          <div>
-            <label className="block font-semibold text-slate-300 mb-1">
-              Special Handling / Dispatch Notes
-            </label>
-            <input
-              type="text"
+          <div className="box-modal-form-full">
+            <Input
+              label="Special Dispatch Instructions (Optional)"
+              name="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Fragile electronic items; deliver before 4 PM"
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none focus:border-emerald-500"
+              placeholder="e.g. Fragile electronic items; deliver before 5 PM"
+              disabled={submitting}
             />
           </div>
-
-          <div className="flex items-center gap-3 pt-3 border-t border-slate-800">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-semibold transition"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="flex-1 py-2.5 px-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl font-bold transition shadow-lg shadow-emerald-500/20 disabled:opacity-60 cursor-pointer"
-            >
-              {submitting ? "Dispatching..." : "Confirm & Dispatch"}
-            </button>
-          </div>
-        </form>
+        </div>
       </div>
-    </div>
+    </BoxModal>
   );
 }

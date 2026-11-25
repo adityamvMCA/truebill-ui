@@ -23,6 +23,42 @@ const STATUS_CONFIG = {
     tone: "success",
   },
 
+  AVAILABLE: {
+    label: "Available",
+    icon: CheckCircle2,
+    tone: "info",
+  },
+
+  ON_TRIP: {
+    label: "On Trip",
+    icon: Truck,
+    tone: "success",
+  },
+
+  OFF_DUTY: {
+    label: "Off Duty",
+    icon: Clock3,
+    tone: "neutral",
+  },
+
+  SCHEDULED: {
+    label: "Scheduled",
+    icon: Clock3,
+    tone: "warning",
+  },
+
+  STARTED: {
+    label: "In Transit",
+    icon: Truck,
+    tone: "success",
+  },
+
+  DELIVERED: {
+    label: "Delivered",
+    icon: CheckCircle2,
+    tone: "success",
+  },
+
   INACTIVE: {
     label: "Inactive",
     icon: Ban,

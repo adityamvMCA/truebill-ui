@@ -23,6 +23,7 @@ const logisticsApi = {
   // ADMIN FLEET & DISPATCH ENDPOINTS
   // ------------------------------------
   getFleetStats: () => apiClient.get("/logistics/fleet/stats"),
+  getDashboardStats: () => apiClient.get("/logistics/fleet/stats"),
   getDrivers: (params = {}) => apiClient.get("/logistics/drivers", { params }),
   createDriver: (data) => apiClient.post("/logistics/drivers", data),
   updateDriver: (id, data) => apiClient.put(`/logistics/drivers/${id}`, data),
