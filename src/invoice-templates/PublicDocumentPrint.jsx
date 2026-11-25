@@ -225,6 +225,9 @@ export default function PublicDocumentPrint() {
           overflow: hidden;
         }
         @media print {
+          body > #root {
+            display: block !important;
+          }
           .public-doc-toolbar, .no-print {
             display: none !important;
           }

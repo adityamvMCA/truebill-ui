@@ -229,23 +229,54 @@ export function PrintDocument({
   variant = "primary",
 }) {
   const [sel] = useSelectedTemplates();
+  const [isPrinting, setIsPrinting] = useState(false);
   const k = KINDS[kind] || KINDS.invoice;
   const { Doc } = k;
   const docNum = getDocNumber(invoice);
+
+  const handlePrint = () => {
+    setIsPrinting(true);
+    document.body.classList.add("is-printing-portal");
+    setTimeout(() => {
+      printWithTitle(`${k.label}-${docNum}`);
+    }, 150);
+  };
+
+  useEffect(() => {
+    if (!isPrinting) return undefined;
+    let cleaned = false;
+    const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
+      document.body.classList.remove("is-printing-portal");
+      setTimeout(() => setIsPrinting(false), 500);
+    };
+
+    window.addEventListener("afterprint", cleanup, { once: true });
+    const safety = setTimeout(cleanup, 60000);
+
+    return () => {
+      clearTimeout(safety);
+      window.removeEventListener("afterprint", cleanup);
+      document.body.classList.remove("is-printing-portal");
+    };
+  }, [isPrinting]);
 
   return (
     <>
       <button
         type="button"
         className={`print-doc-btn tm-btn primary form-button form-button-primary ${className}`}
-        onClick={() => printWithTitle(`${k.label}-${docNum}`)}
+        onClick={handlePrint}
       >
         <Printer size={15} />
         <span>{label || `Print ${k.label.toLowerCase()}`}</span>
       </button>
-      <PrintPortal>
-        <Doc invoice={invoice} templateId={sel[kind] || k.list[0]?.id} />
-      </PrintPortal>
+      {isPrinting && (
+        <PrintPortal>
+          <Doc invoice={invoice} templateId={sel[kind] || k.list[0]?.id} />
+        </PrintPortal>
+      )}
     </>
   );
 }
@@ -267,22 +298,35 @@ export function PrintInvoiceButton({
 
   useEffect(() => {
     if (!doc) return undefined;
-    const done = () => setDoc(null);
-    window.addEventListener("afterprint", done);
-    const id = requestAnimationFrame(() =>
-      requestAnimationFrame(() => {
-        const docNum = getDocNumber(doc);
-        printWithTitle(`${k.label}-${docNum}`);
-      }),
-    );
+
+    document.body.classList.add("is-printing-portal");
+
+    const timer = setTimeout(() => {
+      const docNum = getDocNumber(doc);
+      printWithTitle(`${k.label}-${docNum}`);
+    }, 150);
+
+    let cleaned = false;
+    const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
+      document.body.classList.remove("is-printing-portal");
+      setTimeout(() => setDoc(null), 500);
+    };
+
+    window.addEventListener("afterprint", cleanup, { once: true });
+    const safety = setTimeout(cleanup, 60000);
+
     return () => {
-      cancelAnimationFrame(id);
-      window.removeEventListener("afterprint", done);
+      clearTimeout(timer);
+      clearTimeout(safety);
+      window.removeEventListener("afterprint", cleanup);
+      document.body.classList.remove("is-printing-portal");
     };
   }, [doc, kind, k]);
 
   const handle = async (e) => {
-    e.stopPropagation();
+    e?.stopPropagation?.();
     if (busy) return;
     if (invoice && !fetchInvoice) {
       setDoc(invoice);
@@ -293,9 +337,14 @@ export function PrintInvoiceButton({
       try {
         const num = invoiceNumber || getDocNumber(invoice);
         const res = await fetchInvoice(num, invoice);
-        setDoc(res);
+        if (res) {
+          setDoc(res);
+        } else if (invoice) {
+          setDoc(invoice);
+        }
       } catch (err) {
         console.error(err);
+        if (invoice) setDoc(invoice);
       } finally {
         setBusy(false);
       }
@@ -343,6 +392,7 @@ export default function TemplateManager({ invoice }) {
   }));
   const [live, setLive] = useState(false);
   const [group, setGroup] = useState("All");
+  const [isPrinting, setIsPrinting] = useState(false);
 
   const isMobile = useMedia("(max-width: 900px)");
   const [mobileView, setMobileView] = useState("browse"); // "browse" | "preview"
@@ -366,6 +416,34 @@ export default function TemplateManager({ invoice }) {
   const data = live && invoice ? invoice : sample || SAMPLE_INVOICE;
   const current = list.find((t) => t.id === preview[kind]) || list.find((t) => t.id === sel[kind]) || list[0];
   const cd = dims(current);
+
+  const handlePrint = () => {
+    setIsPrinting(true);
+    document.body.classList.add("is-printing-portal");
+    setTimeout(() => {
+      printWithTitle(`${current.name}-${getDocNumber(data)}`);
+    }, 150);
+  };
+
+  useEffect(() => {
+    if (!isPrinting) return undefined;
+    let cleaned = false;
+    const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
+      document.body.classList.remove("is-printing-portal");
+      setTimeout(() => setIsPrinting(false), 500);
+    };
+
+    window.addEventListener("afterprint", cleanup, { once: true });
+    const safety = setTimeout(cleanup, 60000);
+
+    return () => {
+      clearTimeout(safety);
+      window.removeEventListener("afterprint", cleanup);
+      document.body.classList.remove("is-printing-portal");
+    };
+  }, [isPrinting]);
 
   const fitScale = Math.max(0.1, Math.min(1, (boxW - 2) / cd.w));
   const scale = isMobile && zoom === "full" ? 1 : fitScale;
@@ -515,9 +593,7 @@ export default function TemplateManager({ invoice }) {
               </button>
               <button
                 className="tm-btn primary"
-                onClick={() =>
-                  printWithTitle(`${current.name}-${getDocNumber(data)}`)
-                }
+                onClick={handlePrint}
               >
                 Print
               </button>
@@ -536,9 +612,11 @@ export default function TemplateManager({ invoice }) {
         </aside>
       </div>
 
-      <PrintPortal>
-        <Doc invoice={data} templateId={current.id} />
-      </PrintPortal>
+      {isPrinting && (
+        <PrintPortal>
+          <Doc invoice={data} templateId={current.id} />
+        </PrintPortal>
+      )}
     </div>
   );
 }

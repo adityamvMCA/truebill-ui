@@ -868,7 +868,7 @@
    PRINT MEDIA STYLES — For clean A4 Salary Slip printing
    ============================================================ */
 @media print {
-  body * {
+  body:has(#printable-salary-slip) * {
     visibility: hidden;
   }
   .no-print {

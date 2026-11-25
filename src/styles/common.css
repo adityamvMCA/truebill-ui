@@ -1466,5 +1466,28 @@ button.sip-btn-print:hover {
   z-index: 1000005 !important;
 }
 
+/* =========================================
+   GLOBAL PRINT STYLES - ZERO BLANK PAGES
+========================================= */
+@media print {
+  /* Unless actively printing an isolated portal, keep the main app visible */
+  body:not(.is-printing-portal):not(:has(#print-root)) #root {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  /* Automatically hide layout chrome when printing standard pages */
+  .no-print,
+  .sidebar,
+  .header,
+  .main-header,
+  .lgi-picker-bar,
+  .so-primary-button,
+  .dl-toolbar,
+  .dl-footer {
+    display: none !important;
+  }
+}
+
 
 

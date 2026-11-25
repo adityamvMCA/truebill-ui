@@ -84,22 +84,70 @@ export const DOC_CSS = `
 .doc .th-hr{border-top:1px dashed #000;margin:2px 0}
 .doc .th-row.grand{font-size:1.2em;border-top:1px dashed #000;border-bottom:1px dashed #000;padding:2px 0}
 /* ---- print ---- */
-#print-root{display:none}
-@media print{
-  @page{size:A4;margin:0}
-  @page a5{size:A5;margin:0}
-  @page a4l{size:A4 landscape;margin:0}
-  @page t80{size:80mm 297mm;margin:0}
-  @page t58{size:58mm 297mm;margin:0}
-  html,body{background:#fff!important;margin:0!important;padding:0!important}
-  body>*:not(#print-root){display:none!important}
-  #print-root{display:block!important}
-  .doc{box-decoration-break:clone;-webkit-box-decoration-break:clone}
-  .doc[data-paper=A4]{min-height:296mm}
-  .doc[data-paper=A5]{page:a5;min-height:209mm}
-  .doc[data-paper=A4L]{page:a4l;min-height:209mm}
-  .doc[data-paper=T80]{page:t80}
-  .doc[data-paper=T58]{page:t58}
+#print-root {
+  display: none !important;
+}
+@media print {
+  @page { size: A4; margin: 0; }
+  @page a5 { size: A5; margin: 0; }
+  @page a4l { size: A4 landscape; margin: 0; }
+  @page t80 { size: 80mm 297mm; margin: 0; }
+  @page t58 { size: 58mm 297mm; margin: 0; }
+  html, body {
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100% !important;
+    overflow: visible !important;
+  }
+  
+  /* When printing an invoice portal document, hide everything else */
+  body.is-printing-portal > *:not(#print-root),
+  body:has(#print-root) > *:not(#print-root) {
+    display: none !important;
+  }
+  
+  /* Show #print-root and ensure it is fully visible, full-width, and at the top */
+  body.is-printing-portal #print-root,
+  body:has(#print-root) #print-root {
+    display: block !important;
+    position: relative !important;
+    left: 0 !important;
+    top: 0 !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    height: auto !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    z-index: 999999 !important;
+  }
+
+  body.is-printing-portal #print-root *,
+  body:has(#print-root) #print-root * {
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+  
+  /* Hide non-print elements across the entire app */
+  .no-print, .public-doc-toolbar, .sidebar, .header, .main-header, .lgi-picker-bar, .dbd-btn {
+    display: none !important;
+  }
+
+  .doc {
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+    background: #fff !important;
+    margin: 0 auto !important;
+  }
+  .doc[data-paper=A4] { min-height: 296mm; }
+  .doc[data-paper=A5] { page: a5; min-height: 209mm; }
+  .doc[data-paper=A4L] { page: a4l; min-height: 209mm; }
+  .doc[data-paper=T80] { page: t80; }
+  .doc[data-paper=T58] { page: t58; }
 }
 `;
 

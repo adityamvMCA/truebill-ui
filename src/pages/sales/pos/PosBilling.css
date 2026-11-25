@@ -1210,11 +1210,11 @@
    Print Stylesheet
    -------------------------------------------------------------------------- */
 @media print {
-  body * {
+  body:has(.pos-thermal-paper) * {
     visibility: hidden;
   }
   .pos-thermal-paper, .pos-thermal-paper * {
-    visibility: visible;
+    visibility: visible !important;
   }
   .pos-thermal-paper {
     position: absolute;
