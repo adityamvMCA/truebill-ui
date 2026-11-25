@@ -522,11 +522,13 @@ import {
   Plug,
   Banknote,
   UserCheck,
+  Navigation,
 } from "lucide-react";
 
 const APP_CODE = "truebill";
 
 const iconMap = {
+  Navigation,
   LayoutDashboard,
   ShoppingCart,
   Package,
@@ -765,6 +767,47 @@ const getMenuItems = (responseData) => {
           path: "/hr/payroll",
           icon: Banknote,
           order: 2,
+        },
+      ],
+      hadChildren: true,
+    });
+  }
+
+  const hasLogistics = allItems.some(
+    (item) =>
+      item.path === "/logistics/fleet" ||
+      item.children?.some((c) => c.path === "/logistics/fleet")
+  );
+
+  if (!hasLogistics) {
+    allItems.push({
+      _id: "logistics-fleet-menu-group",
+      group: "logistics",
+      label: "Logistics & Fleet",
+      path: "",
+      icon: Truck,
+      order: 86,
+      children: [
+        {
+          _id: "logistics-fleet-menu-item",
+          label: "Live Fleet Tracking",
+          path: "/logistics/fleet",
+          icon: Navigation,
+          order: 1,
+        },
+        {
+          _id: "logistics-drivers-menu-item",
+          label: "Drivers",
+          path: "/logistics/drivers",
+          icon: Users,
+          order: 2,
+        },
+        {
+          _id: "logistics-trips-menu-item",
+          label: "Dispatch & Trips",
+          path: "/logistics/trips",
+          icon: Truck,
+          order: 3,
         },
       ],
       hadChildren: true,

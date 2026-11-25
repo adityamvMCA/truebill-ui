@@ -275,6 +275,18 @@ const routes = {
     mail: "/gmail/mail/:id",
   },
 
+  logistics: {
+    index: "/logistics/fleet",
+    fleet: "/logistics/fleet",
+    drivers: "/logistics/drivers",
+    trips: "/logistics/trips",
+  },
+
+  driver: {
+    login: "/driver/login",
+    portal: "/driver",
+  },
+
   developer: {
     emails: "/developer/emails",
   },

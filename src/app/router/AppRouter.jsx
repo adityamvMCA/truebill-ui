@@ -118,6 +118,14 @@ import Reports from "../../pages/Reports";
 import PurchaseBillScan from "../../pages/purchase/PurchaseBillScan";
 import PublicDocumentPrint from "../../invoice-templates/PublicDocumentPrint";
 
+// Logistics & Fleet Tracking
+import DriverLogin from "../../pages/logistics/driver/DriverLogin";
+import DriverPortal from "../../pages/logistics/driver/DriverPortal";
+import FleetTrackingMap from "../../pages/logistics/admin/FleetTrackingMap";
+import DriversList from "../../pages/logistics/admin/DriversList";
+import TripsList from "../../pages/logistics/admin/TripsList";
+import PublicLiveTrack from "../../pages/logistics/public/PublicLiveTrack";
+
 // import InventoryReport from "../../pages/Reportdashboard/InventoryReport";
 
 const Login = lazy(() => import("../../pages/Login"));
@@ -139,6 +147,9 @@ const AppRouter = () => (
       ========================= */}
 
       <Route path={routes.public.login} element={<Login />} />
+      <Route path="/driver/login" element={<DriverLogin />} />
+      <Route path="/driver" element={<DriverPortal />} />
+      <Route path="/track/:token" element={<PublicLiveTrack />} />
       <Route path="/print/:docType/:token" element={<PublicDocumentPrint />} />
       <Route path={routes.public.notFound} element={<NotFound />} />
 
@@ -205,6 +216,13 @@ const AppRouter = () => (
             path="/transporters"
             element={gated("sales", <TransportersList />)}
           />
+
+          {/* =====================
+              LOGISTICS & LIVE FLEET TRACKING
+          ====================== */}
+          <Route path="/logistics/fleet" element={<FleetTrackingMap />} />
+          <Route path="/logistics/drivers" element={<DriversList />} />
+          <Route path="/logistics/trips" element={<TripsList />} />
           <Route
             path={routes.sales.quotations}
             element={gated("sales", <SalesQuotationsList />)}
