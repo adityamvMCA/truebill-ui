@@ -6,6 +6,7 @@ import {
   Search,
   Barcode,
   Camera,
+  Smartphone,
   ShoppingCart,
   Plus,
   Minus,
@@ -40,6 +41,7 @@ import barcodeApi from "../../../services/modules/barcodeApi";
 import productCategoryApi from "../../../services/modules/productCategoryApi";
 import routes from "../../../config/routes";
 import ScanBarcodeModal from "../../barcode/ScanBarcodeModal";
+import ScanSessionPanel from "../../barcode/ScanSessionPanel";
 import "./PosBilling.css";
 
 /* --------------------------------------------------------------------------
@@ -119,6 +121,8 @@ export default function PosBilling() {
   const [scanQuery, setScanQuery] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [cameraModalOpen, setCameraModalOpen] = useState(false);
+  const [showMobileScan, setShowMobileScan] = useState(false);
+  const [mobileScanKey, setMobileScanKey] = useState(0);
   const scannerInputRef = useRef(null);
 
   // State: Cart Items
@@ -354,6 +358,36 @@ export default function PosBilling() {
     },
     []
   );
+
+  /* ------------------------------------------------------------------------
+     3b. Mobile Scan Session Handlers (ScanSessionPanel → cart)
+     ------------------------------------------------------------------------ */
+  const applyScanLines = useCallback(
+    (lines) => {
+      lines.forEach((line) => {
+        if (!line.productId) return;
+        const product = {
+          _id: line.productId,
+          name: line.name || line.barcode,
+          productCode: line.productCode || "",
+          salePrice: line.salePrice || 0,
+          gstRate: line.gstRate || 0,
+          unit: line.unit || "Pcs",
+        };
+        // Add once per scanned unit quantity
+        const qty = Math.max(1, Math.round(line.quantity || 1));
+        for (let i = 0; i < qty; i++) {
+          addToCart(product);
+        }
+      });
+    },
+    [addToCart]
+  );
+
+  const endScanSession = useCallback(() => {
+    setShowMobileScan(false);
+    setMobileScanKey((k) => k + 1); // reset panel for next use
+  }, []);
 
   /* ------------------------------------------------------------------------
      4. Barcode / Fast Input Scanner Handler
@@ -785,6 +819,16 @@ export default function PosBilling() {
           >
             <span>Invoices List</span>
             <ArrowRight size={14} />
+          </button>
+
+          <button
+            type="button"
+            className="pos-btn-mobile-scan"
+            onClick={() => setShowMobileScan(true)}
+            title="Scan barcodes from your phone — items sync to POS in real time"
+          >
+            <Smartphone size={15} />
+            <span>Scan from Mobile</span>
           </button>
         </div>
       </header>
@@ -1629,6 +1673,39 @@ export default function PosBilling() {
           }
         }}
       />
+
+      {/* ====================================================================
+          7. Mobile Scan Session Overlay (myBillBook "Scan from Mobile" style)
+          ==================================================================== */}
+      {showMobileScan && (
+        <div className="pos-mobile-scan-overlay" onClick={(e) => { if (e.target === e.currentTarget) endScanSession(); }}>
+          <div className="pos-mobile-scan-panel">
+            <div className="pos-mobile-scan-header">
+              <h3 className="pos-mobile-scan-title">
+                <Smartphone size={18} />
+                Scan from Mobile
+              </h3>
+              <button
+                type="button"
+                className="pos-mobile-scan-close"
+                onClick={endScanSession}
+                title="Close session"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <p className="pos-mobile-scan-hint">
+              Start a session below → scan the QR with your phone → scan product barcodes on mobile → items appear here automatically.
+            </p>
+            <ScanSessionPanel
+              key={mobileScanKey}
+              documentType="SALES"
+              onItemsChange={applyScanLines}
+              onEnd={endScanSession}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

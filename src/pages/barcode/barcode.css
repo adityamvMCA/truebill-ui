@@ -5,11 +5,30 @@
 @media (prefers-color-scheme:dark){:root{--bcx-bg:var(--surface,#161b22);--bcx-fg:var(--text,#e6edf3);--bcx-muted:var(--text-muted,#8b949e);--bcx-border:var(--border,#30363d)}}
 
 
-/* Native camera renders BEHIND the webview: hide everything except .bcx-ui while scanning */
-body.barcode-scanner-active,body.barcode-scanner-active #root,html:has(body.barcode-scanner-active){background:transparent!important}
-body.barcode-scanner-active{visibility:hidden}
-body.barcode-scanner-active .bcx-ui{visibility:visible}
-body.barcode-scanner-active .bcx-frame,body.barcode-scanner-active .bcx-laser{visibility:visible}
+/* ============================================================
+   Native Capacitor camera — ML Kit renders BEHIND webview.
+   We hide everything, then show only .bcx-ui elements on top.
+   ============================================================ */
+body.barcode-scanner-active,
+body.barcode-scanner-active #root,
+html:has(body.barcode-scanner-active) {
+  background: transparent !important;
+}
+body.barcode-scanner-active { visibility: hidden; }
+/* Everything tagged .bcx-ui or the scan overlay stays visible */
+body.barcode-scanner-active .bcx-ui,
+body.barcode-scanner-active .bcx-scan-modal-root,
+body.barcode-scanner-active .bcx-scan-topbar,
+body.barcode-scanner-active .bcx-scan-frame,
+body.barcode-scanner-active .bcx-scan-laser,
+body.barcode-scanner-active .bcx-scan-corner,
+body.barcode-scanner-active .bcx-scan-cam-tools,
+body.barcode-scanner-active .bcx-scan-hint-overlay,
+body.barcode-scanner-active .bcx-scan-footer,
+body.barcode-scanner-active .bcx-frame,
+body.barcode-scanner-active .bcx-laser {
+  visibility: visible;
+}
 
 .bcx-page{display:flex;flex-direction:column;height:100dvh;color:var(--bcx-fg);background:var(--bcx-bg);
   padding-top:env(safe-area-inset-top,0);padding-bottom:env(safe-area-inset-bottom,0);position:relative}
@@ -226,3 +245,229 @@ body.barcode-scanner-active .bcx-frame,body.barcode-scanner-active .bcx-laser{vi
   padding: 2px 8px;
   border-radius: 999px;
 }
+
+
+/* ============================================================
+   ScanBarcodeModal — Full-screen overlay (web + native)
+   ============================================================ */
+
+/* Root: covers entire screen */
+.bcx-scan-modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  /* On native this background stays transparent (ML Kit shows through) */
+}
+.bcx-scan-modal-root.is-native {
+  background: transparent;
+}
+
+/* Top bar */
+.bcx-scan-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  padding-top: calc(12px + env(safe-area-inset-top, 0px));
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  gap: 12px;
+  flex-shrink: 0;
+  z-index: 2;
+}
+.bcx-scan-title {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+.bcx-scan-close {
+  background: rgba(255,255,255,0.15) !important;
+  border-color: rgba(255,255,255,0.3) !important;
+  color: #fff !important;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.bcx-scan-close:hover {
+  background: rgba(255,255,255,0.28) !important;
+}
+
+/* Viewport: fills remaining space */
+.bcx-scan-viewport {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  min-height: 0;
+}
+.is-native .bcx-scan-viewport {
+  background: transparent;
+}
+
+/* Video element */
+.bcx-scan-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Scan frame with corner brackets */
+.bcx-scan-frame {
+  position: absolute;
+  width: min(76%, 320px);
+  aspect-ratio: 1.75;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
+  border-radius: 12px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Four corner brackets */
+.bcx-scan-corner {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-color: #22c55e;
+  border-style: solid;
+  border-width: 0;
+}
+.bcx-scan-corner.tl {
+  top: -2px; left: -2px;
+  border-top-width: 4px; border-left-width: 4px;
+  border-top-left-radius: 10px;
+}
+.bcx-scan-corner.tr {
+  top: -2px; right: -2px;
+  border-top-width: 4px; border-right-width: 4px;
+  border-top-right-radius: 10px;
+}
+.bcx-scan-corner.bl {
+  bottom: -2px; left: -2px;
+  border-bottom-width: 4px; border-left-width: 4px;
+  border-bottom-left-radius: 10px;
+}
+.bcx-scan-corner.br {
+  bottom: -2px; right: -2px;
+  border-bottom-width: 4px; border-right-width: 4px;
+  border-bottom-right-radius: 10px;
+}
+
+/* Laser sweep animation */
+.bcx-scan-laser {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  background: rgba(239, 68, 68, 0.9);
+  box-shadow: 0 0 10px 3px rgba(239, 68, 68, 0.6);
+  border-radius: 2px;
+  animation: bcx-laser-sweep 1.8s ease-in-out infinite alternate;
+  z-index: 4;
+}
+@keyframes bcx-laser-sweep {
+  from { top: 6%; }
+  to   { top: 90%; }
+}
+
+/* Camera tool buttons (torch, flip) */
+.bcx-scan-cam-tools {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 5;
+}
+.bcx-scan-tool-btn {
+  background: rgba(0,0,0,0.6) !important;
+  border-color: rgba(255,255,255,0.3) !important;
+  color: #fff !important;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.bcx-scan-tool-btn.is-on {
+  background: rgba(250,204,21,0.85) !important;
+  color: #000 !important;
+}
+
+/* Hint text */
+.bcx-scan-hint-overlay {
+  position: absolute;
+  bottom: 16px;
+  left: 0; right: 0;
+  text-align: center;
+  color: rgba(255,255,255,0.75);
+  font-size: 13px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* No camera state */
+.bcx-scan-no-camera {
+  padding: 24px 20px;
+  text-align: center;
+  color: #ccc;
+  font-size: 14px;
+  line-height: 1.6;
+  background: #111;
+  border-radius: 12px;
+  margin: 20px;
+}
+
+/* Footer: manual entry */
+.bcx-scan-footer {
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  background: rgba(0,0,0,0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  flex-shrink: 0;
+  z-index: 2;
+}
+.bcx-scan-footer .bcx-manual {
+  display: flex;
+  gap: 8px;
+}
+.bcx-scan-footer .bcx-input {
+  flex: 1;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #fff;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+.bcx-scan-footer .bcx-input::placeholder { color: rgba(255,255,255,0.45); }
+.bcx-scan-footer .bcx-btn.is-primary {
+  background: var(--bcx-primary, #2563eb);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.bcx-scan-footer .bcx-btn.is-primary:disabled { opacity: 0.45; }

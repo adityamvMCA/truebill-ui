@@ -1,6 +1,7 @@
 import { COMPANY, LABELS as L, EWAY_TEMPLATES } from './templates.config';
 import { rs, fmtDate, addrText, resolveTemplate, buildInvoiceVM } from './utils';
 import { Header, docVars, useDocStyles } from './shared';
+import { getTenantCompany } from './tenantCompany';
 
 const KV = ({ rows }) => (
   <div className="kv">
@@ -12,7 +13,8 @@ const KV = ({ rows }) => (
 export default function EwayBillTemplate({ invoice, templateId, template, company }) {
   useDocStyles();
   const cfg = resolveTemplate(EWAY_TEMPLATES, templateId, template);
-  const co = { ...COMPANY, ...company };
+  const tenant = getTenantCompany();
+  const co = { ...COMPANY, ...tenant, ...company };
   const e = invoice.ewayBill || {};
   const v = buildInvoiceVM(invoice);
   const generated = e.status && e.status !== 'NOT_GENERATED';

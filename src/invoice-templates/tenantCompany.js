@@ -24,24 +24,29 @@ export function getTenantCompany() {
     {};
   const b = t.bank || t.bankDetails || {};
 
+  const fullAddress =
+    typeof t.address === "string" && (t.city || t.state || t.pincode)
+      ? [t.address, t.city, t.state, t.pincode].filter(Boolean).join(", ")
+      : addrText(t.address);
+
   return {
     ...clean({
       name: t.businessName || t.name,
       logo: t.logo || t.logoUrl,
       tagline: t.tagline,
-      address: addrText(t.address),
+      address: fullAddress,
       phone: t.phone || t.mobile,
       email: t.email,
       gstin: t.gstin || t.gstNo || t.gstNumber,
-      pan: t.pan,
+      pan: t.pan || t.panNo,
       state: t.state,
-      upi: t.upi || t.upiId,
+      upi: t.upi || t.upiId || b.upi,
       terms: t.termsAndConditions,
     }),
     bank: clean({
       name: b.name || b.bankName,
       accountNo: b.accountNo || b.accountNumber,
-      ifsc: b.ifsc,
+      ifsc: b.ifsc || b.ifscCode,
       branch: b.branch,
     }),
   };

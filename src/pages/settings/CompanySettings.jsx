@@ -19,6 +19,11 @@ import {
   Phone,
   Mail,
   FileText,
+  Upload,
+  Image as ImageIcon,
+  Landmark,
+  QrCode,
+  Trash2,
 } from "lucide-react";
 
 import Input from "../../components/common/Form/Input";
@@ -117,6 +122,13 @@ const initialForm = {
   city: "",
   state: "",
   pincode: "",
+  logo: "",
+  tagline: "",
+  upi: "",
+  bankName: "",
+  accountNo: "",
+  ifsc: "",
+  branch: "",
 };
 
 const EMAIL_REGEX =
@@ -259,6 +271,13 @@ function CompanySettings() {
           state: loadedTenant.state || "",
           pincode:
             loadedTenant.pincode || "",
+          logo: loadedTenant.logo || loadedTenant.logoUrl || "",
+          tagline: loadedTenant.tagline || "",
+          upi: loadedTenant.upi || loadedTenant.upiId || loadedTenant.bank?.upi || "",
+          bankName: loadedTenant.bank?.name || loadedTenant.bankDetails?.bankName || "",
+          accountNo: loadedTenant.bank?.accountNo || loadedTenant.bankDetails?.accountNumber || "",
+          ifsc: loadedTenant.bank?.ifsc || loadedTenant.bankDetails?.ifscCode || "",
+          branch: loadedTenant.bank?.branch || loadedTenant.bankDetails?.branch || "",
         });
       } catch (error) {
         console.error(
@@ -480,6 +499,33 @@ function CompanySettings() {
     return true;
   };
 
+  const handleLogoFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      return toast.error("Please select an image file (PNG, JPG, SVG, WebP)");
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      return toast.error("Logo image size should be less than 2MB");
+    }
+
+    const reader = new FileReader();
+    reader.onload = (uploadEvent) => {
+      const base64Data = uploadEvent.target?.result;
+      if (base64Data) {
+        setFormData((prev) => ({ ...prev, logo: base64Data }));
+        toast.success("Logo uploaded successfully");
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveLogo = () => {
+    setFormData((prev) => ({ ...prev, logo: "" }));
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
 
@@ -522,6 +568,15 @@ function CompanySettings() {
         city: formData.city.trim(),
         state: formData.state.trim(),
         pincode: formData.pincode.trim(),
+        logo: formData.logo?.trim() || "",
+        tagline: formData.tagline?.trim() || "",
+        upi: formData.upi?.trim() || "",
+        bank: {
+          name: formData.bankName?.trim() || "",
+          accountNo: formData.accountNo?.trim() || "",
+          ifsc: formData.ifsc?.trim().toUpperCase() || "",
+          branch: formData.branch?.trim() || "",
+        },
       };
 
       const response =
@@ -546,6 +601,15 @@ function CompanySettings() {
         };
 
       setTenant(updatedTenant);
+
+      try {
+        localStorage.setItem("tenant", JSON.stringify(updatedTenant));
+        sessionStorage.setItem("selectedTenant", JSON.stringify(updatedTenant));
+        window.dispatchEvent(new Event("tenantUpdated"));
+        window.dispatchEvent(new Event("storage"));
+      } catch (storageErr) {
+        console.warn("Storage sync error:", storageErr);
+      }
 
       toast.success(
         "Company settings updated successfully",
@@ -787,17 +851,155 @@ function CompanySettings() {
 
                 <div>
                   <h2>
-                    Business Information
+                    Business Information & Logo
                   </h2>
 
                   <p>
-                    Update your organization
-                    details
+                    Update your organization details and invoice branding
                   </p>
                 </div>
               </div>
 
               <div className="settings-form-grid">
+                {/* Logo Upload Section */}
+                <div
+                  className="settings-form-full"
+                  style={{
+                    padding: "16px",
+                    borderRadius: "10px",
+                    background: "#f8fafc",
+                    border: "1px dashed #cbd5e1",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: "16px",
+                    marginBottom: "8px",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                    <div
+                      style={{
+                        width: "80px",
+                        height: "80px",
+                        borderRadius: "8px",
+                        border: "1px solid #e2e8f0",
+                        background: "#ffffff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        overflow: "hidden",
+                        flexShrink: 0,
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                      }}
+                    >
+                      {formData.logo ? (
+                        <img
+                          src={formData.logo}
+                          alt="Company Logo"
+                          style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            color: "#94a3b8",
+                          }}
+                        >
+                          <ImageIcon size={28} />
+                          <span style={{ fontSize: "0.68rem", marginTop: "4px", fontWeight: 500 }}>
+                            No Logo
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <div
+                        style={{
+                          fontWeight: 600,
+                          fontSize: "0.95rem",
+                          color: "#0f172a",
+                          marginBottom: "4px",
+                        }}
+                      >
+                        Company Logo
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "0.8rem",
+                          color: "#64748b",
+                          maxWidth: "360px",
+                          lineHeight: "1.3",
+                        }}
+                      >
+                        Upload your business logo. It will automatically show up across all sales invoices, estimates, thermal receipts, and delivery notes.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                    <label
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        padding: "8px 14px",
+                        borderRadius: "6px",
+                        background: "#3b82f6",
+                        color: "#ffffff",
+                        fontSize: "0.82rem",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      <Upload size={14} />
+                      {formData.logo ? "Change Logo" : "Upload Logo"}
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                        onChange={handleLogoFileChange}
+                        style={{ display: "none" }}
+                      />
+                    </label>
+
+                    {formData.logo && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveLogo}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          padding: "8px 12px",
+                          borderRadius: "6px",
+                          background: "#fee2e2",
+                          color: "#ef4444",
+                          border: "1px solid #fecaca",
+                          fontSize: "0.82rem",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        <Trash2 size={14} />
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="settings-form-full">
+                  <Input
+                    label="Company Tagline / Subtitle"
+                    name="tagline"
+                    value={formData.tagline}
+                    onChange={handleChange}
+                    placeholder="e.g. Quality You Can Trust | Wholesale & Retail"
+                  />
+                </div>
+
                 <Input
                   label="Business Name"
                   name="businessName"
@@ -906,6 +1108,97 @@ function CompanySettings() {
                   {saving
                     ? "Saving..."
                     : "Save Company Settings"}
+                </Button>
+              </div>
+            </div>
+
+            {/* Bank & Payment Details Card */}
+            <div className="settings-card" style={{ marginTop: "24px" }}>
+              <div className="settings-card-header">
+                <div
+                  className="settings-card-icon"
+                  style={{ background: "#ecfdf5", color: "#059669" }}
+                >
+                  <Landmark size={18} />
+                </div>
+
+                <div>
+                  <h2>Bank & UPI Payment Details</h2>
+                  <p>
+                    These details and UPI QR code appear on invoices, estimates, and receipts
+                  </p>
+                </div>
+              </div>
+
+              <div className="settings-form-grid">
+                <Input
+                  label="Bank Name"
+                  name="bankName"
+                  value={formData.bankName}
+                  onChange={handleChange}
+                  placeholder="e.g. HDFC Bank, State Bank of India"
+                />
+
+                <Input
+                  label="Account Number"
+                  name="accountNo"
+                  value={formData.accountNo}
+                  onChange={handleChange}
+                  placeholder="e.g. 50200012345678"
+                />
+
+                <Input
+                  label="IFSC Code"
+                  name="ifsc"
+                  value={formData.ifsc}
+                  onChange={handleChange}
+                  placeholder="e.g. HDFC0001234"
+                  maxLength={11}
+                />
+
+                <Input
+                  label="Branch Name"
+                  name="branch"
+                  value={formData.branch}
+                  onChange={handleChange}
+                  placeholder="e.g. MG Road Branch"
+                />
+
+                <div className="settings-form-full">
+                  <Input
+                    label="UPI ID / VPA (For Dynamic QR Code on Invoices)"
+                    name="upi"
+                    value={formData.upi}
+                    onChange={handleChange}
+                    placeholder="e.g. businessname@upi or 9876543210@paytm"
+                  />
+                  <div
+                    style={{
+                      fontSize: "0.78rem",
+                      color: "#64748b",
+                      marginTop: "6px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    <QrCode size={14} color="#059669" />
+                    <span>Invoices will generate a scan-and-pay UPI QR code automatically with the invoice balance amount pre-filled.</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="settings-card-footer">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={saving || loading}
+                >
+                  <Save size={16} />
+
+                  {saving
+                    ? "Saving..."
+                    : "Save Company & Bank Details"}
                 </Button>
               </div>
             </div>

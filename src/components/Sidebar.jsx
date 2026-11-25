@@ -520,6 +520,8 @@ import {
   FileCheck,
   Scissors,
   Plug,
+  Banknote,
+  UserCheck,
 } from "lucide-react";
 
 const APP_CODE = "truebill";
@@ -643,7 +645,7 @@ const getMenuItems = (responseData) => {
       ? responseData.data.menuGroups
       : [];
 
-  return [...menuGroups]
+  const allItems = [...menuGroups]
     .filter(Boolean)
     .sort(
       (a, b) =>
@@ -734,6 +736,42 @@ const getMenuItems = (responseData) => {
 
       return Boolean(item.path || item.children.length);
     });
+
+  const hasHr = allItems.some(
+    (item) =>
+      item.path === "/hr/employees" ||
+      item.children?.some((c) => c.path === "/hr/employees")
+  );
+
+  if (!hasHr) {
+    allItems.push({
+      _id: "hr-payroll-menu-group",
+      group: "hr",
+      label: "HR & Payroll",
+      path: "",
+      icon: UsersRound,
+      order: 85,
+      children: [
+        {
+          _id: "hr-employees-menu-item",
+          label: "Employees",
+          path: "/hr/employees",
+          icon: UserCheck,
+          order: 1,
+        },
+        {
+          _id: "hr-payroll-menu-item",
+          label: "Payroll & Salary Slips",
+          path: "/hr/payroll",
+          icon: Banknote,
+          order: 2,
+        },
+      ],
+      hadChildren: true,
+    });
+  }
+
+  return allItems;
 };
 
 function Sidebar({

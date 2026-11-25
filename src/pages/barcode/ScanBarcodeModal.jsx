@@ -1,19 +1,29 @@
-import { useState } from "react";
-import { Flashlight, SwitchCamera } from "lucide-react";
-import BcxModal from "./BcxModal";
+import { useRef, useState } from "react";
+import { Flashlight, SwitchCamera, X } from "lucide-react";
 import useBarcodeEngine from "./useBarcodeEngine";
 import useCameraScanner from "./useCameraScanner";
 import useKeyboardWedge from "./useKeyboardWedge";
 import { feedbackOk, feedbackUnknown } from "./feedback";
 import "./barcode.css";
 
-/** Reusable scan dialog for Product Master and any module: camera + Bluetooth/USB + manual, one engine. */
+/**
+ * Full-screen barcode scan modal.
+ *
+ * Native (Capacitor Android/iOS):
+ *   - ML Kit renders camera natively behind the webview.
+ *   - body gets `barcode-scanner-active` class → CSS makes everything transparent
+ *     so the native camera feed is visible through it.
+ *   - Only the scan frame / laser / controls are shown over it.
+ *
+ * Web browser:
+ *   - <video> element fills the viewport, BarcodeDetector (or Html5Qrcode fallback) decodes frames.
+ */
 export default function ScanBarcodeModal({
   open,
   onClose,
   onFound,
   onUnknown,
-  title = "Scan barcode",
+  title = "Scan Barcode",
 }) {
   const [manual, setManual] = useState("");
 
@@ -26,81 +36,126 @@ export default function ScanBarcodeModal({
     },
     onUnknown: (u) => {
       feedbackUnknown();
-      onClose?.();
       onUnknown?.(u);
     },
   });
 
   const camera = useCameraScanner({
     active: open,
-    onBarcode: (c) => engine(c, "camera"),
+    onBarcode: (code, format) => engine(code, "camera"),
   });
 
-  useKeyboardWedge((c) => engine(c, "wedge"), { enabled: open });
+  useKeyboardWedge((code) => engine(code, "wedge"), { enabled: open });
+
+  if (!open) return null;
+
+  const denied = camera.permission === "denied";
+  const noCamera = !camera.supported || denied;
 
   return (
-    <BcxModal open={open} title={title} onClose={onClose} transparentBody>
-      <div className="bcx-viewport bcx-viewport--modal">
-        {/* Web camera feed */}
-        {camera.isWeb && camera.supported && camera.permission !== "denied" && (
+    /*
+     * On native: body is transparent, this dialog must also be transparent
+     * so the ML Kit camera feed shows through.
+     * .bcx-modal-backdrop sets background only on web.
+     */
+    <div
+      className={`bcx-scan-modal-root bcx-ui${camera.isNative ? " is-native" : ""}`}
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+    >
+      {/* ── Top bar ──────────────────────────────────────────────────────── */}
+      <div className="bcx-scan-topbar bcx-ui">
+        <span className="bcx-scan-title">{title}</span>
+        <button
+          type="button"
+          className="bcx-scan-close bcx-icon-btn"
+          aria-label="Close"
+          onClick={onClose}
+        >
+          <X size={20} />
+        </button>
+      </div>
+
+      {/* ── Viewport ─────────────────────────────────────────────────────── */}
+      <div className="bcx-scan-viewport">
+        {/* Web: live video feed */}
+        {camera.isWeb && camera.supported && !denied && (
           <video
             ref={camera.videoRef}
+            className="bcx-scan-video"
             playsInline
             muted
             autoPlay
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-            }}
           />
         )}
 
-        {camera.supported && camera.permission !== "denied" ? (
-          <div className="bcx-frame" aria-hidden="true">
-            <div className="bcx-laser" />
+        {/* Scan frame + laser (shown on both native and web) */}
+        {!noCamera && (
+          <div className="bcx-scan-frame" aria-hidden="true">
+            <span className="bcx-scan-corner tl" />
+            <span className="bcx-scan-corner tr" />
+            <span className="bcx-scan-corner bl" />
+            <span className="bcx-scan-corner br" />
+            <div className="bcx-scan-laser" />
           </div>
-        ) : (
-          <p className="bcx-hint bcx-ui">
-            {camera.permission === "denied"
-              ? "Camera permission denied. Enable it in your browser / app settings."
-              : "Camera scanning is available on devices with a webcam or mobile camera. Use a Bluetooth/USB scanner or type the code."}
+        )}
+
+        {/* Camera tool buttons overlaid top-right of viewport */}
+        {!noCamera && (
+          <div className="bcx-scan-cam-tools">
+            {camera.torchAvailable && (
+              <button
+                type="button"
+                className={`bcx-icon-btn bcx-scan-tool-btn${camera.torchOn ? " is-on" : ""}`}
+                onClick={camera.toggleTorch}
+                aria-label="Flashlight"
+              >
+                <Flashlight size={20} />
+              </button>
+            )}
+            <button
+              type="button"
+              className="bcx-icon-btn bcx-scan-tool-btn"
+              onClick={camera.flipCamera}
+              aria-label="Switch camera"
+            >
+              <SwitchCamera size={20} />
+            </button>
+          </div>
+        )}
+
+        {/* Error / permission denied state */}
+        {noCamera && (
+          <div className="bcx-scan-no-camera bcx-ui">
+            <p>
+              {denied
+                ? "📷 Camera permission denied. Enable it in Settings and reload."
+                : camera.error
+                ? `⚠️ ${camera.error}`
+                : "Camera not available. Use Bluetooth/USB scanner or type the code below."}
+            </p>
+          </div>
+        )}
+
+        {/* Hint text at bottom of viewport */}
+        {!noCamera && (
+          <p className="bcx-scan-hint-overlay">
+            Point camera at a barcode
           </p>
         )}
       </div>
 
-      <div className="bcx-modal-foot bcx-ui">
-        <div className="bcx-tools">
-          {camera.torchAvailable && (
-            <button
-              type="button"
-              className={`bcx-icon-btn ${camera.torchOn ? "is-on" : ""}`}
-              onClick={camera.toggleTorch}
-              aria-label="Flashlight"
-            >
-              <Flashlight size={18} />
-            </button>
-          )}
-          {camera.supported && (
-            <button
-              type="button"
-              className="bcx-icon-btn"
-              onClick={camera.flipCamera}
-              aria-label="Switch camera"
-            >
-              <SwitchCamera size={18} />
-            </button>
-          )}
-        </div>
-
+      {/* ── Bottom: manual entry ─────────────────────────────────────────── */}
+      <div className="bcx-scan-footer bcx-ui">
         <form
           className="bcx-manual"
           onSubmit={(e) => {
             e.preventDefault();
-            engine(manual, "manual");
-            setManual("");
+            if (manual.trim()) {
+              engine(manual.trim(), "manual");
+              setManual("");
+            }
           }}
         >
           <input
@@ -108,7 +163,7 @@ export default function ScanBarcodeModal({
             data-wedge="1"
             value={manual}
             onChange={(e) => setManual(e.target.value)}
-            placeholder="Type or scan barcode"
+            placeholder="Or type / paste barcode here"
             inputMode="text"
             autoComplete="off"
           />
@@ -122,7 +177,8 @@ export default function ScanBarcodeModal({
         </form>
       </div>
 
+      {/* Required hidden container for Html5Qrcode fallback */}
       <div id="bcx-scanner-hidden" style={{ display: "none" }} />
-    </BcxModal>
+    </div>
   );
 }

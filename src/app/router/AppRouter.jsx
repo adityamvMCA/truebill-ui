@@ -43,6 +43,8 @@ import BankLedger from "../../pages/accounting/BankLedger";
 import SalesInvoiceCreate from "../../pages/sales/invoices/SalesInvoiceCreate";
 import SalesInvoicesList from "../../pages/sales/invoices/SalesInvoicesList";
 import PosBilling from "../../pages/sales/pos/PosBilling";
+import Employees from "../../pages/hr/Employees";
+import Payroll from "../../pages/hr/Payroll";
 import SalesOrderCreation from "../../pages/sales-orders/SalesOrderCreation";
 import SalesOrdersList from "../../pages/sales-orders/SalesOrdersList";
 import DeliveryNoteCreation from "../../pages/delivery-notes/DeliveryNoteCreation";
@@ -541,6 +543,16 @@ const AppRouter = () => (
             path={routes.settings.company}
             element={gated("settings.company", <CompanySettings />)}
           />
+          {/* HR & Payroll */}
+          <Route
+            path={routes.hr.employees}
+            element={gated("hr.employees", <Employees />)}
+          />
+          <Route
+            path={routes.hr.payroll}
+            element={gated("hr.payroll", <Payroll />)}
+          />
+
           <Route
             path={routes.settings.users}
             element={gated("settings.users", <Users />)}

@@ -226,6 +226,23 @@ export default function MobileScannerPage() {
       </header>
 
       <section className="bcx-viewport">
+        {/* Web: live video feed — hidden on native (ML Kit renders behind webview) */}
+        {camera.isWeb && camera.supported && camera.permission !== "denied" && (
+          <video
+            ref={camera.videoRef}
+            playsInline
+            muted
+            autoPlay
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+            }}
+          />
+        )}
+
         {camera.supported && camera.permission !== "denied" ? (
           <div className="bcx-frame" aria-hidden="true"><span className="bcx-laser" /></div>
         ) : (

@@ -2,6 +2,7 @@ import { COMPANY, LABELS as L } from "./templates.config";
 import { DELIVERY_TEMPLATES } from "./deliveryNote.templates";
 import { fmtDate, addrText, resolveTemplate } from "./utils";
 import { Header, docVars, useDocStyles } from "./shared";
+import { getTenantCompany } from "./tenantCompany";
 
 /* Delivery notes don't carry money by default (no rate/amount columns) —
    flip s.showAmount on a per-call basis if you want a priced challan. */
@@ -93,7 +94,8 @@ export default function DeliveryNoteTemplate({
 }) {
   useDocStyles();
   const cfg = resolveTemplate(DELIVERY_TEMPLATES, templateId, template);
-  const co = { ...COMPANY, ...company };
+  const tenant = getTenantCompany();
+  const co = { ...COMPANY, ...tenant, ...company };
   const dn = invoice.deliveryNote || {};
   const items = deliveryItems(invoice.items);
   const dispatched = dn.status && dn.status !== "NOT_DISPATCHED";

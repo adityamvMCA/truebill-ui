@@ -38,6 +38,13 @@ function Thermal({ cfg, co, invoice, v }) {
       <div className="th-row"><span>{L.paid}</span><span>{rs(v.paid)}</span></div>
       <div className="th-row"><b>{L.balance}</b><b>{rs(v.due)}</b></div>
       {s.amountInWords && <div className="sm">{amountInWords(v.total)}</div>}
+      {s.bank && (co.bank?.accountNo || co.bank?.name) && (
+        <div className="th-c sm" style={{ marginTop: 4, fontSize: '0.82em' }}>
+          {co.bank.name && <div><b>{co.bank.name}</b> {co.bank.branch ? `- ${co.bank.branch}` : ''}</div>}
+          {co.bank.accountNo && <div>A/c: {co.bank.accountNo}</div>}
+          {co.bank.ifsc && <div>IFSC: {co.bank.ifsc}</div>}
+        </div>
+      )}
       {s.qr && co.upi && (
         <div className="th-c" style={{ marginTop: 4 }}>
           <QRCodeSVG value={upiLink(co, invoice, v)} size={cfg.paper === 'T58' ? 80 : 100} />
