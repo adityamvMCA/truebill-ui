@@ -22,6 +22,7 @@ import {
   Trash2,
   Copy,
   Printer,
+  Truck,
   Columns3,
   ArrowUp,
   ArrowDown,
@@ -214,6 +215,15 @@ function ActionMenu({
       label: "Print",
       icon: <Printer size={15} />,
       action: actions.print,
+    });
+  }
+
+  if (actions.dispatchFleet) {
+    menuActions.push({
+      key: "dispatchFleet",
+      label: "Dispatch GPS Trip",
+      icon: <Truck size={15} />,
+      action: actions.dispatchFleet,
     });
   }
 

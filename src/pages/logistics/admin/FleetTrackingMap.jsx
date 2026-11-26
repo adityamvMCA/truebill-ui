@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Truck,
   MapPin,
@@ -30,6 +31,7 @@ import Input from "../../../components/common/Form/Input";
 import Select from "../../../components/common/Form/Select";
 import Textarea from "../../../components/common/Form/Textarea";
 import StatusField from "../../../components/common/StatusField/StatusField";
+import api from "../../../services/api";
 import logisticsApi from "../../../services/modules/logisticsApi";
 import { createLogisticsSocket } from "../../../services/modules/logisticsSocket";
 
@@ -79,10 +81,21 @@ export default function FleetTrackingMap() {
   const [statusFilter, setStatusFilter] = useState("STARTED"); // "ALL" | "STARTED" | "SCHEDULED" | "COMPLETED"
   const [selectedTripId, setSelectedTripId] = useState(null);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
+  const [initialDispatchData, setInitialDispatchData] = useState(null);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
   const [sidePanelOpen, setSidePanelOpen] = useState(() => typeof window !== "undefined" && window.innerWidth >= 768);
   const [isFullScreen, setIsFullScreen] = useState(false);
+
+  const location = useLocation();
+
+  // Auto-open dispatch modal if navigating from a Delivery Note
+  useEffect(() => {
+    if (location.state?.dispatchNote) {
+      setInitialDispatchData(location.state.dispatchNote);
+      setShowDispatchModal(true);
+    }
+  }, [location.state]);
 
   // Responsive resize handler & map invalidator
   useEffect(() => {
@@ -1361,9 +1374,14 @@ export default function FleetTrackingMap() {
       <DispatchTripModal
         isOpen={showDispatchModal}
         drivers={drivers}
-        onClose={() => setShowDispatchModal(false)}
+        initialData={initialDispatchData}
+        onClose={() => {
+          setShowDispatchModal(false);
+          setInitialDispatchData(null);
+        }}
         onSuccess={() => {
           setShowDispatchModal(false);
+          setInitialDispatchData(null);
           loadAllData(false);
         }}
       />
@@ -1374,25 +1392,40 @@ export default function FleetTrackingMap() {
 // -------------------------------------------------------------
 // DISPATCH TRIP MODAL USING BOXMODAL & FORM SYSTEM
 // -------------------------------------------------------------
-function DispatchTripModal({ isOpen, drivers, onClose, onSuccess }) {
+function DispatchTripModal({ isOpen, drivers, initialData, onClose, onSuccess }) {
   const [driverId, setDriverId] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [destinationAddress, setDestinationAddress] = useState("");
   const [originAddress, setOriginAddress] = useState("Central Warehouse");
   const [notes, setNotes] = useState("");
+  const [deliveryNoteId, setDeliveryNoteId] = useState("");
+  const [deliveryNoteNumber, setDeliveryNoteNumber] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      setDriverId("");
-      setCustomerName("");
-      setCustomerPhone("");
-      setDestinationAddress("");
-      setOriginAddress("Central Warehouse");
-      setNotes("");
+      if (initialData) {
+        setDriverId(initialData.driverId || "");
+        setCustomerName(initialData.customerName || "");
+        setCustomerPhone(initialData.customerPhone || "");
+        setDestinationAddress(initialData.destinationAddress || "");
+        setOriginAddress(initialData.originAddress || "Central Warehouse");
+        setNotes(initialData.notes || "");
+        setDeliveryNoteId(initialData.deliveryNoteId || "");
+        setDeliveryNoteNumber(initialData.deliveryNoteNumber || "");
+      } else {
+        setDriverId("");
+        setCustomerName("");
+        setCustomerPhone("");
+        setDestinationAddress("");
+        setOriginAddress("Central Warehouse");
+        setNotes("");
+        setDeliveryNoteId("");
+        setDeliveryNoteNumber("");
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, initialData]);
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
@@ -1418,10 +1451,22 @@ function DispatchTripModal({ isOpen, drivers, onClose, onSuccess }) {
         destinationAddress: destinationAddress.trim(),
         originAddress: originAddress.trim(),
         notes: notes.trim(),
+        deliveryNoteId: deliveryNoteId || undefined,
+        deliveryNoteNumber: deliveryNoteNumber || undefined,
       });
 
       if (res.data?.success) {
         toast.success("Delivery trip dispatched successfully!");
+        if (deliveryNoteNumber) {
+          try {
+            await api.deliveryNote.dispatch(deliveryNoteNumber, {
+              dispatchRemarks: "Dispatched with driver via Fleet Command",
+            });
+            toast.success(`Delivery Note #${deliveryNoteNumber} marked as DISPATCHED!`);
+          } catch (dnErr) {
+            console.warn("Could not auto-mark delivery note as dispatched:", dnErr);
+          }
+        }
         onSuccess();
       } else {
         toast.error(res.data?.message || "Failed to dispatch trip");
@@ -1470,6 +1515,29 @@ function DispatchTripModal({ isOpen, drivers, onClose, onSuccess }) {
       width="780px"
       footer={footer}
     >
+      {deliveryNoteNumber && (
+        <div
+          style={{
+            background: "#eff6ff",
+            border: "1px solid #bfdbfe",
+            borderRadius: "8px",
+            padding: "10px 14px",
+            marginBottom: "16px",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            fontSize: "13px",
+            color: "#1e40af",
+            fontWeight: 500,
+          }}
+        >
+          <span style={{ fontSize: "16px" }}>📋</span>
+          <span>
+            Linked to Delivery Note: <strong>#{deliveryNoteNumber}</strong> (Customer & destination pre-filled)
+          </span>
+        </div>
+      )}
+
       {/* SECTION 1: Driver & Vehicle */}
       <div className="box-modal-section">
         <div className="box-modal-section-header">

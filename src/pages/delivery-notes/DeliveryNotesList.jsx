@@ -2690,6 +2690,7 @@ function DeliveryNoteDialog({
   error,
   onClose,
   onSubmit,
+  onDispatchFleet,
 }) {
   const dialogRef = useRef(null);
   const closeRef = useRef(null);
@@ -3098,6 +3099,17 @@ function DeliveryNoteDialog({
             >
               {mode === "view" ? "Close" : "Back"}
             </Button>
+
+            {mode === "view" && note?.status !== "CANCELLED" && note?.status !== "DELIVERED" && onDispatchFleet && (
+              <Button
+                type="button"
+                icon={Truck}
+                variant="primary"
+                onClick={() => onDispatchFleet(note)}
+              >
+                Dispatch GPS Trip
+              </Button>
+            )}
 
             {config && (
               <Button
@@ -4420,6 +4432,20 @@ function DeliveryNotesList() {
           view: (row) => {
             void openDialog(row, "view");
           },
+          dispatchFleet: (row) => {
+            navigate("/logistics/fleet", {
+              state: {
+                dispatchNote: {
+                  deliveryNoteId: row._id,
+                  deliveryNoteNumber: row.deliveryNoteNumber,
+                  customerName: row.customerName,
+                  customerPhone: row.contactPhone || row.receivedByPhone || "",
+                  destinationAddress: row.shippingAddress || row.billingAddress || "",
+                  notes: `Delivery Note #${row.deliveryNoteNumber}${row.sourceSalesOrderNumber ? ` | SO: ${row.sourceSalesOrderNumber}` : ""}`,
+                },
+              },
+            });
+          },
           delete: (row) =>
             openBulkAction(row, "delete"),
         }}
@@ -4482,6 +4508,21 @@ function DeliveryNotesList() {
           error={dialogError}
           onClose={closeDialog}
           onSubmit={submitAction}
+          onDispatchFleet={(note) => {
+            closeDialog();
+            navigate("/logistics/fleet", {
+              state: {
+                dispatchNote: {
+                  deliveryNoteId: note._id,
+                  deliveryNoteNumber: note.deliveryNoteNumber,
+                  customerName: note.customerName,
+                  customerPhone: note.contactPhone || note.receivedByPhone || "",
+                  destinationAddress: note.shippingAddress || note.billingAddress || "",
+                  notes: `Delivery Note #${note.deliveryNoteNumber}${note.sourceSalesOrderNumber ? ` | SO: ${note.sourceSalesOrderNumber}` : ""}`,
+                },
+              },
+            });
+          }}
         />
       )}
 

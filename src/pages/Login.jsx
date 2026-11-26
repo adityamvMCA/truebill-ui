@@ -8,6 +8,7 @@ import {
 } from "@aparajita/capacitor-biometric-auth";
 
 import api from "../services/api";
+import logisticsApi from "../services/modules/logisticsApi";
 import { registerFcmToken } from "../services/fcmService";
 import { getDefaultRoute } from "../config/routes";
 
@@ -134,8 +135,9 @@ function Login() {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (!email.trim() || !password.trim()) {
-      toast.error("Please enter email and password");
+    const inputVal = email.trim();
+    if (!inputVal || !password.trim()) {
+      toast.error("Please enter email/phone and password");
       return;
     }
 
@@ -143,19 +145,53 @@ function Login() {
 
     try {
       const response = await api.auth.login({
-        email: email.trim(),
+        email: inputVal,
         password,
       });
 
+      // If this account is a driver, set driver session
+      if (
+        response.data?.user?.role?.toLowerCase() === "driver" ||
+        response.data?.user?.isDriver
+      ) {
+        localStorage.setItem("driver_token", response.data.token);
+        localStorage.setItem(
+          "driver_user",
+          JSON.stringify(response.data.user),
+        );
+      }
+
       await handleLoginSuccess(response.data);
     } catch (error) {
+      // If ERP login fails, seamlessly attempt driver portal login if input resembles a phone number or username
+      const cleanPhone = inputVal.replace(/\D/g, "");
+      if (cleanPhone.length >= 10 || !inputVal.includes("@")) {
+        try {
+          const driverRes = await logisticsApi.driverLogin({
+            phone: cleanPhone || inputVal,
+            password: password.trim(),
+          });
+
+          if (driverRes.data?.success) {
+            const { token, driver } = driverRes.data.data;
+            localStorage.setItem("driver_token", token);
+            localStorage.setItem("driver_user", JSON.stringify(driver));
+            toast.success(`Welcome back, Driver ${driver.name}!`);
+            navigate("/driver", { replace: true });
+            return;
+          }
+        } catch (driverErr) {
+          // Fall through to display original error
+        }
+      }
+
       console.error("Login error:", error);
 
       const status = error.response?.status;
       const message = error.response?.data?.message;
 
       if (status === 401) {
-        toast.error(message || "Invalid email or password");
+        toast.error(message || "Invalid email/phone or password");
       } else if (status === 403) {
         toast.error(message || "Your account is not allowed to login");
       } else {
@@ -567,6 +603,27 @@ function Login() {
             )}
           </div>
         )}
+
+        {/* Quick Driver Login option */}
+        <div style={{ marginTop: "18px", textAlign: "center", borderTop: "1px dashed var(--border-color, #e2e8f0)", paddingTop: "14px" }}>
+          <button
+            type="button"
+            onClick={() => navigate("/driver/login")}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "var(--primary-color, #2563EB)",
+              fontWeight: 600,
+              fontSize: "13px",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            🚚 Are you a Driver? Driver Portal Login →
+          </button>
+        </div>
 
         <p className="login-footer">© 2026 TrustIQ ERP</p>
       </div>

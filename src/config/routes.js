@@ -306,6 +306,14 @@ export const isPlatformUser = (user) =>
   ["developer", "support"].includes(user?.platformRole);
 
 export const getDefaultRoute = (user) => {
+  if (
+    user?.role?.toLowerCase() === "driver" ||
+    user?.isDriver ||
+    user?.userType?.toLowerCase() === "driver"
+  ) {
+    return routes.driver.portal;
+  }
+
   if (isPlatformUser(user)) {
     return routes.traders.index;
   }
