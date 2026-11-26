@@ -49,18 +49,41 @@ export default function FleetTrackingMap() {
   const [selectedTripId, setSelectedTripId] = useState(null);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
-  const [sidePanelOpen, setSidePanelOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
+  const [sidePanelOpen, setSidePanelOpen] = useState(() => typeof window !== "undefined" && window.innerWidth >= 768);
   const [isFullScreen, setIsFullScreen] = useState(false);
 
-  // Invalidate map size on fullscreen or side panel toggle
+  // Responsive resize handler & map invalidator
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
       if (mapInstanceRef.current) {
         mapInstanceRef.current.invalidateSize();
       }
-    }, 150);
-    return () => clearTimeout(timer);
-  }, [isFullScreen, sidePanelOpen]);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Invalidate map size on fullscreen, side panel toggle, or mobile viewport shift
+  useEffect(() => {
+    const timer1 = setTimeout(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+      }
+    }, 100);
+    const timer2 = setTimeout(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+      }
+    }, 350);
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, [isFullScreen, sidePanelOpen, isMobile]);
 
   // Fit all vehicles on screen
   const fitAllVehicles = useCallback(() => {
@@ -251,6 +274,14 @@ export default function FleetTrackingMap() {
       }).addTo(map);
 
       mapInstanceRef.current = map;
+
+      // Invalidate size once DOM mounts container
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 150);
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 400);
     }
 
     renderAllMarkersOnMap();
@@ -507,37 +538,38 @@ export default function FleetTrackingMap() {
         style={{
           backgroundColor: "#ffffff",
           borderBottom: "1px solid var(--border-color, #e2e8f0)",
-          padding: "12px 20px",
+          padding: isMobile ? "10px 14px" : "12px 20px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           flexWrap: "wrap",
-          gap: "12px",
+          gap: "10px",
           zIndex: 20,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "10px" : "16px" }}>
           <div
             style={{
-              width: "40px",
-              height: "40px",
+              width: "36px",
+              height: "36px",
               borderRadius: "10px",
               backgroundColor: "rgba(14, 165, 233, 0.1)",
               color: "#0284c7",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              flexShrink: 0,
             }}
           >
-            <Truck size={22} strokeWidth={2.2} />
+            <Truck size={20} strokeWidth={2.2} />
           </div>
 
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
               <h1
                 style={{
                   margin: 0,
-                  fontSize: "18px",
+                  fontSize: isMobile ? "16px" : "18px",
                   fontWeight: 700,
                   letterSpacing: "-0.01em",
                 }}
@@ -569,26 +601,30 @@ export default function FleetTrackingMap() {
                 {isSocketConnected ? "Live GPS Connected" : "Connecting..."}
               </span>
             </div>
-            <p
-              style={{
-                margin: "2px 0 0 0",
-                fontSize: "12px",
-                color: "var(--text-muted, #64748b)",
-              }}
-            >
-              Real-time OpenStreetMap telemetry & vehicle tracking stream
-            </p>
+            {!isMobile && (
+              <p
+                style={{
+                  margin: "2px 0 0 0",
+                  fontSize: "12px",
+                  color: "var(--text-muted, #64748b)",
+                }}
+              >
+                Real-time OpenStreetMap telemetry & vehicle tracking stream
+              </p>
+            )}
           </div>
         </div>
 
         {/* Quick Stats & Action Buttons */}
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "8px" : "14px", flexWrap: "wrap" }}>
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "12px",
+              gap: "8px",
               fontSize: "12px",
+              overflowX: isMobile ? "auto" : "visible",
+              maxWidth: "100%",
             }}
           >
             <div
@@ -596,10 +632,11 @@ export default function FleetTrackingMap() {
                 display: "flex",
                 alignItems: "center",
                 gap: "6px",
-                padding: "4px 10px",
+                padding: "4px 8px",
                 borderRadius: "8px",
                 backgroundColor: "#f0fdf4",
                 border: "1px solid #bbf7d0",
+                whiteSpace: "nowrap",
               }}
             >
               <span style={{ color: "#166534" }}>In Transit:</span>
@@ -613,10 +650,11 @@ export default function FleetTrackingMap() {
                 display: "flex",
                 alignItems: "center",
                 gap: "6px",
-                padding: "4px 10px",
+                padding: "4px 8px",
                 borderRadius: "8px",
                 backgroundColor: "#f8fafc",
                 border: "1px solid #e2e8f0",
+                whiteSpace: "nowrap",
               }}
             >
               <span style={{ color: "#64748b" }}>Drivers:</span>
@@ -630,13 +668,14 @@ export default function FleetTrackingMap() {
                 display: "flex",
                 alignItems: "center",
                 gap: "6px",
-                padding: "4px 10px",
+                padding: "4px 8px",
                 borderRadius: "8px",
                 backgroundColor: "#f0fdfa",
                 border: "1px solid #ccfbf1",
+                whiteSpace: "nowrap",
               }}
             >
-              <span style={{ color: "#0f766e" }}>Delivered Today:</span>
+              <span style={{ color: "#0f766e" }}>Delivered:</span>
               <strong style={{ color: "#0d9488" }}>
                 {stats.completedToday ||
                   trips.filter((t) => t.status === "COMPLETED").length}
@@ -709,7 +748,7 @@ export default function FleetTrackingMap() {
             title={isFullScreen ? "Exit Full Screen" : "Full Screen Map"}
           >
             {isFullScreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
-            <span>{isFullScreen ? "Exit Full Screen" : "Full Screen"}</span>
+            <span>{isFullScreen ? "Exit" : "Full Screen"}</span>
           </button>
 
           <button
@@ -724,21 +763,80 @@ export default function FleetTrackingMap() {
       </header>
 
       {/* 2. SPLIT INTERFACE: SIDEBAR + LEAFLET MAP */}
-      <div style={{ display: "flex", flex: 1, position: "relative", overflow: "hidden" }}>
+      <div style={{ display: "flex", flex: 1, position: "relative", overflow: "hidden", minHeight: 0 }}>
+        {/* MOBILE BACKDROP OVERLAY */}
+        {isMobile && sidePanelOpen && (
+          <div
+            onClick={() => setSidePanelOpen(false)}
+            style={{
+              position: "absolute",
+              inset: 0,
+              backgroundColor: "rgba(15, 23, 42, 0.45)",
+              zIndex: 40,
+              backdropFilter: "blur(2px)",
+            }}
+          />
+        )}
+
         {/* SIDEBAR PANEL */}
         <aside
           style={{
-            width: sidePanelOpen ? "380px" : "0px",
-            minWidth: sidePanelOpen ? "380px" : "0px",
-            transition: "width 0.2s ease",
+            position: isMobile ? "absolute" : "relative",
+            left: 0,
+            top: 0,
+            bottom: 0,
+            height: "100%",
+            width: isMobile ? "min(350px, 86vw)" : sidePanelOpen ? "380px" : "0px",
+            minWidth: isMobile ? "auto" : sidePanelOpen ? "380px" : "0px",
+            transform: isMobile && !sidePanelOpen ? "translateX(-100%)" : "none",
+            transition: isMobile ? "transform 0.25s ease" : "width 0.2s ease",
             backgroundColor: "#ffffff",
             borderRight: "1px solid var(--border-color, #e2e8f0)",
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
-            zIndex: 10,
+            zIndex: isMobile ? 50 : 10,
+            boxShadow: isMobile && sidePanelOpen ? "4px 0 24px rgba(0,0,0,0.25)" : "none",
           }}
         >
+          {/* Mobile Drawer Close Header */}
+          {isMobile && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "12px 16px",
+                borderBottom: "1px solid #e2e8f0",
+                backgroundColor: "#f8fafc",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Truck size={18} color="#0284c7" />
+                <span style={{ fontWeight: 700, fontSize: "14px", color: "#0f172a" }}>
+                  Fleet Vehicles ({trips.length})
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSidePanelOpen(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "4px",
+                  color: "#64748b",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                aria-label="Close vehicles list"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          )}
+
           {/* Search & Tabs */}
           <div
             style={{
@@ -966,27 +1064,35 @@ export default function FleetTrackingMap() {
         </aside>
 
         {/* TOGGLE SIDE PANEL BUTTON */}
-        <button
-          type="button"
-          onClick={() => setSidePanelOpen(!sidePanelOpen)}
-          style={{
-            position: "absolute",
-            left: sidePanelOpen ? "390px" : "10px",
-            top: "10px",
-            zIndex: 30,
-            backgroundColor: "#ffffff",
-            border: "1px solid var(--border-color, #e2e8f0)",
-            padding: "6px 8px",
-            borderRadius: "8px",
-            cursor: "pointer",
-            boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-            color: "var(--text-main, #334155)",
-            transition: "left 0.2s ease",
-          }}
-          title={sidePanelOpen ? "Collapse List" : "Show List"}
-        >
-          {sidePanelOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-        </button>
+        {(!isMobile || !sidePanelOpen) && (
+          <button
+            type="button"
+            onClick={() => setSidePanelOpen(!sidePanelOpen)}
+            style={{
+              position: "absolute",
+              left: isMobile ? "12px" : sidePanelOpen ? "390px" : "12px",
+              top: "12px",
+              zIndex: 35,
+              backgroundColor: "#ffffff",
+              border: "1px solid var(--border-color, #e2e8f0)",
+              padding: isMobile ? "7px 12px" : "6px 8px",
+              borderRadius: "8px",
+              cursor: "pointer",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+              color: "var(--text-main, #334155)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              fontSize: "12.5px",
+              fontWeight: 600,
+              transition: isMobile ? "none" : "left 0.2s ease",
+            }}
+            title={sidePanelOpen ? "Collapse List" : "Show Fleet List"}
+          >
+            {sidePanelOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+            {isMobile && <span>Vehicles ({trips.length})</span>}
+          </button>
+        )}
 
         {/* MAP CONTAINER */}
         <main style={{ flex: 1, position: "relative", height: "100%" }}>

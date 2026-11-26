@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 
 import hrApi from "../../services/modules/hrApi";
+import BoxModal from "../../components/common/Modal/BoxModal";
+import StatusField from "../../components/common/StatusField/StatusField";
 import "./Payroll.css";
 
 const MONTHS = [
@@ -328,26 +330,34 @@ export default function Payroll() {
             </button>
           </div>
         ) : (
-          <div className="pay-table-wrapper">
-            <table className="pay-table">
+          <>
+            <div className="pay-table-wrapper">
+              <table className="pay-table">
               <thead>
                 <tr>
-                  <th>Slip No</th>
+                  <th style={{ width: "120px" }}>Slip No</th>
                   <th>Employee</th>
                   <th>Designation / Dept</th>
-                  <th>Period</th>
-                  <th style={{ textAlign: "right" }}>Gross</th>
-                  <th style={{ textAlign: "right" }}>Deductions</th>
-                  <th style={{ textAlign: "right" }}>Net Salary</th>
-                  <th>Status</th>
-                  <th style={{ textAlign: "right" }}>Actions</th>
+                  <th style={{ width: "110px" }}>Period</th>
+                  <th style={{ textAlign: "right", width: "120px" }}>Gross</th>
+                  <th style={{ textAlign: "right", width: "120px" }}>Deductions</th>
+                  <th style={{ textAlign: "right", width: "130px" }}>Net Salary</th>
+                  <th style={{ width: "110px", textAlign: "center" }}>Status</th>
+                  <th style={{ textAlign: "right", width: "170px" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {slips.map((slip) => (
                   <tr key={slip._id}>
                     <td>
-                      <span className="pay-slip-badge">{slip.slipNumber}</span>
+                      <button
+                        type="button"
+                        className="doc-link-button"
+                        onClick={() => setViewSlip(slip)}
+                        title="View slip details"
+                      >
+                        {slip.slipNumber}
+                      </button>
                     </td>
                     <td>
                       <div className="pay-emp-name-cell">
@@ -364,48 +374,40 @@ export default function Payroll() {
                     <td>
                       <span className="pay-period-badge">{slip.period}</span>
                     </td>
-                    <td style={{ textAlign: "right" }}>
+                    <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
                       <span>{fmt(slip.earnings?.totalEarnings)}</span>
                     </td>
-                    <td style={{ textAlign: "right", color: "#dc2626" }}>
+                    <td style={{ textAlign: "right", color: "#dc2626", fontVariantNumeric: "tabular-nums" }}>
                       <span>-{fmt(slip.deductions?.totalDeductions)}</span>
                     </td>
-                    <td style={{ textAlign: "right" }}>
+                    <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
                       <strong className="pay-net-val">{fmt(slip.netSalary)}</strong>
                     </td>
-                    <td>
-                      <span className={`pay-status-badge ${slip.status.toLowerCase()}`}>
-                        {slip.status === "PAID" ? (
-                          <>
-                            <CheckCircle2 size={12} /> Paid
-                          </>
-                        ) : (
-                          <>
-                            <Clock size={12} /> Unpaid
-                          </>
-                        )}
-                      </span>
+                    <td style={{ textAlign: "center" }}>
+                      <StatusField value={slip.status} />
                     </td>
                     <td style={{ textAlign: "right" }}>
-                      <div className="pay-actions-cell">
+                      <div className="pay-actions-cell" style={{ justifyContent: "flex-end" }}>
                         {slip.status === "UNPAID" && (
                           <button
                             type="button"
-                            className="pay-btn-action pay"
+                            className="sip-btn sip-btn-pay"
                             onClick={() => handleOpenPay(slip)}
-                            title="Mark Salary as Paid"
+                            title="Record Payment"
                           >
-                            <CreditCard size={13} /> Pay
+                            <CreditCard size={13} />
+                            <span>Pay</span>
                           </button>
                         )}
 
                         <button
                           type="button"
-                          className="pay-btn-action view"
+                          className="sip-btn sip-btn-view"
                           onClick={() => setViewSlip(slip)}
                           title="View & Print Salary Slip"
                         >
-                          <FileText size={13} /> View Slip
+                          <FileText size={13} />
+                          <span>View</span>
                         </button>
 
                         <button
@@ -423,42 +425,116 @@ export default function Payroll() {
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+
+          {/* Mobile Responsive Cards */}
+          <div className="pay-mobile-cards">
+            {slips.map((slip) => (
+              <div key={slip._id} className="pay-mobile-card">
+                <div className="pay-card-top">
+                  <div className="pay-card-identity">
+                    <button
+                      type="button"
+                      className="doc-link-button"
+                      onClick={() => setViewSlip(slip)}
+                    >
+                      {slip.slipNumber}
+                    </button>
+                    <strong className="pay-card-name">{slip.employeeName}</strong>
+                    <span className="pay-card-code">({slip.employeeCode})</span>
+                  </div>
+                  <StatusField value={slip.status} />
+                </div>
+
+                <div className="pay-card-details">
+                  <div className="pay-card-row">
+                    <span className="pay-card-lbl">Period:</span>
+                    <span className="pay-period-badge">{slip.period}</span>
+                  </div>
+                  <div className="pay-card-row">
+                    <span className="pay-card-lbl">Role:</span>
+                    <span className="pay-card-val">
+                      {slip.designation || "Staff"} &bull; {slip.department || "General"}
+                    </span>
+                  </div>
+                  <div className="pay-card-row">
+                    <span className="pay-card-lbl">Gross / Deductions:</span>
+                    <span className="pay-card-val" style={{ fontVariantNumeric: "tabular-nums" }}>
+                      {fmt(slip.earnings?.totalEarnings)} / <span style={{ color: "#dc2626" }}>-{fmt(slip.deductions?.totalDeductions)}</span>
+                    </span>
+                  </div>
+                  <div className="pay-card-row">
+                    <span className="pay-card-lbl">Net Payable:</span>
+                    <strong className="pay-net-val" style={{ fontVariantNumeric: "tabular-nums", fontSize: "15px" }}>
+                      {fmt(slip.netSalary)}
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="pay-card-actions">
+                  {slip.status === "UNPAID" && (
+                    <button
+                      type="button"
+                      className="sip-btn sip-btn-pay"
+                      style={{ flex: 1, justifyContent: "center" }}
+                      onClick={() => handleOpenPay(slip)}
+                    >
+                      <CreditCard size={14} />
+                      <span>Pay Salary</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="sip-btn sip-btn-view"
+                    style={{ flex: 1, justifyContent: "center" }}
+                    onClick={() => setViewSlip(slip)}
+                  >
+                    <FileText size={14} />
+                    <span>View Slip</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="pay-icon-btn danger"
+                    onClick={() => handleDeleteSlip(slip)}
+                    title="Delete Slip"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
 
       {/* ============================================================
           MODAL 1: VIEW & PRINT SALARY SLIP (Standard Indian Slip Format)
           ============================================================ */}
-      {viewSlip && (
-        <div
-          className="pay-modal-overlay"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setViewSlip(null);
-          }}
-        >
-          <div className="pay-slip-modal-card">
-            <div className="pay-slip-modal-header no-print">
-              <div className="pay-slip-modal-title">
-                <FileText size={18} />
-                <span>Salary Slip Preview ({viewSlip.slipNumber})</span>
-              </div>
-              <div className="pay-slip-modal-actions">
-                <button type="button" className="pay-btn-print" onClick={handlePrint}>
-                  <Printer size={16} /> Print Salary Slip
-                </button>
-                <button
-                  type="button"
-                  className="pay-modal-close"
-                  onClick={() => setViewSlip(null)}
-                >
-                  <X size={18} />
-                </button>
-              </div>
-            </div>
-
-            {/* PRINTABLE SALARY SLIP CONTENT */}
-            <div className="salary-slip-document" id="printable-salary-slip">
-              {/* Slip Header */}
+      <BoxModal
+        show={Boolean(viewSlip)}
+        onClose={() => setViewSlip(null)}
+        title={viewSlip ? `Salary Slip - ${viewSlip.slipNumber}` : "Salary Slip"}
+        subtitle={viewSlip ? `${viewSlip.employeeName} (${viewSlip.employeeCode}) • Period: ${viewSlip.period}` : ""}
+        icon={FileText}
+        width="min(880px, calc(100vw - 24px))"
+        footer={
+          <div className="pay-slip-modal-actions no-print" style={{ display: "flex", justifyContent: "flex-end", gap: "10px", width: "100%" }}>
+            <button type="button" className="pay-btn-print" onClick={handlePrint}>
+              <Printer size={16} /> Print Salary Slip
+            </button>
+            <button
+              type="button"
+              className="pay-btn-cancel"
+              onClick={() => setViewSlip(null)}
+            >
+              Close
+            </button>
+          </div>
+        }
+      >
+        {viewSlip && (
+          <div className="salary-slip-document" id="printable-salary-slip">
+            {/* Slip Header */}
               <div className="slip-org-header">
                 {tenant?.logo && <img src={tenant.logo} alt="Logo" className="slip-org-logo" />}
                 <div className="slip-org-info">
@@ -649,103 +725,97 @@ export default function Payroll() {
                 <p>This is a system-generated document. For queries, contact the HR & Accounts department.</p>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
+      </BoxModal>
 
       {/* ============================================================
           MODAL 2: MARK AS PAID MODAL
           ============================================================ */}
-      {payModalSlip && (
-        <div
-          className="pay-modal-overlay"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setPayModalSlip(null);
-          }}
-        >
-          <div className="pay-confirm-modal-card">
-            <div className="pay-confirm-header">
-              <h3>Record Salary Payment</h3>
-              <button
-                type="button"
-                className="pay-modal-close"
-                onClick={() => setPayModalSlip(null)}
-              >
-                <X size={18} />
-              </button>
+      <BoxModal
+        show={Boolean(payModalSlip)}
+        onClose={() => setPayModalSlip(null)}
+        title="Record Salary Payment"
+        subtitle={payModalSlip ? `${payModalSlip.employeeName} (${payModalSlip.employeeCode}) • Net: ${fmt(payModalSlip.netSalary)}` : ""}
+        icon={CreditCard}
+        width="min(520px, calc(100vw - 24px))"
+        footer={
+          <div className="pay-confirm-footer" style={{ display: "flex", justifyContent: "flex-end", gap: "10px", width: "100%" }}>
+            <button
+              type="button"
+              className="pay-btn-cancel"
+              onClick={() => setPayModalSlip(null)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="pay-btn-primary"
+              disabled={paying}
+              onClick={handleConfirmPayment}
+            >
+              {paying ? "Saving..." : "Confirm & Mark Paid"}
+            </button>
+          </div>
+        }
+      >
+        {payModalSlip && (
+          <form onSubmit={handleConfirmPayment} className="pay-confirm-body">
+            <div className="pay-confirm-info">
+              <div>
+                <span>Employee:</span>
+                <strong>{payModalSlip.employeeName} ({payModalSlip.employeeCode})</strong>
+              </div>
+              <div>
+                <span>Pay Period:</span>
+                <strong>{payModalSlip.period}</strong>
+              </div>
+              <div>
+                <span>Net Payable:</span>
+                <strong className="text-success">{fmt(payModalSlip.netSalary)}</strong>
+              </div>
             </div>
 
-            <form onSubmit={handleConfirmPayment} className="pay-confirm-body">
-              <div className="pay-confirm-info">
-                <div>
-                  <span>Employee:</span>
-                  <strong>{payModalSlip.employeeName} ({payModalSlip.employeeCode})</strong>
-                </div>
-                <div>
-                  <span>Pay Period:</span>
-                  <strong>{payModalSlip.period}</strong>
-                </div>
-                <div>
-                  <span>Net Payable:</span>
-                  <strong className="text-success">{fmt(payModalSlip.netSalary)}</strong>
-                </div>
-              </div>
+            <div className="pay-form-group">
+              <label>Payment Date *</label>
+              <input
+                type="date"
+                required
+                value={paymentForm.paymentDate}
+                onChange={(e) =>
+                  setPaymentForm({ ...paymentForm, paymentDate: e.target.value })
+                }
+              />
+            </div>
 
-              <div className="pay-form-group">
-                <label>Payment Date *</label>
-                <input
-                  type="date"
-                  required
-                  value={paymentForm.paymentDate}
-                  onChange={(e) =>
-                    setPaymentForm({ ...paymentForm, paymentDate: e.target.value })
-                  }
-                />
-              </div>
+            <div className="pay-form-group">
+              <label>Payment Mode *</label>
+              <select
+                value={paymentForm.paymentMode}
+                onChange={(e) =>
+                  setPaymentForm({ ...paymentForm, paymentMode: e.target.value })
+                }
+              >
+                <option value="BANK_TRANSFER">Bank Transfer (NEFT/RTGS/IMPS)</option>
+                <option value="UPI">UPI</option>
+                <option value="CASH">Cash</option>
+                <option value="CHEQUE">Cheque</option>
+              </select>
+            </div>
 
-              <div className="pay-form-group">
-                <label>Payment Mode *</label>
-                <select
-                  value={paymentForm.paymentMode}
-                  onChange={(e) =>
-                    setPaymentForm({ ...paymentForm, paymentMode: e.target.value })
-                  }
-                >
-                  <option value="BANK_TRANSFER">Bank Transfer (NEFT/RTGS/IMPS)</option>
-                  <option value="UPI">UPI</option>
-                  <option value="CASH">Cash</option>
-                  <option value="CHEQUE">Cheque</option>
-                </select>
-              </div>
-
-              <div className="pay-form-group">
-                <label>Reference / UTR / Cheque Number</label>
-                <input
-                  type="text"
-                  placeholder="e.g. UTR1234567890 or Cheque #45210"
-                  value={paymentForm.paymentReference}
-                  onChange={(e) =>
-                    setPaymentForm({ ...paymentForm, paymentReference: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="pay-confirm-footer">
-                <button
-                  type="button"
-                  className="pay-btn-cancel"
-                  onClick={() => setPayModalSlip(null)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="pay-btn-primary" disabled={paying}>
-                  {paying ? "Saving..." : "Confirm & Mark Paid"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <div className="pay-form-group">
+              <label>Reference / UTR / Cheque Number</label>
+              <input
+                type="text"
+                placeholder="e.g. UTR1234567890 or Cheque #45210"
+                value={paymentForm.paymentReference}
+                onChange={(e) =>
+                  setPaymentForm({ ...paymentForm, paymentReference: e.target.value })
+                }
+              />
+            </div>
+          </form>
+        )}
+      </BoxModal>
     </div>
   );
 }

@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 
 import hrApi from "../../services/modules/hrApi";
+import BoxModal from "../../components/common/Modal/BoxModal";
 import "./Employees.css";
 
 const fmt = (num) =>
@@ -252,8 +253,9 @@ export default function Employees() {
             </button>
           </div>
         ) : (
-          <div className="emp-table-wrapper">
-            <table className="emp-table">
+          <>
+            <div className="emp-table-wrapper">
+              <table className="emp-table">
               <thead>
                 <tr>
                   <th>Code</th>
@@ -339,49 +341,135 @@ export default function Employees() {
               </tbody>
             </table>
           </div>
-        )}
-      </div>
 
-      {/* Add / Edit Employee Modal */}
-      {modalOpen && (
-        <div className="emp-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setModalOpen(false); }}>
-          <div className="emp-modal-card">
-            <div className="emp-modal-header">
-              <h3>{editingId ? "Edit Employee" : "Add New Employee"}</h3>
-              <button type="button" className="emp-modal-close" onClick={() => setModalOpen(false)}>
-                <X size={18} />
-              </button>
-            </div>
+          {/* Responsive Mobile Cards for Small Screens */}
+          <div className="emp-mobile-cards">
+            {employees.map((emp) => (
+              <div key={emp._id} className="emp-mobile-card">
+                <div className="emp-card-top">
+                  <div className="emp-card-identity">
+                    <span className="emp-code-badge">{emp.employeeCode}</span>
+                    <strong className="emp-card-name">{emp.name}</strong>
+                  </div>
+                  <span className={`emp-badge ${String(emp.status).toLowerCase().replace(/\s+/g, "-")}`}>
+                    {emp.status}
+                  </span>
+                </div>
 
-            {/* Modal Navigation Tabs */}
-            <div className="emp-modal-tabs">
-              <button
-                type="button"
-                className={`emp-tab-btn ${activeTab === "basic" ? "active" : ""}`}
-                onClick={() => setActiveTab("basic")}
-              >
-                <UserCheck size={15} />
-                Basic Information
-              </button>
-              <button
-                type="button"
-                className={`emp-tab-btn ${activeTab === "salary" ? "active" : ""}`}
-                onClick={() => setActiveTab("salary")}
-              >
-                <Banknote size={15} />
-                Salary Structure
-              </button>
-              <button
-                type="button"
-                className={`emp-tab-btn ${activeTab === "bank" ? "active" : ""}`}
-                onClick={() => setActiveTab("bank")}
-              >
-                <CreditCard size={15} />
-                Bank & Statutory
-              </button>
-            </div>
+                <div className="emp-card-details">
+                  <div className="emp-card-row">
+                    <span className="emp-card-lbl">Role:</span>
+                    <span className="emp-card-val">
+                      {emp.designation || "Staff"} &bull; {emp.department || "General"}
+                    </span>
+                  </div>
 
-            <form onSubmit={handleSave} className="emp-modal-body">
+                  {(emp.phone || emp.email) && (
+                    <div className="emp-card-row">
+                      <span className="emp-card-lbl">Contact:</span>
+                      <span className="emp-card-val emp-contact-text">
+                        {emp.phone && <span><Phone size={12} /> {emp.phone}</span>}
+                        {emp.email && <span><Mail size={12} /> {emp.email}</span>}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="emp-card-row">
+                    <span className="emp-card-lbl">Net Salary:</span>
+                    <strong className="emp-salary-val">
+                      {fmt(emp.salaryStructure?.netSalary || 0)}
+                    </strong>
+                  </div>
+
+                  <div className="emp-card-row">
+                    <span className="emp-card-lbl">Ledger:</span>
+                    <span className="emp-ledger-tag">
+                      <BookOpen size={12} /> {emp.ledgerId?.code || `EMP-${emp.employeeCode}`}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="emp-card-actions">
+                  <button
+                    type="button"
+                    className="emp-card-btn edit"
+                    onClick={() => handleOpenEdit(emp)}
+                  >
+                    <Pencil size={14} /> Edit
+                  </button>
+                  <button
+                    type="button"
+                    className="emp-card-btn delete"
+                    onClick={() => handleDelete(emp)}
+                  >
+                    <Trash2 size={14} /> Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+
+      {/* Add / Edit Employee BoxModal */}
+      <BoxModal
+        show={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editingId ? "Edit Employee" : "Add New Employee"}
+        subtitle="Configure employee profile, salary breakdown, and statutory details"
+        icon={Briefcase}
+        width="min(860px, calc(100vw - 24px))"
+        footer={
+          <div className="emp-modal-footer">
+            <button
+              type="button"
+              className="emp-btn-cancel"
+              onClick={() => setModalOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="emp-btn-primary"
+              disabled={saving}
+              onClick={handleSave}
+            >
+              {saving ? "Saving..." : editingId ? "Update Employee" : "Save Employee"}
+            </button>
+          </div>
+        }
+      >
+        <div className="emp-modal-inner">
+          {/* Modal Navigation Tabs */}
+          <div className="emp-modal-tabs">
+            <button
+              type="button"
+              className={`emp-tab-btn ${activeTab === "basic" ? "active" : ""}`}
+              onClick={() => setActiveTab("basic")}
+            >
+              <UserCheck size={15} />
+              Basic Information
+            </button>
+            <button
+              type="button"
+              className={`emp-tab-btn ${activeTab === "salary" ? "active" : ""}`}
+              onClick={() => setActiveTab("salary")}
+            >
+              <Banknote size={15} />
+              Salary Structure
+            </button>
+            <button
+              type="button"
+              className={`emp-tab-btn ${activeTab === "bank" ? "active" : ""}`}
+              onClick={() => setActiveTab("bank")}
+            >
+              <CreditCard size={15} />
+              Bank & Statutory
+            </button>
+          </div>
+
+          <form onSubmit={handleSave} className="emp-modal-body">
               {/* TAB 1: BASIC INFORMATION */}
               {activeTab === "basic" && (
                 <div className="emp-form-grid">
@@ -773,23 +861,9 @@ export default function Employees() {
                 </div>
               )}
 
-              {/* Modal footer */}
-              <div className="emp-modal-footer">
-                <button
-                  type="button"
-                  className="emp-btn-cancel"
-                  onClick={() => setModalOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="emp-btn-primary" disabled={saving}>
-                  {saving ? "Saving..." : editingId ? "Update Employee" : "Save Employee"}
-                </button>
-              </div>
             </form>
           </div>
-        </div>
-      )}
+      </BoxModal>
     </div>
   );
 }

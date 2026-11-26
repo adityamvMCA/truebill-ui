@@ -254,12 +254,208 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+  white-space: nowrap;
 }
 
 .pay-table td {
   padding: 13px 16px;
   border-bottom: 1px solid var(--border-color, #f3f4f6);
   vertical-align: middle;
+  font-size: 13.5px;
+}
+
+.pay-table td[style*="text-align: right"],
+.pay-table th[style*="text-align: right"] {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.doc-link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: var(--primary-color, #2563eb);
+  font-weight: 700;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-align: left;
+  transition: color 0.15s;
+}
+
+.doc-link-button:hover {
+  color: #1d4ed8;
+}
+
+/* Sales Invoice style action buttons */
+.sip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.sip-btn.sip-btn-pay {
+  background: #ecfdf5;
+  color: #059669;
+  border-color: #a7f3d0;
+}
+
+.sip-btn.sip-btn-pay:hover {
+  background: #d1fae5;
+  border-color: #6ee7b7;
+}
+
+.sip-btn.sip-btn-view {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #bfdbfe;
+}
+
+.sip-btn.sip-btn-view:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+/* Mobile Responsive Cards */
+.pay-mobile-cards {
+  display: none;
+}
+
+.pay-mobile-card {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+
+.pay-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.pay-card-identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pay-card-name {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text-primary, #111827);
+}
+
+.pay-card-code {
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+}
+
+.pay-card-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 0;
+  border-top: 1px dashed var(--border-color, #f1f5f9);
+  border-bottom: 1px dashed var(--border-color, #f1f5f9);
+}
+
+.pay-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  gap: 8px;
+}
+
+.pay-card-lbl {
+  color: var(--text-secondary, #6b7280);
+  font-size: 12.5px;
+  flex-shrink: 0;
+}
+
+.pay-card-val {
+  color: var(--text-primary, #1f2937);
+  font-weight: 500;
+  text-align: right;
+}
+
+.pay-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (max-width: 820px) {
+  .pay-table-wrapper {
+    display: none;
+  }
+
+  .pay-mobile-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .pay-page-container {
+    padding: 12px;
+  }
+
+  .pay-page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .pay-btn-generate {
+    width: 100%;
+    justify-content: center;
+    padding: 11px 16px;
+  }
+
+  .pay-control-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .pay-period-selectors {
+    width: 100%;
+  }
+
+  .pay-search-wrapper {
+    min-width: 100%;
+    max-width: 100%;
+  }
+
+  .pay-kpi-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 520px) {
+  .pay-kpi-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .pay-table tr:hover td {
