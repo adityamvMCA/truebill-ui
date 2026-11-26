@@ -23,6 +23,7 @@ import {
   Copy,
   Printer,
   Truck,
+  FileCode,
   Columns3,
   ArrowUp,
   ArrowDown,
@@ -224,6 +225,15 @@ function ActionMenu({
       label: "Dispatch GPS Trip",
       icon: <Truck size={15} />,
       action: actions.dispatchFleet,
+    });
+  }
+
+  if (actions.exportTally) {
+    menuActions.push({
+      key: "exportTally",
+      label: "Export to Tally XML",
+      icon: <FileCode size={15} />,
+      action: actions.exportTally,
     });
   }
 

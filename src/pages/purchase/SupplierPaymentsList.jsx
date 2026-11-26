@@ -378,6 +378,7 @@ import DataList from "../../components/common/DataList/DataList";
 import StatusField from "../../components/common/StatusField/StatusField";
 
 import { saveCsvFile } from "../../components/common/DataList/fileDownload";
+import { generatePaymentsTallyXml, saveTallyXmlFile } from "../../utils/tallyExport";
 
 import api from "../../services/api";
 import routes from "../../config/routes";
@@ -1025,6 +1026,29 @@ function SupplierPaymentsList() {
     [],
   );
 
+  const handleExportTallySelected = useCallback(
+    async (rows) => {
+      if (exportLock.current) return;
+      if (!Array.isArray(rows) || !rows.length) {
+        toast.error("No payments selected for Tally export.");
+        return;
+      }
+      exportLock.current = true;
+      const toastId = toast.loading("Generating Tally XML for selected payments...");
+      try {
+        const records = uniquePayments(rows);
+        const xml = generatePaymentsTallyXml(records);
+        await saveTallyXmlFile("supplier-payments-tally.xml", xml);
+        toast.success(`Exported ${records.length} payments to Tally XML.`, { id: toastId });
+      } catch (error) {
+        toast.error(getErrorMessage(error), { id: toastId });
+      } finally {
+        exportLock.current = false;
+      }
+    },
+    [],
+  );
+
   /* ---------------------------------------------------------------- */
   /* Export all matching records                                       */
   /* ---------------------------------------------------------------- */
@@ -1392,6 +1416,7 @@ function SupplierPaymentsList() {
         searchPlaceholder="Search payment, supplier, supplier code, reference..."
         actions={{
           view: handleView,
+          exportTally: (row) => handleExportTallySelected([row]),
         }}
         bulkActions={[
           {
@@ -1399,6 +1424,12 @@ function SupplierPaymentsList() {
             label: "Export Selected",
             action:
               handleExportSelected,
+          },
+          {
+            key: "exportTally",
+            label: "Export to Tally XML",
+            action:
+              handleExportTallySelected,
           },
         ]}
         onRefresh={refreshAll}

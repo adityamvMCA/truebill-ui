@@ -2314,6 +2314,7 @@ import Textarea from "../../components/common/Form/Textarea";
 import Button from "../../components/common/Form/Button";
 
 import { saveCsvFile } from "../../components/common/DataList/fileDownload";
+import { generateDeliveryNotesTallyXml, saveTallyXmlFile } from "../../utils/tallyExport";
 
 /* ---- NEW: print (TemplateManager) + share (ShareDeliveryNoteButton) ---- */
 
@@ -4064,6 +4065,29 @@ function DeliveryNotesList() {
     [],
   );
 
+  const handleExportTallySelected = useCallback(
+    async (rows) => {
+      if (exportLockRef.current) return;
+      if (!Array.isArray(rows) || !rows.length) {
+        toast.error("Select at least one Delivery Note.");
+        return;
+      }
+      exportLockRef.current = true;
+      const toastId = toast.loading("Generating Tally XML for selected notes...");
+      try {
+        const records = uniqueNotes(rows);
+        const xml = generateDeliveryNotesTallyXml(records);
+        await saveTallyXmlFile("delivery-notes-tally.xml", xml);
+        toast.success(`Exported ${records.length} delivery notes to Tally XML.`, { id: toastId });
+      } catch (error) {
+        toast.error(getErrors(error), { id: toastId });
+      } finally {
+        exportLockRef.current = false;
+      }
+    },
+    [],
+  );
+
   const handleExport = useCallback(async () => {
     if (exportLockRef.current) return;
 
@@ -4446,6 +4470,7 @@ function DeliveryNotesList() {
               },
             });
           },
+          exportTally: (row) => handleExportTallySelected([row]),
           delete: (row) =>
             openBulkAction(row, "delete"),
         }}
@@ -4474,6 +4499,11 @@ function DeliveryNotesList() {
             key: "export",
             label: "Export Selected",
             action: handleExportSelected,
+          },
+          {
+            key: "exportTally",
+            label: "Export to Tally XML",
+            action: handleExportTallySelected,
           },
         ]}
         onRefresh={() => {

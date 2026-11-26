@@ -2955,15 +2955,38 @@ function DeliveryNoteCreation({
                     . Dispatch is handled
                     separately.
                   </p>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() =>
-                      navigate(listPath)
-                    }
-                  >
-                    Go to Delivery Notes
-                  </Button>
+                  <div style={{ display: "flex", gap: "8px", marginTop: "10px", flexWrap: "wrap" }}>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() =>
+                        navigate(listPath)
+                      }
+                    >
+                      Go to Delivery Notes
+                    </Button>
+                    <Button
+                      type="button"
+                      icon={Truck}
+                      variant="primary"
+                      onClick={() => {
+                        navigate("/logistics/fleet", {
+                          state: {
+                            dispatchNote: {
+                              deliveryNoteId: createdNote._id,
+                              deliveryNoteNumber: createdNote.deliveryNoteNumber,
+                              customerName: createdNote.customerName,
+                              customerPhone: createdNote.contactPhone || "",
+                              destinationAddress: createdNote.shippingAddress || createdNote.billingAddress || "",
+                              notes: `Delivery Note #${createdNote.deliveryNoteNumber}`,
+                            },
+                          },
+                        });
+                      }}
+                    >
+                      Dispatch with Driver (Fleet GPS)
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}

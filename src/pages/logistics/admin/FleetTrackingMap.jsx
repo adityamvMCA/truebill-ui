@@ -34,37 +34,12 @@ import StatusField from "../../../components/common/StatusField/StatusField";
 import api from "../../../services/api";
 import logisticsApi from "../../../services/modules/logisticsApi";
 import { createLogisticsSocket } from "../../../services/modules/logisticsSocket";
-
-// Geocoding helper using OpenStreetMap Nominatim with progressive fallback
-async function geocodeAddress(address) {
-  if (!address || typeof address !== "string") return null;
-  const clean = address.trim();
-  const parts = clean.split(",").map((p) => p.trim()).filter(Boolean);
-  const candidates = [
-    clean,
-    parts.slice(-3).join(", "),
-    parts.slice(-2).join(", "),
-    parts.slice(-1)[0],
-  ];
-
-  for (const q of candidates) {
-    if (!q || q.length < 3) continue;
-    try {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`;
-      const res = await fetch(url, {
-        headers: { "User-Agent": "TrustIQ-ERP/1.0" },
-      });
-      const data = await res.json();
-      if (Array.isArray(data) && data[0]?.lat && data[0]?.lon) {
-        return {
-          lat: parseFloat(data[0].lat),
-          lng: parseFloat(data[0].lon),
-        };
-      }
-    } catch (err) {}
-  }
-  return null;
-}
+import {
+  geocodeAddress,
+  fetchRoadRoute,
+  formatDistance,
+  formatDuration,
+} from "../../../utils/logisticsGeo";
 
 export default function FleetTrackingMap() {
   const [trips, setTrips] = useState([]);
@@ -498,6 +473,33 @@ export default function FleetTrackingMap() {
       if (polylineRef.current) {
         map.removeLayer(polylineRef.current);
         polylineRef.current = null;
+      }
+
+      const startPt = [
+        trip.currentLocation?.lat || trip.origin?.lat,
+        trip.currentLocation?.lng || trip.origin?.lng,
+      ];
+      const endPt = [trip.destination?.lat, trip.destination?.lng];
+
+      if (startPt[0] && startPt[1] && endPt[0] && endPt[1]) {
+        fetchRoadRoute(startPt, endPt).then(({ coordinates }) => {
+          if (!mapInstanceRef.current) return;
+          if (polylineRef.current) {
+            mapInstanceRef.current.removeLayer(polylineRef.current);
+          }
+          const polyline = L.polyline(coordinates, {
+            color: "#0284c7",
+            weight: 5,
+            opacity: 0.9,
+            lineCap: "round",
+            lineJoin: "round",
+          }).addTo(mapInstanceRef.current);
+          polylineRef.current = polyline;
+          try {
+            mapInstanceRef.current.fitBounds(coordinates, { padding: [50, 50], maxZoom: 16 });
+          } catch {}
+        });
+        return;
       }
 
       const points = [];

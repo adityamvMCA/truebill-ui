@@ -334,6 +334,7 @@ import DataList from "../../components/common/DataList/DataList";
 import StatusField from "../../components/common/StatusField/StatusField";
 
 import { saveCsvFile } from "../../components/common/DataList/fileDownload";
+import { generateReceiptsTallyXml, saveTallyXmlFile } from "../../utils/tallyExport";
 
 import api from "../../services/api";
 import routes, {
@@ -1132,6 +1133,29 @@ function CustomerReceiptsList() {
       [],
     );
 
+  const handleExportTallySelected = useCallback(
+    async (rows) => {
+      if (exportLockRef.current) return;
+      if (!Array.isArray(rows) || !rows.length) {
+        toast.error("No receipts selected for Tally export.");
+        return;
+      }
+      exportLockRef.current = true;
+      const toastId = toast.loading("Generating Tally XML for selected receipts...");
+      try {
+        const records = uniqueReceipts(rows);
+        const xml = generateReceiptsTallyXml(records);
+        await saveTallyXmlFile("customer-receipts-tally.xml", xml);
+        toast.success(`Exported ${records.length} receipts to Tally XML.`, { id: toastId });
+      } catch (error) {
+        toast.error(getErrorMessage(error), { id: toastId });
+      } finally {
+        exportLockRef.current = false;
+      }
+    },
+    [],
+  );
+
   /* ---------------------------------------------------------------- */
   /* Export all matching records                                       */
   /* ---------------------------------------------------------------- */
@@ -1569,6 +1593,8 @@ function CustomerReceiptsList() {
         actions={{
           view:
             handleView,
+          exportTally: (row) =>
+            handleExportTallySelected([row]),
         }}
         bulkActions={[
           {
@@ -1577,6 +1603,13 @@ function CustomerReceiptsList() {
               "Export Selected",
             action:
               handleExportSelected,
+          },
+          {
+            key: "exportTally",
+            label:
+              "Export to Tally XML",
+            action:
+              handleExportTallySelected,
           },
         ]}
         onRefresh={refreshAll}

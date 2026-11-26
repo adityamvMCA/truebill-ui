@@ -31,8 +31,9 @@ const DOCS = {
   goodsReceipt: { list: GOODS_RECEIPT_TEMPLATES, Doc: GoodsReceiptTemplate },
 };
 
-/* e.g. http://localhost:5001  (no trailing slash, no /api) */
-const ORIGIN = (import.meta.env.VITE_BACKEND_ORIGIN || "").replace(/\/$/, "");
+/* e.g. http://localhost:5001 or https://truebillapi.trustiqtech.com */
+const RAW_ORIGIN = import.meta.env.VITE_BACKEND_ORIGIN || import.meta.env.VITE_API_BASE_URL || "";
+const ORIGIN = RAW_ORIGIN.replace(/\/api\/?$/, "").replace(/\/$/, "");
 
 const fail = (message) => {
   window.__PDF_ERROR_MSG__ = String(message || "");
@@ -58,20 +59,17 @@ class Guard extends Component {
 }
 
 export default function PublicDocumentPrint() {
-  const { token } = useParams();
+  const params = useParams();
+  const token = params.token || params.docType;
   const [data, setData] = useState(null);
   const ref = useRef(null);
 
   useEffect(() => {
     document.body.style.margin = "0";
 
-    if (!ORIGIN) {
-      fail("VITE_BACKEND_ORIGIN is not set");
-      setData({ error: true });
-      return;
-    }
+    const fetchUrl = `${ORIGIN}/api/public/document-data/${encodeURIComponent(token)}`;
 
-    fetch(`${ORIGIN}/public/document-data/${encodeURIComponent(token)}`)
+    fetch(fetchUrl)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`Data request failed: HTTP ${r.status}`))))
       .then(setData)
       .catch((e) => {

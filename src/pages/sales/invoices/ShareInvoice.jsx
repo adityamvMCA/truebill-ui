@@ -416,7 +416,15 @@ export const buildShareContent = (row, action, docLink = "") => {
         : 0;
 
   const total = money(totalPaise);
-  const due = money(row.outstandingAmountPaise || 0);
+  const duePaise =
+    row.outstandingAmountPaise !== undefined
+      ? row.outstandingAmountPaise
+      : row.balanceAmountPaise !== undefined
+        ? row.balanceAmountPaise
+        : row.balanceAmount !== undefined
+          ? Math.round(Number(row.balanceAmount) * 100)
+          : 0;
+  const due = money(duePaise);
 
   const dueDate = niceDate(row.dueDate);
   const invDate = niceDate(

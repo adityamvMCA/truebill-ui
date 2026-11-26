@@ -29,39 +29,14 @@ import Textarea from "../../../components/common/Form/Textarea";
 import StatusField from "../../../components/common/StatusField/StatusField";
 import logisticsApi from "../../../services/modules/logisticsApi";
 import { createLogisticsSocket } from "../../../services/modules/logisticsSocket";
+import {
+  geocodeAddress,
+  fetchRoadRoute,
+  formatDistance,
+  formatDuration,
+} from "../../../utils/logisticsGeo";
 import "../../../styles/common.css";
 import "../../../styles/layout.css";
-
-// Geocoding helper using OpenStreetMap Nominatim with progressive fallback
-async function geocodeAddress(address) {
-  if (!address || typeof address !== "string") return null;
-  const clean = address.trim();
-  const parts = clean.split(",").map((p) => p.trim()).filter(Boolean);
-  const candidates = [
-    clean,
-    parts.slice(-3).join(", "),
-    parts.slice(-2).join(", "),
-    parts.slice(-1)[0],
-  ];
-
-  for (const q of candidates) {
-    if (!q || q.length < 3) continue;
-    try {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`;
-      const res = await fetch(url, {
-        headers: { "User-Agent": "TrustIQ-ERP/1.0" },
-      });
-      const data = await res.json();
-      if (Array.isArray(data) && data[0]?.lat && data[0]?.lon) {
-        return {
-          lat: parseFloat(data[0].lat),
-          lng: parseFloat(data[0].lon),
-        };
-      }
-    } catch (err) {}
-  }
-  return null;
-}
 
 export default function DriverPortal() {
   const navigate = useNavigate();
@@ -81,6 +56,7 @@ export default function DriverPortal() {
   const [currentCoords, setCurrentCoords] = useState(null);
   const [speedKmH, setSpeedKmH] = useState(0);
   const [accuracyM, setAccuracyM] = useState(0);
+  const [routeSummary, setRouteSummary] = useState(null); // { distance: "270 m", duration: "4 mins" }
 
   // Delivery Completion modal
   const [showCompleteModal, setShowCompleteModal] = useState(false);
@@ -358,27 +334,33 @@ export default function DriverPortal() {
         updateDriverMapMarker([driverLat, driverLng]);
       }
 
-      // 3. Draw in-app route polyline between driver and destination
+      // 3. Draw real road route polyline between driver and destination
       if (driverLat && driverLng && destLat && destLng) {
-        const routePoints = [
-          [driverLat, driverLng],
-          [destLat, destLng],
-        ];
+        fetchRoadRoute([driverLat, driverLng], [destLat, destLng]).then(({ coordinates, distanceM, durationS }) => {
+          if (!mapInstanceRef.current) return;
+          if (distanceM > 0 || durationS > 0) {
+            setRouteSummary({
+              distance: formatDistance(distanceM),
+              duration: formatDuration(durationS),
+            });
+          }
 
-        if (routePolylineRef.current) {
-          routePolylineRef.current.setLatLngs(routePoints);
-        } else {
-          routePolylineRef.current = L.polyline(routePoints, {
-            color: "#2563eb",
-            weight: 5,
-            opacity: 0.85,
-            dashArray: "8, 8",
-          }).addTo(map);
-        }
+          if (routePolylineRef.current) {
+            routePolylineRef.current.setLatLngs(coordinates);
+          } else {
+            routePolylineRef.current = L.polyline(coordinates, {
+              color: "#2563eb",
+              weight: 6,
+              opacity: 0.9,
+              lineCap: "round",
+              lineJoin: "round",
+            }).addTo(mapInstanceRef.current);
+          }
 
-        try {
-          map.fitBounds(routePoints, { padding: [60, 60], maxZoom: 16 });
-        } catch {}
+          try {
+            mapInstanceRef.current.fitBounds(coordinates, { padding: [60, 60], maxZoom: 16 });
+          } catch {}
+        });
       } else if (driverLat && driverLng) {
         map.setView([driverLat, driverLng], 15);
       } else if (destLat && destLng) {
@@ -389,6 +371,7 @@ export default function DriverPortal() {
     syncTripMarkers();
   }, [activeTrip]);
 
+  const lastRouteFetchRef = useRef(0);
   const updateDriverMapMarker = (coords) => {
     if (!mapInstanceRef.current) return;
 
@@ -414,20 +397,33 @@ export default function DriverPortal() {
       driverMarkerRef.current.setLatLng(coords);
     }
 
-    // Update in-app route polyline to destination
+    // Refresh road route at most every 15 seconds to track active driver progress
     const destLat = activeTripRef.current?.destination?.lat;
     const destLng = activeTripRef.current?.destination?.lng;
     if (destLat && destLng && mapInstanceRef.current) {
-      const routePoints = [coords, [destLat, destLng]];
-      if (routePolylineRef.current) {
-        routePolylineRef.current.setLatLngs(routePoints);
-      } else {
-        routePolylineRef.current = L.polyline(routePoints, {
-          color: "#2563eb",
-          weight: 5,
-          opacity: 0.85,
-          dashArray: "8, 8",
-        }).addTo(mapInstanceRef.current);
+      const now = Date.now();
+      if (now - lastRouteFetchRef.current > 15000) {
+        lastRouteFetchRef.current = now;
+        fetchRoadRoute(coords, [destLat, destLng]).then(({ coordinates, distanceM, durationS }) => {
+          if (!mapInstanceRef.current) return;
+          if (distanceM > 0 || durationS > 0) {
+            setRouteSummary({
+              distance: formatDistance(distanceM),
+              duration: formatDuration(durationS),
+            });
+          }
+          if (routePolylineRef.current) {
+            routePolylineRef.current.setLatLngs(coordinates);
+          } else {
+            routePolylineRef.current = L.polyline(coordinates, {
+              color: "#2563eb",
+              weight: 6,
+              opacity: 0.9,
+              lineCap: "round",
+              lineJoin: "round",
+            }).addTo(mapInstanceRef.current);
+          }
+        });
       }
     }
   };
@@ -512,21 +508,29 @@ export default function DriverPortal() {
               if (mapInstanceRef.current) {
                 updateDriverMapMarker([latitude, longitude]);
                 if (destLat && destLng) {
-                  const pts = [
-                    [latitude, longitude],
-                    [destLat, destLng],
-                  ];
-                  if (routePolylineRef.current) {
-                    routePolylineRef.current.setLatLngs(pts);
-                  } else {
-                    routePolylineRef.current = L.polyline(pts, {
-                      color: "#2563eb",
-                      weight: 5,
-                      opacity: 0.85,
-                      dashArray: "8, 8",
-                    }).addTo(mapInstanceRef.current);
-                  }
-                  mapInstanceRef.current.fitBounds(pts, { padding: [60, 60], maxZoom: 16 });
+                  fetchRoadRoute([latitude, longitude], [destLat, destLng]).then(({ coordinates, distanceM, durationS }) => {
+                    if (!mapInstanceRef.current) return;
+                    if (distanceM > 0 || durationS > 0) {
+                      setRouteSummary({
+                        distance: formatDistance(distanceM),
+                        duration: formatDuration(durationS),
+                      });
+                    }
+                    if (routePolylineRef.current) {
+                      routePolylineRef.current.setLatLngs(coordinates);
+                    } else {
+                      routePolylineRef.current = L.polyline(coordinates, {
+                        color: "#2563eb",
+                        weight: 6,
+                        opacity: 0.9,
+                        lineCap: "round",
+                        lineJoin: "round",
+                      }).addTo(mapInstanceRef.current);
+                    }
+                    try {
+                      mapInstanceRef.current.fitBounds(coordinates, { padding: [60, 60], maxZoom: 16 });
+                    } catch {}
+                  });
                 } else {
                   mapInstanceRef.current.setView([latitude, longitude], 15);
                 }
@@ -1635,6 +1639,33 @@ export default function DriverPortal() {
                         </button>
                       </div>
                     </div>
+
+                    {/* Route Estimated Distance & Duration Banner */}
+                    {routeSummary && (
+                      <div
+                        style={{
+                          marginBottom: "10px",
+                          padding: "6px 12px",
+                          borderRadius: "8px",
+                          backgroundColor: "#eff6ff",
+                          border: "1px solid #bfdbfe",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          fontSize: "12px",
+                          color: "#1d4ed8",
+                          fontWeight: 600,
+                        }}
+                      >
+                        <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                          <Navigation size={13} />
+                          Live Road Route
+                        </span>
+                        <span>
+                          {routeSummary.duration} &bull; {routeSummary.distance}
+                        </span>
+                      </div>
+                    )}
 
                     {/* Quick Action Buttons (Always accessible) */}
                     <div

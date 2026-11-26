@@ -5,6 +5,7 @@ import { Filesystem, Directory } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
 
 import salesInvoiceApi from "../../../services/modules/salesInvoiceApi";
+import purchaseBillApi from "../../../services/modules/purchaseBills";
 
 /* ------------------------------------------------------------------ */
 /* Config: adjust to your data                                          */
@@ -70,6 +71,22 @@ const loadInvoice = async (invoiceNumber) => {
   }
 
   return invoice;
+};
+
+const loadPurchaseBill = async (billNumber) => {
+  const response = await purchaseBillApi.getByNumber(billNumber);
+  const body = response?.data;
+  const bill =
+    body?.bill ||
+    body?.data?.bill ||
+    (body?.data?.billNumber ? body.data : null) ||
+    (body?.billNumber ? body : null);
+
+  if (!bill) {
+    throw new Error("Unable to load the purchase bill for the PDF.");
+  }
+
+  return bill;
 };
 
 /* ------------------------------------------------------------------ */
@@ -256,10 +273,32 @@ export const buildInvoicePdf = (inv) => {
 
 export const createInvoicePdf = async (docOrNumber) => {
   if (docOrNumber && typeof docOrNumber === "object") {
+    const isPB = Boolean(docOrNumber.billNumber);
+    const hasItems = Array.isArray(docOrNumber.items) && docOrNumber.items.length > 0;
+    if (hasItems) {
+      return buildInvoicePdf(docOrNumber);
+    }
+    if (isPB && docOrNumber.billNumber) {
+      try {
+        const full = await loadPurchaseBill(docOrNumber.billNumber);
+        if (full) return buildInvoicePdf(full);
+      } catch {}
+    } else if (docOrNumber.invoiceNumber) {
+      try {
+        const full = await loadInvoice(docOrNumber.invoiceNumber);
+        if (full) return buildInvoicePdf(full);
+      } catch {}
+    }
     return buildInvoicePdf(docOrNumber);
   }
-  const invoice = await loadInvoice(docOrNumber);
-  return buildInvoicePdf(invoice);
+
+  try {
+    const invoice = await loadInvoice(docOrNumber);
+    return buildInvoicePdf(invoice);
+  } catch (err) {
+    const bill = await loadPurchaseBill(docOrNumber);
+    return buildInvoicePdf(bill);
+  }
 };
 
 /* ------------------------------------------------------------------ */

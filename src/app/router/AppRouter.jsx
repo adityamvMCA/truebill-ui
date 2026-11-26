@@ -151,6 +151,7 @@ const AppRouter = () => (
       <Route path="/driver" element={<DriverPortal />} />
       <Route path="/track/:token" element={<PublicLiveTrack />} />
       <Route path="/print/:docType/:token" element={<PublicDocumentPrint />} />
+      <Route path="/print/:token" element={<PublicDocumentPrint />} />
       <Route path={routes.public.notFound} element={<NotFound />} />
 
       {/* =========================

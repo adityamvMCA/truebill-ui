@@ -2087,6 +2087,7 @@ import ConfirmModal from "../../../components/common/ConfirmModal/ConfirmModal";
 import StatusField from "../../../components/common/StatusField/StatusField";
 
 import { saveCsvFile } from "../../../components/common/DataList/fileDownload";
+import { generateSalesInvoicesTallyXml, saveTallyXmlFile } from "../../../utils/tallyExport";
 
 import EwayBillModal from "./EwayBillModal";
 
@@ -3474,6 +3475,29 @@ function SalesInvoicesListContent() {
     [],
   );
 
+  const handleExportTallySelected = useCallback(
+    async (rows) => {
+      if (exportLock.current) return;
+      if (!Array.isArray(rows) || !rows.length) {
+        toast.error("No invoices selected for Tally export.");
+        return;
+      }
+      exportLock.current = true;
+      const toastId = toast.loading("Generating Tally XML for selected invoices...");
+      try {
+        const records = uniqueInvoices(rows);
+        const xml = generateSalesInvoicesTallyXml(records);
+        await saveTallyXmlFile("sales-invoices-tally.xml", xml);
+        toast.success(`Exported ${records.length} invoices to Tally XML.`, { id: toastId });
+      } catch (error) {
+        toast.error(getErrorMessage(error), { id: toastId });
+      } finally {
+        exportLock.current = false;
+      }
+    },
+    [],
+  );
+
   const handleExport = useCallback(async () => {
     if (exportLock.current) return;
 
@@ -3954,6 +3978,7 @@ function SalesInvoicesListContent() {
         actions={{
           view: handleView,
           edit: handleEdit,
+          exportTally: (row) => handleExportTallySelected([row]),
           delete: (row) =>
             openAction(
               [row],
@@ -3985,6 +4010,12 @@ function SalesInvoicesListContent() {
             label: "Export Selected",
             action:
               handleExportSelected,
+          },
+          {
+            key: "exportTally",
+            label: "Export to Tally XML",
+            action:
+              handleExportTallySelected,
           },
         ]}
         onRefresh={() => {

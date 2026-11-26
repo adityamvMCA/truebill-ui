@@ -16,6 +16,7 @@ import "leaflet/dist/leaflet.css";
 
 import logisticsApi from "../../../services/modules/logisticsApi";
 import { createLogisticsSocket } from "../../../services/modules/logisticsSocket";
+import { fetchRoadRoute } from "../../../utils/logisticsGeo";
 import "../logistics.css";
 
 export default function PublicLiveTrack() {
@@ -170,6 +171,24 @@ export default function PublicLiveTrack() {
       } else {
         vehicleMarkerRef.current.setLatLng(vehCoords);
       }
+    }
+
+    // Draw live road route to destination
+    if (vehLat && vehLng && trip.destination?.lat && trip.destination?.lng) {
+      fetchRoadRoute([vehLat, vehLng], [trip.destination.lat, trip.destination.lng]).then(({ coordinates }) => {
+        if (!mapInstanceRef.current) return;
+        if (polylineRef.current) {
+          polylineRef.current.setLatLngs(coordinates);
+        } else {
+          polylineRef.current = L.polyline(coordinates, {
+            color: "#059669",
+            weight: 5,
+            opacity: 0.85,
+            lineCap: "round",
+            lineJoin: "round",
+          }).addTo(mapInstanceRef.current);
+        }
+      });
     }
 
     if (bounds.length > 0) {

@@ -16,6 +16,7 @@ import StatusField from "../../components/common/StatusField/StatusField";
 import ConfirmModal from "../../components/common/ConfirmModal/ConfirmModal";
 
 import { saveCsvFile } from "../../components/common/DataList/fileDownload";
+import { generatePurchaseBillsTallyXml, saveTallyXmlFile } from "../../utils/tallyExport";
 
 import api from "../../services/api";
 import routes, { buildRoute } from "../../config/routes";
@@ -957,6 +958,31 @@ function PurchaseBillsList() {
     }
   }, [buildParams]);
 
+  const handleExportTallySelected = useCallback(
+    async (rows) => {
+      if (exportLock.current) return;
+      if (!Array.isArray(rows) || !rows.length) {
+        toast.error("No purchase bills selected for Tally export.");
+        return;
+      }
+      exportLock.current = true;
+      const toastId = toast.loading("Generating Tally XML for selected purchase bills...");
+      try {
+        const uniqueRows = Array.from(
+          new Map(rows.map((row) => [row._id || row.billNumber, row])).values()
+        );
+        const xml = generatePurchaseBillsTallyXml(uniqueRows);
+        await saveTallyXmlFile("purchase-bills-tally.xml", xml);
+        toast.success(`Exported ${uniqueRows.length} bills to Tally XML.`, { id: toastId });
+      } catch (error) {
+        toast.error(getErrorMessage(error), { id: toastId });
+      } finally {
+        exportLock.current = false;
+      }
+    },
+    [],
+  );
+
   const fetchFullBill = useCallback(async (billNumber) => {
     const res = await api.purchaseBills.getByNumber(billNumber);
     return res?.data?.bill || res?.data?.data || res?.data || res;
@@ -1338,6 +1364,7 @@ function PurchaseBillsList() {
         actions={{
           view: handleView,
           edit: handleEdit,
+          exportTally: (row) => handleExportTallySelected([row]),
           delete: (row) =>
             openAction(row, "delete"),
         }}
@@ -1354,6 +1381,11 @@ function PurchaseBillsList() {
             danger: true,
             action: (rows) =>
               openAction(rows, "delete"),
+          },
+          {
+            key: "exportTally",
+            label: "Export to Tally XML",
+            action: handleExportTallySelected,
           },
         ]}
         onRefresh={refreshAll}
