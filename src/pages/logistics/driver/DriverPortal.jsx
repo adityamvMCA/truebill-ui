@@ -32,6 +32,37 @@ import { createLogisticsSocket } from "../../../services/modules/logisticsSocket
 import "../../../styles/common.css";
 import "../../../styles/layout.css";
 
+// Geocoding helper using OpenStreetMap Nominatim with progressive fallback
+async function geocodeAddress(address) {
+  if (!address || typeof address !== "string") return null;
+  const clean = address.trim();
+  const parts = clean.split(",").map((p) => p.trim()).filter(Boolean);
+  const candidates = [
+    clean,
+    parts.slice(-3).join(", "),
+    parts.slice(-2).join(", "),
+    parts.slice(-1)[0],
+  ];
+
+  for (const q of candidates) {
+    if (!q || q.length < 3) continue;
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`;
+      const res = await fetch(url, {
+        headers: { "User-Agent": "TrustIQ-ERP/1.0" },
+      });
+      const data = await res.json();
+      if (Array.isArray(data) && data[0]?.lat && data[0]?.lon) {
+        return {
+          lat: parseFloat(data[0].lat),
+          lng: parseFloat(data[0].lon),
+        };
+      }
+    } catch (err) {}
+  }
+  return null;
+}
+
 export default function DriverPortal() {
   const navigate = useNavigate();
   const [driver, setDriver] = useState(null);
@@ -65,6 +96,7 @@ export default function DriverPortal() {
   const mapInstanceRef = useRef(null);
   const driverMarkerRef = useRef(null);
   const destMarkerRef = useRef(null);
+  const routePolylineRef = useRef(null);
   const activeTripRef = useRef(activeTrip);
 
   useEffect(() => {
@@ -191,6 +223,16 @@ export default function DriverPortal() {
       };
 
       if (socketRef.current?.connected) {
+        // Emit both event formats for socket compatibility
+        socketRef.current.emit("driver:location", {
+          tripId,
+          driverId: driver?._id,
+          lat: latitude,
+          lng: longitude,
+          speed: speedKm,
+          heading: heading || 0,
+          accuracy: roundedAcc,
+        });
         socketRef.current.emit("driver:location_update", {
           tripId,
           location: payload,
@@ -243,21 +285,21 @@ export default function DriverPortal() {
   };
 
   // -------------------------------------------------------------
-  // LEAFLET MAP
+  // LEAFLET MAP & LIVE ROUTE DISPLAY
   // -------------------------------------------------------------
   useEffect(() => {
     if (!mapRef.current || !activeTrip) return;
 
     if (!mapInstanceRef.current) {
       const defaultCenter = [
-        activeTrip.destination?.lat || 20.5937,
-        activeTrip.destination?.lng || 78.9629,
+        activeTrip.destination?.lat || activeTrip.currentLocation?.lat || 20.5937,
+        activeTrip.destination?.lng || activeTrip.currentLocation?.lng || 78.9629,
       ];
 
       const map = L.map(mapRef.current, {
         zoomControl: true,
         attributionControl: false,
-      }).setView(defaultCenter, 13);
+      }).setView(defaultCenter, 14);
 
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
@@ -265,27 +307,86 @@ export default function DriverPortal() {
       }).addTo(map);
 
       mapInstanceRef.current = map;
+
+      setTimeout(() => map.invalidateSize(), 150);
+      setTimeout(() => map.invalidateSize(), 400);
     }
 
-    if (activeTrip.destination?.lat && activeTrip.destination?.lng) {
-      const destCoords = [
-        activeTrip.destination.lat,
-        activeTrip.destination.lng,
-      ];
-      if (!destMarkerRef.current) {
-        const destIcon = L.divIcon({
-          className: "dest-icon",
-          html: `<div style="background:#dc2626;color:white;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:2px solid white;font-size:14px;font-weight:bold;">📍</div>`,
-          iconSize: [30, 30],
-          iconAnchor: [15, 15],
-        });
-        destMarkerRef.current = L.marker(destCoords, { icon: destIcon })
-          .addTo(mapInstanceRef.current)
-          .bindPopup(`<b>Destination</b><br/>${activeTrip.destination.address}`);
-      } else {
-        destMarkerRef.current.setLatLng(destCoords);
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    const syncTripMarkers = async () => {
+      let destLat = activeTrip.destination?.lat;
+      let destLng = activeTrip.destination?.lng;
+
+      // Auto-geocode destination address if lat/lng are missing
+      if ((!destLat || !destLng) && activeTrip.destination?.address) {
+        const geo = await geocodeAddress(activeTrip.destination.address);
+        if (geo) {
+          destLat = geo.lat;
+          destLng = geo.lng;
+          activeTrip.destination = { ...activeTrip.destination, lat: destLat, lng: destLng };
+          setActiveTrip((prev) =>
+            prev ? { ...prev, destination: { ...prev.destination, lat: destLat, lng: destLng } } : prev
+          );
+        }
       }
-    }
+
+      // 1. Render Destination Pin
+      if (destLat && destLng) {
+        const destCoords = [destLat, destLng];
+        if (!destMarkerRef.current) {
+          const destIcon = L.divIcon({
+            className: "dest-icon",
+            html: `<div style="background:#dc2626;color:white;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,0.35);border:3px solid white;font-size:16px;">📍</div>`,
+            iconSize: [34, 34],
+            iconAnchor: [17, 34],
+            popupAnchor: [0, -34],
+          });
+          destMarkerRef.current = L.marker(destCoords, { icon: destIcon })
+            .addTo(map)
+            .bindPopup(`<b>Delivery Destination</b><br/>${activeTrip.destination?.address || "Customer Delivery Point"}`);
+        } else {
+          destMarkerRef.current.setLatLng(destCoords);
+        }
+      }
+
+      // 2. Render Driver / Vehicle Marker
+      const driverLat = currentCoords?.[0] || activeTrip.currentLocation?.lat;
+      const driverLng = currentCoords?.[1] || activeTrip.currentLocation?.lng;
+      if (driverLat && driverLng) {
+        updateDriverMapMarker([driverLat, driverLng]);
+      }
+
+      // 3. Draw in-app route polyline between driver and destination
+      if (driverLat && driverLng && destLat && destLng) {
+        const routePoints = [
+          [driverLat, driverLng],
+          [destLat, destLng],
+        ];
+
+        if (routePolylineRef.current) {
+          routePolylineRef.current.setLatLngs(routePoints);
+        } else {
+          routePolylineRef.current = L.polyline(routePoints, {
+            color: "#2563eb",
+            weight: 5,
+            opacity: 0.85,
+            dashArray: "8, 8",
+          }).addTo(map);
+        }
+
+        try {
+          map.fitBounds(routePoints, { padding: [60, 60], maxZoom: 16 });
+        } catch {}
+      } else if (driverLat && driverLng) {
+        map.setView([driverLat, driverLng], 15);
+      } else if (destLat && destLng) {
+        map.setView([destLat, destLng], 14);
+      }
+    };
+
+    syncTripMarkers();
   }, [activeTrip]);
 
   const updateDriverMapMarker = (coords) => {
@@ -309,31 +410,56 @@ export default function DriverPortal() {
       driverMarkerRef.current = L.marker(coords, { icon: driverIcon }).addTo(
         mapInstanceRef.current,
       );
-      mapInstanceRef.current.setView(coords, 15);
     } else {
       driverMarkerRef.current.setLatLng(coords);
+    }
+
+    // Update in-app route polyline to destination
+    const destLat = activeTripRef.current?.destination?.lat;
+    const destLng = activeTripRef.current?.destination?.lng;
+    if (destLat && destLng && mapInstanceRef.current) {
+      const routePoints = [coords, [destLat, destLng]];
+      if (routePolylineRef.current) {
+        routePolylineRef.current.setLatLngs(routePoints);
+      } else {
+        routePolylineRef.current = L.polyline(routePoints, {
+          color: "#2563eb",
+          weight: 5,
+          opacity: 0.85,
+          dashArray: "8, 8",
+        }).addTo(mapInstanceRef.current);
+      }
     }
   };
 
   const centerOnDriver = () => {
     if (!mapInstanceRef.current) return;
-    if (currentCoords) {
-      mapInstanceRef.current.setView(currentCoords, 16, { animate: true });
+    const lat = currentCoords?.[0] || activeTrip?.currentLocation?.lat;
+    const lng = currentCoords?.[1] || activeTrip?.currentLocation?.lng;
+    if (lat && lng) {
+      mapInstanceRef.current.setView([lat, lng], 16, { animate: true });
     } else {
       toast("Waiting for GPS location...");
     }
   };
 
   const centerOnDestination = () => {
-    if (!mapInstanceRef.current || !activeTrip?.destination?.lat) {
+    if (!mapInstanceRef.current) return;
+    const destLat = activeTrip?.destination?.lat;
+    const destLng = activeTrip?.destination?.lng;
+    if (destLat && destLng) {
+      mapInstanceRef.current.setView([destLat, destLng], 16, { animate: true });
+    } else if (activeTrip?.destination?.address) {
+      geocodeAddress(activeTrip.destination.address).then((geo) => {
+        if (geo && mapInstanceRef.current) {
+          mapInstanceRef.current.setView([geo.lat, geo.lng], 16, { animate: true });
+        } else {
+          toast("Destination coordinates not available");
+        }
+      });
+    } else {
       toast("Destination coordinates not available");
-      return;
     }
-    mapInstanceRef.current.setView(
-      [activeTrip.destination.lat, activeTrip.destination.lng],
-      15,
-      { animate: true },
-    );
   };
 
   // -------------------------------------------------------------
@@ -344,7 +470,18 @@ export default function DriverPortal() {
 
     try {
       setRefreshing(true);
-      toast.loading("Acquiring GPS location...", { id: "trip-action" });
+      toast.loading("Acquiring GPS location & resolving route...", { id: "trip-action" });
+
+      // First check if destination has coordinates, if not auto-geocode immediately
+      let destLat = activeTrip.destination?.lat;
+      let destLng = activeTrip.destination?.lng;
+      if ((!destLat || !destLng) && activeTrip.destination?.address) {
+        const geo = await geocodeAddress(activeTrip.destination.address);
+        if (geo) {
+          destLat = geo.lat;
+          destLng = geo.lng;
+        }
+      }
 
       navigator.geolocation.getCurrentPosition(
         async (position) => {
@@ -353,14 +490,50 @@ export default function DriverPortal() {
             const res = await logisticsApi.startDriverTrip(activeTrip._id, {
               lat: latitude,
               lng: longitude,
+              destinationLat: destLat,
+              destinationLng: destLng,
             });
 
             if (res.data?.success) {
               const updated = res.data.data;
+              if (destLat && destLng) {
+                updated.destination = {
+                  ...updated.destination,
+                  lat: destLat,
+                  lng: destLng,
+                };
+              }
               setActiveTrip(updated);
               activeTripRef.current = updated;
+              setCurrentCoords([latitude, longitude]);
+              setIsFullScreenMap(true);
+
+              // Immediately plot driver & destination on map with route
+              if (mapInstanceRef.current) {
+                updateDriverMapMarker([latitude, longitude]);
+                if (destLat && destLng) {
+                  const pts = [
+                    [latitude, longitude],
+                    [destLat, destLng],
+                  ];
+                  if (routePolylineRef.current) {
+                    routePolylineRef.current.setLatLngs(pts);
+                  } else {
+                    routePolylineRef.current = L.polyline(pts, {
+                      color: "#2563eb",
+                      weight: 5,
+                      opacity: 0.85,
+                      dashArray: "8, 8",
+                    }).addTo(mapInstanceRef.current);
+                  }
+                  mapInstanceRef.current.fitBounds(pts, { padding: [60, 60], maxZoom: 16 });
+                } else {
+                  mapInstanceRef.current.setView([latitude, longitude], 15);
+                }
+              }
+
               startGpsTracking(updated._id);
-              toast.success("Trip started! Real-time GPS stream active.", {
+              toast.success("Trip started! Real-time GPS navigation active.", {
                 id: "trip-action",
               });
             } else {
@@ -377,26 +550,14 @@ export default function DriverPortal() {
             setRefreshing(false);
           }
         },
-        async () => {
-          try {
-            const res = await logisticsApi.startDriverTrip(activeTrip._id, {});
-            if (res.data?.success) {
-              setActiveTrip(res.data.data);
-              activeTripRef.current = res.data.data;
-              startGpsTracking(res.data.data._id);
-              toast.success("Trip started! Tracking initialized.", {
-                id: "trip-action",
-              });
-            }
-          } catch (err) {
-            toast.error(err.response?.data?.message || "Failed to start trip", {
-              id: "trip-action",
-            });
-          } finally {
-            setRefreshing(false);
-          }
+        async (geoErr) => {
+          console.warn("GPS acquire error:", geoErr);
+          toast.error("Please enable GPS/location permissions on your device to start trip", {
+            id: "trip-action",
+          });
+          setRefreshing(false);
         },
-        { enableHighAccuracy: true, timeout: 8000 },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
       );
     } catch (err) {
       setRefreshing(false);

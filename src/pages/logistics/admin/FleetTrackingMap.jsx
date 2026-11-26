@@ -33,6 +33,37 @@ import StatusField from "../../../components/common/StatusField/StatusField";
 import logisticsApi from "../../../services/modules/logisticsApi";
 import { createLogisticsSocket } from "../../../services/modules/logisticsSocket";
 
+// Geocoding helper using OpenStreetMap Nominatim with progressive fallback
+async function geocodeAddress(address) {
+  if (!address || typeof address !== "string") return null;
+  const clean = address.trim();
+  const parts = clean.split(",").map((p) => p.trim()).filter(Boolean);
+  const candidates = [
+    clean,
+    parts.slice(-3).join(", "),
+    parts.slice(-2).join(", "),
+    parts.slice(-1)[0],
+  ];
+
+  for (const q of candidates) {
+    if (!q || q.length < 3) continue;
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`;
+      const res = await fetch(url, {
+        headers: { "User-Agent": "TrustIQ-ERP/1.0" },
+      });
+      const data = await res.json();
+      if (Array.isArray(data) && data[0]?.lat && data[0]?.lon) {
+        return {
+          lat: parseFloat(data[0].lat),
+          lng: parseFloat(data[0].lon),
+        };
+      }
+    } catch (err) {}
+  }
+  return null;
+}
+
 export default function FleetTrackingMap() {
   const [trips, setTrips] = useState([]);
   const [drivers, setDrivers] = useState([]);
@@ -184,13 +215,13 @@ export default function FleetTrackingMap() {
       updateVehicleMarkerOnMap(tripId, location, driverId);
     });
 
-    // Real-time trip status changes
-    socket.on("trip:status_change", ({ tripId, status }) => {
-      setTrips((prev) =>
-        prev.map((t) => (t._id === tripId ? { ...t, status } : t)),
-      );
+    // Real-time trip status changes & updates
+    const handleTripStatusUpdate = () => {
       loadAllData(false);
-    });
+    };
+    socket.on("trip:status_change", handleTripStatusUpdate);
+    socket.on("trip:status_update", handleTripStatusUpdate);
+    socket.on("fleet:status_update", handleTripStatusUpdate);
 
     return () => {
       if (socketRef.current) {
@@ -229,6 +260,31 @@ export default function FleetTrackingMap() {
 
       setTrips(Array.isArray(tripsList) ? tripsList : []);
       setDrivers(Array.isArray(driversList) ? driversList : []);
+
+      // Auto-resolve coordinates for trips that only have text addresses
+      if (Array.isArray(tripsList)) {
+        tripsList.forEach(async (t) => {
+          if (!t.destination?.lat && t.destination?.address) {
+            const geo = await geocodeAddress(t.destination.address);
+            if (geo) {
+              setTrips((prev) =>
+                prev.map((item) =>
+                  item._id === t._id
+                    ? {
+                        ...item,
+                        destination: {
+                          ...item.destination,
+                          lat: geo.lat,
+                          lng: geo.lng,
+                        },
+                      }
+                    : item
+                )
+              );
+            }
+          }
+        });
+      }
       setStats({
         activeTrips:
           dashStats.activeTrips ??
@@ -436,8 +492,9 @@ export default function FleetTrackingMap() {
         points.push([trip.origin.lat, trip.origin.lng]);
       }
 
-      if (Array.isArray(trip.locationBreadcrumbs)) {
-        trip.locationBreadcrumbs.forEach((pt) => {
+      const crumbs = trip.path || trip.locationBreadcrumbs;
+      if (Array.isArray(crumbs)) {
+        crumbs.forEach((pt) => {
           if (pt.lat && pt.lng) points.push([pt.lat, pt.lng]);
         });
       }
@@ -446,15 +503,25 @@ export default function FleetTrackingMap() {
         points.push([trip.currentLocation.lat, trip.currentLocation.lng]);
       }
 
+      // Also connect to destination point if known
+      if (trip.destination?.lat && trip.destination?.lng) {
+        points.push([trip.destination.lat, trip.destination.lng]);
+      }
+
       if (points.length > 1) {
         const polyline = L.polyline(points, {
           color: "#0284c7",
           weight: 4,
           opacity: 0.85,
+          dashArray: "6, 6",
           smoothFactor: 1,
         }).addTo(map);
 
         polylineRef.current = polyline;
+
+        try {
+          map.fitBounds(points, { padding: [50, 50], maxZoom: 15 });
+        } catch {}
       }
     },
     [trips],
