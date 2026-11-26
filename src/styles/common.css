@@ -1469,7 +1469,61 @@ button.sip-btn-print:hover {
 /* =========================================
    GLOBAL PRINT STYLES - ZERO BLANK PAGES
 ========================================= */
+#print-root {
+  position: fixed !important;
+  left: -99999px !important;
+  top: 0 !important;
+  width: 210mm !important;
+  height: auto !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  z-index: -9999 !important;
+}
+
 @media print {
+  html,
+  body {
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100% !important;
+    overflow: visible !important;
+  }
+
+  /* When printing an isolated invoice portal, hide standard UI */
+  body.is-printing-portal > *:not(#print-root),
+  body:has(#print-root) > *:not(#print-root) {
+    display: none !important;
+  }
+
+  /* Reveal and format print-root portal */
+  body.is-printing-portal #print-root,
+  body:has(#print-root) #print-root,
+  #print-root {
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    height: auto !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: block !important;
+    pointer-events: auto !important;
+    z-index: 999999 !important;
+  }
+
+  body.is-printing-portal #print-root *,
+  body:has(#print-root) #print-root *,
+  #print-root * {
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
   /* Unless actively printing an isolated portal, keep the main app visible */
   body:not(.is-printing-portal):not(:has(#print-root)) #root {
     display: block !important;

@@ -16,6 +16,9 @@ import {
   Share2,
   Activity,
   CheckCircle2,
+  Maximize2,
+  Minimize2,
+  Compass,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import L from "leaflet";
@@ -47,6 +50,45 @@ export default function FleetTrackingMap() {
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
   const [sidePanelOpen, setSidePanelOpen] = useState(true);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
+  // Invalidate map size on fullscreen or side panel toggle
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [isFullScreen, sidePanelOpen]);
+
+  // Fit all vehicles on screen
+  const fitAllVehicles = useCallback(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    const filtered = trips.filter((t) => {
+      if (statusFilter === "STARTED") return t.status === "STARTED";
+      if (statusFilter === "SCHEDULED") return t.status === "SCHEDULED";
+      if (statusFilter === "COMPLETED") return t.status === "COMPLETED";
+      return true;
+    });
+
+    const validBounds = [];
+    filtered.forEach((t) => {
+      const lat = t.currentLocation?.lat || t.destination?.lat;
+      const lng = t.currentLocation?.lng || t.destination?.lng;
+      if (lat && lng) validBounds.push([lat, lng]);
+    });
+
+    if (validBounds.length > 0) {
+      try {
+        map.fitBounds(validBounds, { padding: [60, 60], maxZoom: 15 });
+      } catch {}
+    } else {
+      map.setView([20.5937, 78.9629], 5);
+    }
+  }, [trips, statusFilter]);
 
   // Map & Socket refs
   const mapContainerRef = useRef(null);
@@ -436,14 +478,29 @@ export default function FleetTrackingMap() {
 
   return (
     <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "calc(100vh - 65px)",
-        backgroundColor: "var(--bg-main, #f8fafc)",
-        color: "var(--text-main, #0f172a)",
-        overflow: "hidden",
-      }}
+      style={
+        isFullScreen
+          ? {
+              position: "fixed",
+              inset: 0,
+              width: "100vw",
+              height: "100vh",
+              zIndex: 99999,
+              display: "flex",
+              flexDirection: "column",
+              backgroundColor: "var(--bg-main, #f8fafc)",
+              color: "var(--text-main, #0f172a)",
+              overflow: "hidden",
+            }
+          : {
+              display: "flex",
+              flexDirection: "column",
+              height: "calc(100vh - 65px)",
+              backgroundColor: "var(--bg-main, #f8fafc)",
+              color: "var(--text-main, #0f172a)",
+              overflow: "hidden",
+            }
+      }
     >
       {/* 1. TOP HEADER & METRICS BAR */}
       <header
@@ -609,6 +666,50 @@ export default function FleetTrackingMap() {
                 animation: refreshing ? "spin 1s linear infinite" : "none",
               }}
             />
+          </button>
+
+          <button
+            type="button"
+            onClick={fitAllVehicles}
+            style={{
+              padding: "7px 12px",
+              borderRadius: "8px",
+              border: "1px solid var(--border-color, #e2e8f0)",
+              backgroundColor: "#fff",
+              cursor: "pointer",
+              color: "var(--primary-color, #2563eb)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              fontSize: "13px",
+              fontWeight: 600,
+            }}
+            title="Center and fit all active vehicles"
+          >
+            <Compass size={15} />
+            <span>Fit All</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsFullScreen(!isFullScreen)}
+            style={{
+              padding: "7px 12px",
+              borderRadius: "8px",
+              border: "1px solid var(--border-color, #e2e8f0)",
+              backgroundColor: isFullScreen ? "var(--primary-light, #eff6ff)" : "#fff",
+              cursor: "pointer",
+              color: isFullScreen ? "var(--primary-color, #2563eb)" : "var(--text-main, #334155)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              fontSize: "13px",
+              fontWeight: 600,
+            }}
+            title={isFullScreen ? "Exit Full Screen" : "Full Screen Map"}
+          >
+            {isFullScreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+            <span>{isFullScreen ? "Exit Full Screen" : "Full Screen"}</span>
           </button>
 
           <button
@@ -890,6 +991,113 @@ export default function FleetTrackingMap() {
         {/* MAP CONTAINER */}
         <main style={{ flex: 1, position: "relative", height: "100%" }}>
           <div ref={mapContainerRef} style={{ width: "100%", height: "100%", zIndex: 1 }} />
+
+          {/* FLOATING QUICK MAP CONTROLS (Always convenient in full screen or standard view) */}
+          <div
+            style={{
+              position: "absolute",
+              top: "14px",
+              right: "14px",
+              zIndex: 30,
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              backgroundColor: "rgba(255, 255, 255, 0.95)",
+              backdropFilter: "blur(10px)",
+              padding: "6px 8px",
+              borderRadius: "10px",
+              border: "1px solid var(--border-color, #e2e8f0)",
+              boxShadow: "0 4px 14px rgba(0,0,0,0.08)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                gap: "4px",
+                paddingRight: "6px",
+                borderRight: "1px solid var(--border-color, #e2e8f0)",
+              }}
+            >
+              {[
+                { id: "ALL", label: "All" },
+                { id: "STARTED", label: "Moving" },
+                { id: "SCHEDULED", label: "Scheduled" },
+                { id: "COMPLETED", label: "Delivered" },
+              ].map((pill) => (
+                <button
+                  key={pill.id}
+                  type="button"
+                  onClick={() => setStatusFilter(pill.id)}
+                  style={{
+                    padding: "4px 8px",
+                    borderRadius: "6px",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    border: "none",
+                    cursor: "pointer",
+                    backgroundColor:
+                      statusFilter === pill.id
+                        ? "var(--primary-color, #2563eb)"
+                        : "transparent",
+                    color:
+                      statusFilter === pill.id
+                        ? "#ffffff"
+                        : "var(--text-secondary, #64748b)",
+                  }}
+                >
+                  {pill.label}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={fitAllVehicles}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                padding: "4px 8px",
+                borderRadius: "6px",
+                border: "1px solid var(--border-color, #e2e8f0)",
+                backgroundColor: "#fff",
+                fontSize: "11px",
+                fontWeight: 600,
+                color: "var(--primary-color, #2563eb)",
+                cursor: "pointer",
+              }}
+              title="Center and fit all active vehicles"
+            >
+              <Compass size={13} />
+              <span>Center</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsFullScreen(!isFullScreen)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                padding: "4px 8px",
+                borderRadius: "6px",
+                border: "1px solid var(--border-color, #e2e8f0)",
+                backgroundColor: isFullScreen
+                  ? "var(--primary-light, #eff6ff)"
+                  : "#fff",
+                fontSize: "11px",
+                fontWeight: 600,
+                color: isFullScreen
+                  ? "var(--primary-color, #2563eb)"
+                  : "var(--text-main, #334155)",
+                cursor: "pointer",
+              }}
+              title={isFullScreen ? "Exit Full Screen" : "Full Screen"}
+            >
+              {isFullScreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+              <span>{isFullScreen ? "Exit" : "Expand"}</span>
+            </button>
+          </div>
 
           {/* ACTIVE VEHICLE FLOATING FOCUS CARD */}
           {activeSelectedTrip && (

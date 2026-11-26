@@ -20,6 +20,7 @@ import api from "../services/api";
 import businessApi from "../services/modules/businessApi";
 import AddBusinessModal from "./common/BusinessModals/AddBusinessModal";
 import { UpgradeAdModal } from "./common/UpgradeAdBanner/UpgradeAdBanner";
+import NotificationDropdown from "./NotificationDropdown/NotificationDropdown";
 
 const themes = [
   { id: "blue", name: "Ocean Blue", color: "#2563eb" },
@@ -589,15 +590,7 @@ function Header({ onMenuClick }) {
             NOTIFICATIONS
         ====================================== */}
 
-        <button
-          type="button"
-          className="header-icon-button notification-button"
-          aria-label="Notifications"
-        >
-          <Bell size={20} />
-
-          <span className="notification-dot" />
-        </button>
+        <NotificationDropdown />
 
         {/* =====================================
             THEME

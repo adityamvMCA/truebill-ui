@@ -17,6 +17,9 @@ async function setupNotificationChannel() {
     importance: 5,
     visibility: 1,
     sound: "default",
+    vibration: true,
+    lights: true,
+    lightColor: "#2563EB",
   });
 
   notificationChannelCreated = true;
@@ -58,6 +61,9 @@ export async function registerFcmToken() {
             return;
           }
 
+          const notifData = notification.data || event.data || {};
+          const iconColor = notifData.color || "#2563EB";
+
           await LocalNotifications.schedule({
             notifications: [
               {
@@ -65,9 +71,12 @@ export async function registerFcmToken() {
                 title: notification.title || "TrueBill",
                 body: notification.body || "",
                 smallIcon: "ic_stat_truebill",
+                iconColor: iconColor,
+                largeIcon: "ic_stat_truebill",
                 channelId: "default",
+                extra: notifData,
                 schedule: {
-                  at: new Date(Date.now() + 500),
+                  at: new Date(Date.now() + 300),
                 },
               },
             ],

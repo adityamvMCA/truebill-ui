@@ -237,9 +237,13 @@ export function PrintDocument({
   const handlePrint = () => {
     setIsPrinting(true);
     document.body.classList.add("is-printing-portal");
-    setTimeout(() => {
-      printWithTitle(`${k.label}-${docNum}`);
-    }, 150);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          printWithTitle(`${k.label}-${docNum}`);
+        }, 250);
+      });
+    });
   };
 
   useEffect(() => {
@@ -301,10 +305,15 @@ export function PrintInvoiceButton({
 
     document.body.classList.add("is-printing-portal");
 
-    const timer = setTimeout(() => {
-      const docNum = getDocNumber(doc);
-      printWithTitle(`${k.label}-${docNum}`);
-    }, 150);
+    let timer;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        timer = setTimeout(() => {
+          const docNum = getDocNumber(doc);
+          printWithTitle(`${k.label}-${docNum}`);
+        }, 250);
+      });
+    });
 
     let cleaned = false;
     const cleanup = () => {
@@ -420,9 +429,13 @@ export default function TemplateManager({ invoice }) {
   const handlePrint = () => {
     setIsPrinting(true);
     document.body.classList.add("is-printing-portal");
-    setTimeout(() => {
-      printWithTitle(`${current.name}-${getDocNumber(data)}`);
-    }, 150);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          printWithTitle(`${current.name}-${getDocNumber(data)}`);
+        }, 250);
+      });
+    });
   };
 
   useEffect(() => {

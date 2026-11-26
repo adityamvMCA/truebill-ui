@@ -85,7 +85,14 @@ export const DOC_CSS = `
 .doc .th-row.grand{font-size:1.2em;border-top:1px dashed #000;border-bottom:1px dashed #000;padding:2px 0}
 /* ---- print ---- */
 #print-root {
-  display: none !important;
+  position: fixed !important;
+  left: -99999px !important;
+  top: 0 !important;
+  width: 210mm !important;
+  height: auto !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  z-index: -9999 !important;
 }
 @media print {
   @page { size: A4; margin: 0; }
@@ -111,11 +118,12 @@ export const DOC_CSS = `
   
   /* Show #print-root and ensure it is fully visible, full-width, and at the top */
   body.is-printing-portal #print-root,
-  body:has(#print-root) #print-root {
+  body:has(#print-root) #print-root,
+  #print-root {
     display: block !important;
-    position: relative !important;
-    left: 0 !important;
-    top: 0 !important;
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
     margin: 0 auto !important;
     padding: 0 !important;
     width: 100% !important;
@@ -123,11 +131,13 @@ export const DOC_CSS = `
     height: auto !important;
     opacity: 1 !important;
     visibility: visible !important;
+    pointer-events: auto !important;
     z-index: 999999 !important;
   }
 
   body.is-printing-portal #print-root *,
-  body:has(#print-root) #print-root * {
+  body:has(#print-root) #print-root *,
+  #print-root * {
     visibility: visible !important;
     opacity: 1 !important;
   }

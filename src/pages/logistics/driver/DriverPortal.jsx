@@ -15,6 +15,8 @@ import {
   Maximize2,
   Minimize2,
   Compass,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import L from "leaflet";
@@ -39,8 +41,9 @@ export default function DriverPortal() {
   const [activeTab, setActiveTab] = useState("cockpit"); // "cockpit" | "history"
   const [pastTrips, setPastTrips] = useState([]);
 
-  // Fullscreen map mode state
-  const [isFullScreenMap, setIsFullScreenMap] = useState(false);
+  // Fullscreen map mode state - default to true for convenient driver navigation
+  const [isFullScreenMap, setIsFullScreenMap] = useState(true);
+  const [isDrawerCollapsed, setIsDrawerCollapsed] = useState(false);
 
   // Telemetry state
   const [isTracking, setIsTracking] = useState(false);
@@ -126,6 +129,9 @@ export default function DriverPortal() {
         const trip = res.data.data;
         setActiveTrip(trip);
         activeTripRef.current = trip;
+        if (trip) {
+          setIsFullScreenMap(true);
+        }
 
         if (trip?.status === "STARTED") {
           startGpsTracking(trip._id);
@@ -1332,7 +1338,7 @@ export default function DriverPortal() {
                   }}
                 />
 
-                {/* FULL SCREEN FLOATING BOTTOM CONTROLS */}
+                {/* FULL SCREEN FLOATING BOTTOM CONTROLS (Collapsible & Thumb-Friendly) */}
                 {isFullScreenMap && (
                   <div
                     style={{
@@ -1343,33 +1349,55 @@ export default function DriverPortal() {
                       zIndex: 10000,
                       maxWidth: "540px",
                       margin: "0 auto",
-                      backgroundColor: "rgba(255, 255, 255, 0.95)",
-                      backdropFilter: "blur(12px)",
+                      backgroundColor: "rgba(255, 255, 255, 0.96)",
+                      backdropFilter: "blur(14px)",
                       border: "1px solid var(--border-color, #e2e8f0)",
                       borderRadius: "16px",
-                      padding: "14px 16px",
-                      boxShadow: "0 10px 30px rgba(0, 0, 0, 0.15)",
+                      padding: isDrawerCollapsed ? "10px 14px" : "14px 16px",
+                      boxShadow: "0 10px 30px rgba(0, 0, 0, 0.16)",
+                      transition: "all 0.25s ease",
                     }}
                   >
+                    {/* Collapsible toggle drag handle / header */}
                     <div
                       style={{
                         display: "flex",
-                        alignItems: "flex-start",
+                        alignItems: "center",
                         justifyContent: "space-between",
+                        marginBottom: isDrawerCollapsed ? "0" : "10px",
                         gap: "10px",
-                        marginBottom: "10px",
                       }}
                     >
-                      <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        onClick={() => setIsDrawerCollapsed(!isDrawerCollapsed)}
+                        style={{
+                          flex: 1,
+                          minWidth: 0,
+                          cursor: "pointer",
+                          userSelect: "none",
+                        }}
+                      >
                         <div
                           style={{
                             fontSize: "10px",
                             fontWeight: 700,
                             color: "var(--text-secondary, #64748b)",
                             textTransform: "uppercase",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
                           }}
                         >
-                          Customer Destination
+                          <span>Destination</span>
+                          <span
+                            style={{
+                              fontSize: "10px",
+                              color: "var(--primary-color, #2563eb)",
+                              fontWeight: 600,
+                            }}
+                          >
+                            {isDrawerCollapsed ? "• Tap to expand" : "• Tap to collapse"}
+                          </span>
                         </div>
                         <strong
                           style={{
@@ -1383,48 +1411,77 @@ export default function DriverPortal() {
                         >
                           {activeTrip.customerName}
                         </strong>
-                        <p
-                          style={{
-                            fontSize: "12px",
-                            color: "var(--text-secondary, #475569)",
-                            margin: "2px 0 0",
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                          }}
-                        >
-                          {activeTrip.destination?.address}
-                        </p>
+                        {!isDrawerCollapsed && (
+                          <p
+                            style={{
+                              fontSize: "12px",
+                              color: "var(--text-secondary, #475569)",
+                              margin: "2px 0 0",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {activeTrip.destination?.address}
+                          </p>
+                        )}
                       </div>
 
-                      {activeTrip.customerPhone && (
-                        <a
-                          href={`tel:${activeTrip.customerPhone}`}
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        {activeTrip.customerPhone && (
+                          <a
+                            href={`tel:${activeTrip.customerPhone}`}
+                            style={{
+                              backgroundColor: "#ecfdf5",
+                              color: "#059669",
+                              border: "1px solid #a7f3d0",
+                              padding: "6px 10px",
+                              borderRadius: "8px",
+                              fontSize: "12px",
+                              fontWeight: 700,
+                              textDecoration: "none",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <Phone size={12} /> Call
+                          </a>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => setIsDrawerCollapsed(!isDrawerCollapsed)}
                           style={{
-                            backgroundColor: "#ecfdf5",
-                            color: "#059669",
-                            border: "1px solid #a7f3d0",
-                            padding: "6px 12px",
+                            background: "none",
+                            border: "1px solid var(--border-color, #e2e8f0)",
                             borderRadius: "8px",
-                            fontSize: "12px",
-                            fontWeight: 700,
-                            textDecoration: "none",
+                            padding: "5px 6px",
+                            cursor: "pointer",
+                            color: "var(--text-secondary, #64748b)",
                             display: "inline-flex",
                             alignItems: "center",
-                            gap: "4px",
-                            flexShrink: 0,
+                            justifyContent: "center",
                           }}
+                          title={isDrawerCollapsed ? "Expand drawer" : "Collapse drawer"}
                         >
-                          <Phone size={12} /> Call
-                        </a>
-                      )}
+                          {isDrawerCollapsed ? (
+                            <ChevronUp size={16} />
+                          ) : (
+                            <ChevronDown size={16} />
+                          )}
+                        </button>
+                      </div>
                     </div>
 
+                    {/* Quick Action Buttons (Always accessible) */}
                     <div
                       style={{
                         display: "grid",
                         gridTemplateColumns: "1fr 1fr",
                         gap: "10px",
+                        marginTop: isDrawerCollapsed ? "8px" : "0",
                       }}
                     >
                       <button
