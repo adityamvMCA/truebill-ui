@@ -365,6 +365,20 @@ const fetchOrderOptions = async ({
     "orders",
   );
 
+  // Filter out any sales orders that already have an invoice created or are draft/cancelled
+  const eligibleOrders = (result.data || []).filter((order) => {
+    if (order.invoiceNumber || order.invoiceId) {
+      return false;
+    }
+    if (
+      order.status &&
+      ["DRAFT", "CANCELLED"].includes(String(order.status).toUpperCase())
+    ) {
+      return false;
+    }
+    return true;
+  });
+
   return {
     data:
       page === 1
@@ -373,9 +387,9 @@ const fetchOrderOptions = async ({
               orderNumber: NO_ORDER,
               directOption: true,
             },
-            ...result.data,
+            ...eligibleOrders,
           ]
-        : result.data,
+        : eligibleOrders,
 
     // The direct-invoice shortcut is not an order.
     total: Math.max(1, result.total),
