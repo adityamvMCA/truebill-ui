@@ -20,6 +20,9 @@ import {
   Maximize2,
   Minimize2,
   Compass,
+  Layers,
+  Crosshair,
+  ArrowUp,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import L from "leaflet";
@@ -39,6 +42,11 @@ import {
   fetchRoadRoute,
   formatDistance,
   formatDuration,
+  calculateBearing,
+  calculateDistanceKm,
+  searchAreas,
+  reverseGeocode,
+  MAP_LAYERS,
 } from "../../../utils/logisticsGeo";
 
 export default function FleetTrackingMap() {
@@ -61,6 +69,11 @@ export default function FleetTrackingMap() {
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
   const [sidePanelOpen, setSidePanelOpen] = useState(() => typeof window !== "undefined" && window.innerWidth >= 768);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [mapLayer, setMapLayer] = useState("streets"); // "streets" | "satellite"
+  const [areaSearchQuery, setAreaSearchQuery] = useState("");
+  const [areaResults, setAreaResults] = useState([]);
+  const [isSearchingArea, setIsSearchingArea] = useState(false);
+  const [showAreaResults, setShowAreaResults] = useState(false);
 
   const location = useLocation();
 
@@ -135,6 +148,8 @@ export default function FleetTrackingMap() {
   // Map & Socket refs
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
+  const tileLayerRef = useRef(null);
+  const areaSearchMarkerRef = useRef(null);
   const markersRef = useRef({}); // tripId -> L.marker
   const polylineRef = useRef(null);
   const socketRef = useRef(null);
@@ -165,14 +180,19 @@ export default function FleetTrackingMap() {
       setIsSocketConnected(false);
     });
 
-    // Real-time Driver GPS update broadcasted across tenant
-    socket.on("fleet:driver_update", (data) => {
-      const { tripId, location, driverId } = data;
+    // Handle high-frequency live GPS updates for vehicle
+    const handleIncomingLocation = (data) => {
+      const { tripId, location, driverId, distanceCoveredKm, remainingKm, etaMinutes } = data;
       if (!tripId || !location) return;
 
       setTrips((prevTrips) =>
         prevTrips.map((t) => {
           if (t._id === tripId) {
+            let heading = location.heading;
+            if (!heading && t.currentLocation?.lat && (t.currentLocation.lat !== location.lat || t.currentLocation.lng !== location.lng)) {
+              heading = calculateBearing(t.currentLocation.lat, t.currentLocation.lng, location.lat, location.lng);
+            }
+
             const updatedBreadcrumbs = [
               ...(t.locationBreadcrumbs || []),
               {
@@ -186,22 +206,28 @@ export default function FleetTrackingMap() {
             return {
               ...t,
               status: "STARTED",
+              distanceCoveredKm: distanceCoveredKm !== undefined ? distanceCoveredKm : t.distanceCoveredKm,
+              remainingKm: remainingKm !== undefined ? remainingKm : t.remainingKm,
+              etaMinutes: etaMinutes !== undefined ? etaMinutes : t.etaMinutes,
               currentLocation: {
                 lat: location.lat,
                 lng: location.lng,
                 speed: location.speed || 0,
-                heading: location.heading || 0,
+                heading: heading || t.currentLocation?.heading || 0,
                 updatedAt: location.timestamp || new Date(),
               },
               locationBreadcrumbs: updatedBreadcrumbs,
             };
           }
           return t;
-        }),
+        })
       );
 
       updateVehicleMarkerOnMap(tripId, location, driverId);
-    });
+    };
+
+    socket.on("fleet:driver_update", handleIncomingLocation);
+    socket.on("trip:location_update", handleIncomingLocation);
 
     // Real-time trip status changes & updates
     const handleTripStatusUpdate = () => {
@@ -312,10 +338,8 @@ export default function FleetTrackingMap() {
         attributionControl: false,
       }).setView([20.5937, 78.9629], 5); // Default India center
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19,
-        attribution: "&copy; OpenStreetMap contributors",
-      }).addTo(map);
+      const initialLayer = MAP_LAYERS[mapLayer] || MAP_LAYERS.streets;
+      tileLayerRef.current = L.tileLayer(initialLayer.url, initialLayer.options).addTo(map);
 
       mapInstanceRef.current = map;
 
@@ -331,42 +355,118 @@ export default function FleetTrackingMap() {
     renderAllMarkersOnMap();
   }, [trips, statusFilter]);
 
-  // Create custom vector vehicle icon
+  // Switch map layer between Streets & Satellite
+  const switchMapLayer = (layerKey) => {
+    setMapLayer(layerKey);
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    if (tileLayerRef.current) {
+      map.removeLayer(tileLayerRef.current);
+    }
+    const layer = MAP_LAYERS[layerKey] || MAP_LAYERS.streets;
+    tileLayerRef.current = L.tileLayer(layer.url, layer.options).addTo(map);
+  };
+
+  // Map Area Search with auto-fly & inspection pin
+  const handleAreaSearch = async (val) => {
+    setAreaSearchQuery(val);
+    if (!val || val.trim().length < 2) {
+      setAreaResults([]);
+      setShowAreaResults(false);
+      return;
+    }
+    setIsSearchingArea(true);
+    setShowAreaResults(true);
+    try {
+      const results = await searchAreas(val);
+      setAreaResults(results);
+    } catch {
+      setAreaResults([]);
+    } finally {
+      setIsSearchingArea(false);
+    }
+  };
+
+  const handleSelectArea = (item) => {
+    setShowAreaResults(false);
+    setAreaSearchQuery(item.label);
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    map.flyTo([item.lat, item.lng], 16, { duration: 1.5 });
+
+    if (areaSearchMarkerRef.current) {
+      map.removeLayer(areaSearchMarkerRef.current);
+    }
+
+    const pinIcon = L.divIcon({
+      className: "area-search-pin",
+      html: `
+        <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
+          <div style="background:#2563eb;color:#ffffff;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:700;white-space:nowrap;box-shadow:0 3px 10px rgba(0,0,0,0.3);margin-bottom:3px;">
+            📍 ${item.label.split(",")[0]}
+          </div>
+          <div style="width:14px;height:14px;background:#2563eb;border:2.5px solid #ffffff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>
+        </div>
+      `,
+      iconSize: [120, 40],
+      iconAnchor: [60, 36],
+    });
+
+    areaSearchMarkerRef.current = L.marker([item.lat, item.lng], { icon: pinIcon })
+      .addTo(map)
+      .bindPopup(`<b>${item.label}</b><br/>Lat: ${item.lat.toFixed(5)}, Lng: ${item.lng.toFixed(5)}`)
+      .openPopup();
+  };
+
+  // Create Rapido / Uber style directional vector vehicle icon
   const createVehicleIcon = (t, isSelected = false) => {
     const isMoving = t.status === "STARTED";
     const speed = t.currentLocation?.speed || 0;
+    const heading = t.currentLocation?.heading || 0;
     const bgCol = isMoving ? "#0ea5e9" : "#64748b";
     const borderCol = isSelected ? "#0284c7" : "#ffffff";
+    const eta = t.etaMinutes ? `${t.etaMinutes}m` : null;
 
     return L.divIcon({
       className: `vehicle-marker-${t._id}`,
       html: `
-        <div style="position:relative;width:40px;height:40px;cursor:pointer;">
+        <div style="position:relative;width:44px;height:44px;cursor:pointer;user-select:none;">
           ${
             isMoving
-              ? `<span style="position:absolute;inset:0;border-radius:50%;background:#0ea5e9;opacity:0.35;animation:ping 1.8s cubic-bezier(0,0,0.2,1) infinite;"></span>`
+              ? `<span style="position:absolute;inset:-4px;border-radius:50%;background:#0ea5e9;opacity:0.35;animation:ping 1.8s cubic-bezier(0,0,0.2,1) infinite;"></span>`
               : ""
           }
-          <div style="position:relative;background:${bgCol};width:40px;height:40px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;box-shadow:0 3px 10px rgba(0,0,0,0.2);border:3px solid ${borderCol};">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <rect x="1" y="3" width="15" height="13"></rect>
-              <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
-              <circle cx="5.5" cy="18.5" r="2.5"></circle>
-              <circle cx="18.5" cy="18.5" r="2.5"></circle>
-            </svg>
+          <!-- Rotating Heading Arrow & Vehicle Shell -->
+          <div style="transform: rotate(${heading}deg); transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); width:44px; height:44px; display:flex; align-items:center; justify-content:center; position:relative;">
+            <!-- Front directional needle pointer -->
+            <div style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:8px solid #0284c7;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.3));"></div>
+
+            <!-- Central Vehicle Hub -->
+            <div style="position:relative;background:${bgCol};width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;box-shadow:0 4px 14px rgba(0,0,0,0.3);border:2.5px solid ${borderCol};">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+                <rect x="1" y="3" width="15" height="13"></rect>
+                <polygon points="16 8 20 8 23 11 23 16 16 16 8"></polygon>
+                <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                <circle cx="18.5" cy="18.5" r="2.5"></circle>
+              </svg>
+            </div>
           </div>
+
+          <!-- Speed & ETA badges -->
           ${
-            isMoving && speed > 0
-              ? `<div style="position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);background:#0f172a;color:#38bdf8;font-size:9px;font-weight:800;padding:1px 5px;border-radius:6px;border:1px solid #0ea5e9;white-space:nowrap;box-shadow:0 2px 4px rgba(0,0,0,0.2);">
-                  ${speed} km/h
+            isMoving && (speed > 0 || eta)
+              ? `<div style="position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);background:#0f172a;color:#38bdf8;font-size:9px;font-weight:800;padding:1px 5px;border-radius:6px;border:1px solid #0ea5e9;white-space:nowrap;box-shadow:0 2px 4px rgba(0,0,0,0.3);display:flex;gap:3px;align-items:center;">
+                  ${speed > 0 ? `<span>${speed} km/h</span>` : ""}
+                  ${eta ? `<span style="color:#a7f3d0;">• ${eta}</span>` : ""}
                 </div>`
               : ""
           }
         </div>
       `,
-      iconSize: [40, 40],
-      iconAnchor: [20, 20],
-      popupAnchor: [0, -20],
+      iconSize: [44, 44],
+      iconAnchor: [22, 22],
+      popupAnchor: [0, -22],
     });
   };
 
@@ -453,6 +553,10 @@ export default function FleetTrackingMap() {
 
     if (marker) {
       marker.setLatLng(coords);
+      const trip = trips.find((t) => t._id === tripId);
+      if (trip) {
+        marker.setIcon(createVehicleIcon({ ...trip, currentLocation: location }, selectedTripId === tripId));
+      }
     } else {
       renderAllMarkersOnMap();
     }
@@ -1180,7 +1284,105 @@ export default function FleetTrackingMap() {
         <main style={{ flex: 1, position: "relative", height: "100%" }}>
           <div ref={mapContainerRef} style={{ width: "100%", height: "100%", zIndex: 1 }} />
 
-          {/* FLOATING QUICK MAP CONTROLS (Always convenient in full screen or standard view) */}
+          {/* FLOATING MAP AREA SEARCH BAR (Item 7: Admin can search area in map) */}
+          <div
+            style={{
+              position: "absolute",
+              top: "14px",
+              left: isMobile ? "60px" : "16px",
+              zIndex: 35,
+              width: isMobile ? "calc(100% - 130px)" : "320px",
+            }}
+          >
+            <div
+              style={{
+                position: "relative",
+                display: "flex",
+                alignItems: "center",
+                backgroundColor: "#ffffff",
+                borderRadius: "10px",
+                border: "1px solid var(--border-color, #cbd5e1)",
+                boxShadow: "0 4px 14px rgba(0,0,0,0.12)",
+                padding: "2px 8px",
+              }}
+            >
+              <Search size={15} color="#64748b" style={{ flexShrink: 0, marginRight: "6px" }} />
+              <input
+                type="text"
+                value={areaSearchQuery}
+                onChange={(e) => handleAreaSearch(e.target.value)}
+                onFocus={() => {
+                  if (areaResults.length > 0) setShowAreaResults(true);
+                }}
+                placeholder="Search area, landmark, locality..."
+                style={{
+                  border: "none",
+                  outline: "none",
+                  fontSize: "12px",
+                  padding: "6px 0",
+                  width: "100%",
+                  color: "#0f172a",
+                  backgroundColor: "transparent",
+                }}
+              />
+              {isSearchingArea && (
+                <RefreshCw size={13} color="#0284c7" style={{ animation: "spin 1s linear infinite" }} />
+              )}
+              {areaSearchQuery && !isSearchingArea && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAreaSearchQuery("");
+                    setAreaResults([]);
+                    setShowAreaResults(false);
+                  }}
+                  style={{ border: "none", background: "none", cursor: "pointer", color: "#94a3b8", padding: "2px" }}
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+
+            {/* Area Search Results Autocomplete Dropdown */}
+            {showAreaResults && areaResults.length > 0 && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 4px)",
+                  left: 0,
+                  right: 0,
+                  backgroundColor: "#ffffff",
+                  borderRadius: "8px",
+                  border: "1px solid #e2e8f0",
+                  boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
+                  maxHeight: "220px",
+                  overflowY: "auto",
+                  zIndex: 40,
+                }}
+              >
+                {areaResults.map((item, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => handleSelectArea(item)}
+                    style={{
+                      padding: "8px 12px",
+                      cursor: "pointer",
+                      borderBottom: idx < areaResults.length - 1 ? "1px solid #f1f5f9" : "none",
+                      fontSize: "12px",
+                      lineHeight: "1.3",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f8fafc")}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                  >
+                    <div style={{ fontWeight: 600, color: "#0f172a" }}>{item.label.split(",")[0]}</div>
+                    <div style={{ fontSize: "10px", color: "#64748b" }}>{item.label}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* FLOATING QUICK MAP CONTROLS */}
           <div
             style={{
               position: "absolute",
@@ -1237,6 +1439,29 @@ export default function FleetTrackingMap() {
                 </button>
               ))}
             </div>
+
+            {/* Satellite / Streets Map Switcher (Item 6) */}
+            <button
+              type="button"
+              onClick={() => switchMapLayer(mapLayer === "satellite" ? "streets" : "satellite")}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                padding: "4px 8px",
+                borderRadius: "6px",
+                border: "1px solid var(--border-color, #e2e8f0)",
+                backgroundColor: mapLayer === "satellite" ? "#1e293b" : "#fff",
+                fontSize: "11px",
+                fontWeight: 600,
+                color: mapLayer === "satellite" ? "#38bdf8" : "var(--text-main, #334155)",
+                cursor: "pointer",
+              }}
+              title={mapLayer === "satellite" ? "Switch to Streets View" : "Switch to Satellite View"}
+            >
+              <Layers size={13} />
+              <span>{mapLayer === "satellite" ? "🛰️ Satellite" : "🗺️ Streets"}</span>
+            </button>
 
             <button
               type="button"
@@ -1358,13 +1583,21 @@ export default function FleetTrackingMap() {
                     paddingTop: "6px",
                     borderTop: "1px solid #f1f5f9",
                     display: "flex",
-                    justifyContent: "space-between",
-                    fontWeight: 600,
-                    color: "#0284c7",
+                    flexDirection: "column",
+                    gap: "4px",
+                    fontSize: "11px",
                   }}
                 >
-                  <span>Speed: {activeSelectedTrip.currentLocation?.speed || 0} km/h</span>
-                  <span>Covered: {activeSelectedTrip.distanceCoveredKm || 0} km</span>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 600, color: "#0284c7" }}>
+                    <span>Speed: {activeSelectedTrip.currentLocation?.speed || 0} km/h</span>
+                    <span>Covered: {activeSelectedTrip.distanceCoveredKm || 0} km</span>
+                  </div>
+                  {(activeSelectedTrip.remainingKm || activeSelectedTrip.etaMinutes) && (
+                    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, color: "#059669" }}>
+                      <span>Remaining: {activeSelectedTrip.remainingKm || "--"} km</span>
+                      <span>ETA: {activeSelectedTrip.etaMinutes ? `${activeSelectedTrip.etaMinutes} mins` : "--"}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1393,17 +1626,31 @@ export default function FleetTrackingMap() {
 
 // -------------------------------------------------------------
 // DISPATCH TRIP MODAL USING BOXMODAL & FORM SYSTEM
+// (With Interactive Map Area Search & Draggable Destination Pin)
 // -------------------------------------------------------------
 function DispatchTripModal({ isOpen, drivers, initialData, onClose, onSuccess }) {
   const [driverId, setDriverId] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [destinationAddress, setDestinationAddress] = useState("");
+  const [destCoords, setDestCoords] = useState(null); // { lat, lng }
   const [originAddress, setOriginAddress] = useState("Central Warehouse");
   const [notes, setNotes] = useState("");
   const [deliveryNoteId, setDeliveryNoteId] = useState("");
   const [deliveryNoteNumber, setDeliveryNoteNumber] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Modal Map States & Refs
+  const [destLayer, setDestLayer] = useState("streets");
+  const [modalAreaQuery, setModalAreaQuery] = useState("");
+  const [modalAreaResults, setModalAreaResults] = useState([]);
+  const [isModalSearching, setIsModalSearching] = useState(false);
+  const [showModalResults, setShowModalResults] = useState(false);
+
+  const modalMapContainerRef = useRef(null);
+  const modalMapInstanceRef = useRef(null);
+  const modalMarkerRef = useRef(null);
+  const modalTileLayerRef = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -1416,18 +1663,198 @@ function DispatchTripModal({ isOpen, drivers, initialData, onClose, onSuccess })
         setNotes(initialData.notes || "");
         setDeliveryNoteId(initialData.deliveryNoteId || "");
         setDeliveryNoteNumber(initialData.deliveryNoteNumber || "");
+
+        if (initialData.destination?.lat && initialData.destination?.lng) {
+          setDestCoords({
+            lat: initialData.destination.lat,
+            lng: initialData.destination.lng,
+          });
+        } else if (initialData.destinationAddress) {
+          geocodeAddress(initialData.destinationAddress).then((geo) => {
+            if (geo) setDestCoords(geo);
+          });
+        } else {
+          setDestCoords({ lat: 20.5937, lng: 78.9629 });
+        }
       } else {
         setDriverId("");
         setCustomerName("");
         setCustomerPhone("");
         setDestinationAddress("");
+        setDestCoords({ lat: 20.5937, lng: 78.9629 });
         setOriginAddress("Central Warehouse");
         setNotes("");
         setDeliveryNoteId("");
         setDeliveryNoteNumber("");
       }
+      setModalAreaQuery("");
+      setModalAreaResults([]);
+      setShowModalResults(false);
     }
   }, [isOpen, initialData]);
+
+  // Initialize interactive Leaflet map inside modal
+  useEffect(() => {
+    if (!isOpen || !modalMapContainerRef.current) return;
+
+    const timer = setTimeout(() => {
+      if (!modalMapContainerRef.current) return;
+
+      const defaultLat = destCoords?.lat || 20.5937;
+      const defaultLng = destCoords?.lng || 78.9629;
+      const defaultZoom = destCoords ? 14 : 5;
+
+      if (!modalMapInstanceRef.current) {
+        const map = L.map(modalMapContainerRef.current, {
+          zoomControl: true,
+          attributionControl: false,
+        }).setView([defaultLat, defaultLng], defaultZoom);
+
+        const layer = MAP_LAYERS[destLayer] || MAP_LAYERS.streets;
+        modalTileLayerRef.current = L.tileLayer(layer.url, layer.options).addTo(map);
+        modalMapInstanceRef.current = map;
+
+        // Custom draggable red pin icon
+        const pinIcon = L.divIcon({
+          className: "modal-draggable-pin",
+          html: `
+            <div style="position:relative;display:flex;flex-direction:column;align-items:center;cursor:grab;">
+              <div style="background:#ef4444;color:#ffffff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.3);margin-bottom:2px;white-space:nowrap;">
+                📍 Drop-off Pin
+              </div>
+              <div style="width:28px;height:28px;background:#ef4444;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;box-shadow:0 3px 10px rgba(0,0,0,0.3);border:2.5px solid white;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                  <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+              </div>
+            </div>
+          `,
+          iconSize: [80, 50],
+          iconAnchor: [40, 48],
+        });
+
+        const marker = L.marker([defaultLat, defaultLng], {
+          icon: pinIcon,
+          draggable: true,
+        }).addTo(map);
+        modalMarkerRef.current = marker;
+
+        // Handle Pin Drag
+        marker.on("dragend", async (e) => {
+          const pos = e.target.getLatLng();
+          setDestCoords({ lat: pos.lat, lng: pos.lng });
+          try {
+            const geo = await reverseGeocode(pos.lat, pos.lng);
+            if (geo?.address) {
+              setDestinationAddress(geo.address);
+              toast.success("Destination address updated from pinned location!");
+            }
+          } catch {}
+        });
+
+        // Handle Map Click to Reposition Pin
+        map.on("click", async (e) => {
+          const pos = e.latlng;
+          marker.setLatLng(pos);
+          setDestCoords({ lat: pos.lat, lng: pos.lng });
+          try {
+            const geo = await reverseGeocode(pos.lat, pos.lng);
+            if (geo?.address) {
+              setDestinationAddress(geo.address);
+              toast.success("Destination address updated from pinned location!");
+            }
+          } catch {}
+        });
+      } else {
+        const map = modalMapInstanceRef.current;
+        map.invalidateSize();
+        if (destCoords) {
+          map.setView([destCoords.lat, destCoords.lng], 14);
+          if (modalMarkerRef.current) {
+            modalMarkerRef.current.setLatLng([destCoords.lat, destCoords.lng]);
+          }
+        }
+      }
+    }, 180);
+
+    return () => {
+      clearTimeout(timer);
+      if (!isOpen && modalMapInstanceRef.current) {
+        modalMapInstanceRef.current.remove();
+        modalMapInstanceRef.current = null;
+        modalMarkerRef.current = null;
+      }
+    };
+  }, [isOpen]);
+
+  // Switch tile layer in modal
+  const handleModalLayerSwitch = (layerKey) => {
+    setDestLayer(layerKey);
+    const map = modalMapInstanceRef.current;
+    if (!map) return;
+    if (modalTileLayerRef.current) {
+      map.removeLayer(modalTileLayerRef.current);
+    }
+    const layer = MAP_LAYERS[layerKey] || MAP_LAYERS.streets;
+    modalTileLayerRef.current = L.tileLayer(layer.url, layer.options).addTo(map);
+  };
+
+  // Search area inside modal
+  const handleModalAreaSearch = async (val) => {
+    setModalAreaQuery(val);
+    if (!val || val.trim().length < 2) {
+      setModalAreaResults([]);
+      setShowModalResults(false);
+      return;
+    }
+    setIsModalSearching(true);
+    setShowModalResults(true);
+    try {
+      const results = await searchAreas(val);
+      setModalAreaResults(results);
+    } catch {
+      setModalAreaResults([]);
+    } finally {
+      setIsModalSearching(false);
+    }
+  };
+
+  const handleSelectModalArea = (item) => {
+    setShowModalResults(false);
+    setModalAreaQuery(item.label);
+    setDestCoords({ lat: item.lat, lng: item.lng });
+    setDestinationAddress(item.label);
+
+    const map = modalMapInstanceRef.current;
+    if (map) {
+      map.flyTo([item.lat, item.lng], 15, { duration: 1.2 });
+      if (modalMarkerRef.current) {
+        modalMarkerRef.current.setLatLng([item.lat, item.lng]);
+      }
+    }
+  };
+
+  // Locate destination address on map manually
+  const handleLocateAddressOnMap = async () => {
+    if (!destinationAddress.trim()) return;
+    try {
+      const geo = await geocodeAddress(destinationAddress);
+      if (geo) {
+        setDestCoords(geo);
+        const map = modalMapInstanceRef.current;
+        if (map) {
+          map.flyTo([geo.lat, geo.lng], 15, { duration: 1.2 });
+          if (modalMarkerRef.current) {
+            modalMarkerRef.current.setLatLng([geo.lat, geo.lng]);
+          }
+        }
+        toast.success("Located address on map! Drag pin to adjust exact spot.");
+      } else {
+        toast.error("Could not find coordinates for this address. Use area search above.");
+      }
+    } catch {}
+  };
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
@@ -1451,6 +1878,8 @@ function DispatchTripModal({ isOpen, drivers, initialData, onClose, onSuccess })
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
         destinationAddress: destinationAddress.trim(),
+        destinationLat: destCoords?.lat || undefined,
+        destinationLng: destCoords?.lng || undefined,
         originAddress: originAddress.trim(),
         notes: notes.trim(),
         deliveryNoteId: deliveryNoteId || undefined,
@@ -1513,8 +1942,8 @@ function DispatchTripModal({ isOpen, drivers, initialData, onClose, onSuccess })
       show={isOpen}
       onClose={onClose}
       title="Dispatch Delivery Trip"
-      subtitle="Assign a driver, vehicle, and destination address for live GPS tracking"
-      width="780px"
+      subtitle="Assign a driver, vehicle, and fine-tune the delivery pin on the interactive map"
+      width="820px"
       footer={footer}
     >
       {deliveryNoteNumber && (
@@ -1611,16 +2040,216 @@ function DispatchTripModal({ isOpen, drivers, initialData, onClose, onSuccess })
           />
 
           <div className="box-modal-form-full">
-            <Textarea
-              label="Delivery Destination Address"
-              name="destinationAddress"
-              value={destinationAddress}
-              onChange={(e) => setDestinationAddress(e.target.value)}
-              placeholder="Full delivery street address, building, city, and pincode..."
-              rows={2}
-              required
-              disabled={submitting}
-            />
+            <div style={{ display: "flex", gap: "8px", alignItems: "flex-end" }}>
+              <div style={{ flex: 1 }}>
+                <Textarea
+                  label="Delivery Destination Address"
+                  name="destinationAddress"
+                  value={destinationAddress}
+                  onChange={(e) => setDestinationAddress(e.target.value)}
+                  placeholder="Full delivery street address, building, city, and pincode..."
+                  rows={2}
+                  required
+                  disabled={submitting}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleLocateAddressOnMap}
+                style={{
+                  height: "42px",
+                  padding: "0 12px",
+                  marginBottom: "4px",
+                  borderRadius: "8px",
+                  border: "1px solid #cbd5e1",
+                  backgroundColor: "#f8fafc",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  color: "#0284c7",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+                title="Geocode & center map on this address"
+              >
+                <Crosshair size={14} />
+                Locate
+              </button>
+            </div>
+          </div>
+
+          {/* ITEM 7: Interactive Destination Pin Adjuster Map */}
+          <div className="box-modal-form-full" style={{ marginTop: "4px" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "6px",
+                flexWrap: "wrap",
+                gap: "6px",
+              }}
+            >
+              <label style={{ fontSize: "12px", fontWeight: 700, color: "#334155", display: "flex", alignItems: "center", gap: "6px" }}>
+                <span>📍 Drop-off Pin Location</span>
+                <span style={{ fontSize: "11px", fontWeight: 500, color: "#64748b" }}>
+                  (Drag pin or click map to adjust exact GPS drop-off spot)
+                </span>
+              </label>
+
+              {/* Satellite / Streets toggle in modal */}
+              <div style={{ display: "flex", gap: "4px" }}>
+                <button
+                  type="button"
+                  onClick={() => handleModalLayerSwitch("streets")}
+                  style={{
+                    padding: "3px 8px",
+                    borderRadius: "4px",
+                    border: "1px solid #cbd5e1",
+                    backgroundColor: destLayer === "streets" ? "#0284c7" : "#fff",
+                    color: destLayer === "streets" ? "#fff" : "#475569",
+                    fontSize: "10px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  🗺️ Streets
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleModalLayerSwitch("satellite")}
+                  style={{
+                    padding: "3px 8px",
+                    borderRadius: "4px",
+                    border: "1px solid #cbd5e1",
+                    backgroundColor: destLayer === "satellite" ? "#1e293b" : "#fff",
+                    color: destLayer === "satellite" ? "#38bdf8" : "#475569",
+                    fontSize: "10px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  🛰️ Satellite
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Area Search Input with Autocomplete */}
+            <div style={{ position: "relative", marginBottom: "8px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  backgroundColor: "#ffffff",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "6px",
+                  padding: "4px 8px",
+                }}
+              >
+                <Search size={14} color="#64748b" style={{ marginRight: "6px" }} />
+                <input
+                  type="text"
+                  value={modalAreaQuery}
+                  onChange={(e) => handleModalAreaSearch(e.target.value)}
+                  onFocus={() => {
+                    if (modalAreaResults.length > 0) setShowModalResults(true);
+                  }}
+                  placeholder="Search area / locality to fly pin directly (e.g. Indiranagar, Bangalore)..."
+                  style={{
+                    border: "none",
+                    outline: "none",
+                    fontSize: "11px",
+                    width: "100%",
+                    color: "#0f172a",
+                  }}
+                />
+                {isModalSearching && (
+                  <RefreshCw size={12} color="#0284c7" style={{ animation: "spin 1s linear infinite" }} />
+                )}
+                {modalAreaQuery && !isModalSearching && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModalAreaQuery("");
+                      setModalAreaResults([]);
+                      setShowModalResults(false);
+                    }}
+                    style={{ border: "none", background: "none", cursor: "pointer", color: "#94a3b8" }}
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+
+              {showModalResults && modalAreaResults.length > 0 && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "100%",
+                    left: 0,
+                    right: 0,
+                    backgroundColor: "#ffffff",
+                    borderRadius: "6px",
+                    border: "1px solid #cbd5e1",
+                    boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
+                    maxHeight: "180px",
+                    overflowY: "auto",
+                    zIndex: 100,
+                  }}
+                >
+                  {modalAreaResults.map((item, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => handleSelectModalArea(item)}
+                      style={{
+                        padding: "6px 10px",
+                        cursor: "pointer",
+                        borderBottom: idx < modalAreaResults.length - 1 ? "1px solid #f1f5f9" : "none",
+                        fontSize: "11px",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f8fafc")}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                    >
+                      <div style={{ fontWeight: 600, color: "#0f172a" }}>{item.label.split(",")[0]}</div>
+                      <div style={{ fontSize: "10px", color: "#64748b" }}>{item.label}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Interactive Mini Map Canvas */}
+            <div
+              style={{
+                borderRadius: "8px",
+                overflow: "hidden",
+                border: "1px solid #cbd5e1",
+                position: "relative",
+              }}
+            >
+              <div ref={modalMapContainerRef} style={{ height: "200px", width: "100%" }} />
+              {destCoords && (
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: "8px",
+                    left: "8px",
+                    zIndex: 400,
+                    backgroundColor: "rgba(15, 23, 42, 0.85)",
+                    backdropFilter: "blur(4px)",
+                    color: "#38bdf8",
+                    fontSize: "10px",
+                    padding: "3px 8px",
+                    borderRadius: "4px",
+                    fontWeight: 600,
+                  }}
+                >
+                  GPS: {destCoords.lat.toFixed(5)}, {destCoords.lng.toFixed(5)}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="box-modal-form-full">

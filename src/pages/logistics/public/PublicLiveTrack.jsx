@@ -10,13 +10,14 @@ import {
   Radio,
   AlertCircle,
   ShieldCheck,
+  Layers,
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 import logisticsApi from "../../../services/modules/logisticsApi";
 import { createLogisticsSocket } from "../../../services/modules/logisticsSocket";
-import { fetchRoadRoute } from "../../../utils/logisticsGeo";
+import { fetchRoadRoute, MAP_LAYERS, calculateBearing } from "../../../utils/logisticsGeo";
 import "../logistics.css";
 
 export default function PublicLiveTrack() {
@@ -25,9 +26,11 @@ export default function PublicLiveTrack() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
   const [liveLocation, setLiveLocation] = useState(null);
+  const [mapLayer, setMapLayer] = useState("streets");
 
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
+  const tileLayerRef = useRef(null);
   const vehicleMarkerRef = useRef(null);
   const destMarkerRef = useRef(null);
   const polylineRef = useRef(null);
@@ -67,9 +70,19 @@ export default function PublicLiveTrack() {
       socket.emit("trip:join", { trackingToken: token });
     });
 
-    socket.on("trip:location_update", ({ location, distanceCoveredKm }) => {
+    socket.on("trip:location_update", ({ location, distanceCoveredKm, remainingKm, etaMinutes }) => {
       if (location?.lat && location?.lng) {
-        setLiveLocation(location);
+        setLiveLocation((prevLoc) => {
+          let heading = location.heading;
+          if (!heading && prevLoc?.lat && (prevLoc.lat !== location.lat || prevLoc.lng !== location.lng)) {
+            heading = calculateBearing(prevLoc.lat, prevLoc.lng, location.lat, location.lng);
+          }
+          return {
+            ...location,
+            heading: heading || prevLoc?.heading || 0,
+          };
+        });
+
         setTrip((prev) =>
           prev
             ? {
@@ -79,6 +92,10 @@ export default function PublicLiveTrack() {
                   distanceCoveredKm !== undefined
                     ? distanceCoveredKm
                     : prev.distanceCoveredKm,
+                remainingKm:
+                  remainingKm !== undefined ? remainingKm : prev.remainingKm,
+                etaMinutes:
+                  etaMinutes !== undefined ? etaMinutes : prev.etaMinutes,
               }
             : prev
         );
@@ -102,6 +119,18 @@ export default function PublicLiveTrack() {
     };
   }, [token]);
 
+  // Switch map layer between Streets & Satellite
+  const switchMapLayer = (layerKey) => {
+    setMapLayer(layerKey);
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    if (tileLayerRef.current) {
+      map.removeLayer(tileLayerRef.current);
+    }
+    const layer = MAP_LAYERS[layerKey] || MAP_LAYERS.streets;
+    tileLayerRef.current = L.tileLayer(layer.url, layer.options).addTo(map);
+  };
+
   // Leaflet map initialization
   useEffect(() => {
     if (!mapContainerRef.current || !trip) return;
@@ -117,9 +146,8 @@ export default function PublicLiveTrack() {
         attributionControl: false,
       }).setView([initialLat, initialLng], 14);
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19,
-      }).addTo(map);
+      const layer = MAP_LAYERS[mapLayer] || MAP_LAYERS.streets;
+      tileLayerRef.current = L.tileLayer(layer.url, layer.options).addTo(map);
 
       mapInstanceRef.current = map;
     }
@@ -145,31 +173,41 @@ export default function PublicLiveTrack() {
       }
     }
 
-    // Vehicle marker
+    // Rapido / Uber style vehicle marker
     const vehLat = liveLocation?.lat || trip.currentLocation?.lat;
     const vehLng = liveLocation?.lng || trip.currentLocation?.lng;
+    const heading = liveLocation?.heading || trip.currentLocation?.heading || 0;
+    const speed = liveLocation?.speed || trip.currentLocation?.speed || 0;
 
     if (vehLat && vehLng) {
       const vehCoords = [vehLat, vehLng];
       bounds.push(vehCoords);
 
-      if (!vehicleMarkerRef.current) {
-        const vehIcon = L.divIcon({
-          className: "vehicle-pin",
-          html: `<div style="position:relative;width:40px;height:40px;">
-            <span style="position:absolute;inset:0;border-radius:50%;background:#10b981;opacity:0.4;animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;"></span>
-            <div style="position:relative;background:#059669;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;box-shadow:0 3px 12px rgba(0,0,0,0.4);border:3px solid white;">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+      const vehIcon = L.divIcon({
+        className: "vehicle-pin",
+        html: `
+          <div style="position:relative;width:44px;height:44px;user-select:none;">
+            <span style="position:absolute;inset:-3px;border-radius:50%;background:#10b981;opacity:0.35;animation:ping 1.6s cubic-bezier(0,0,0.2,1) infinite;"></span>
+            <!-- Directional Rotating Arrow Wrapper -->
+            <div style="transform: rotate(${heading}deg); transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); width:44px; height:44px; display:flex; align-items:center; justify-content:center; position:relative;">
+              <div style="position:absolute;top:-5px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:8px solid #059669;filter:drop-shadow(0 2px 2px rgba(0,0,0,0.3));"></div>
+              <div style="position:relative;background:#059669;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;box-shadow:0 4px 14px rgba(0,0,0,0.35);border:2.5px solid white;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+              </div>
             </div>
+            ${speed > 0 ? `<div style="position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);background:#0f172a;color:#34d399;font-size:9px;font-weight:800;padding:1px 5px;border-radius:5px;border:1px solid #10b981;white-space:nowrap;box-shadow:0 2px 4px rgba(0,0,0,0.3);">${speed} km/h</div>` : ""}
           </div>`,
-          iconSize: [40, 40],
-          iconAnchor: [20, 20],
-        });
+        iconSize: [44, 44],
+        iconAnchor: [22, 22],
+      });
+
+      if (!vehicleMarkerRef.current) {
         vehicleMarkerRef.current = L.marker(vehCoords, { icon: vehIcon })
           .addTo(map)
-          .bindPopup(`<b>Your Delivery Vehicle</b><br/>${trip.vehicleNumber}`);
+          .bindPopup(`<b>Your Delivery Vehicle</b><br/>${trip.vehicleNumber || trip.vehicleType}`);
       } else {
         vehicleMarkerRef.current.setLatLng(vehCoords);
+        vehicleMarkerRef.current.setIcon(vehIcon);
       }
     }
 
@@ -293,33 +331,71 @@ export default function PublicLiveTrack() {
                 border: "1px solid #a7f3d0",
                 borderRadius: 12,
                 padding: "10px 14px",
-                textAlign: "center",
-                fontSize: 12,
+                fontSize: "12px",
                 color: "#059669",
                 marginBottom: 12,
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
+                flexDirection: "column",
+                gap: 4,
               }}
             >
-              <Radio size={14} />
-              <span>
-                Vehicle is moving live &bull; Speed:{" "}
-                <strong>{liveLocation?.speed || 0} km/h</strong> &bull; Distance:{" "}
-                <strong>{trip.distanceCoveredKm || 0} km</strong>
-              </span>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                <Radio size={14} />
+                <span>
+                  Moving live &bull; Speed: <strong>{liveLocation?.speed || 0} km/h</strong> &bull; Covered: <strong>{trip.distanceCoveredKm || 0} km</strong>
+                </span>
+              </div>
+              {(trip.remainingKm || trip.etaMinutes) && (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, fontWeight: 700, color: "#047857", fontSize: "11px", marginTop: "2px" }}>
+                  {trip.remainingKm && <span>Remaining: {trip.remainingKm} km</span>}
+                  {trip.etaMinutes && <span>Estimated Arrival: {trip.etaMinutes} mins</span>}
+                </div>
+              )}
             </div>
           )}
 
-          {/* Map */}
+          {/* Map with Satellite Switcher (Item 6) */}
           <div className="driver-map-wrapper">
-            <div className="driver-map-header">
+            <div className="driver-map-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <Navigation size={14} color="#059669" /> OpenStreetMap Vehicle Route
+                <Navigation size={14} color="#059669" /> Live Vehicle Route
               </span>
+              <div style={{ display: "flex", gap: 4 }}>
+                <button
+                  type="button"
+                  onClick={() => switchMapLayer("streets")}
+                  style={{
+                    padding: "3px 8px",
+                    borderRadius: "4px",
+                    border: "1px solid #cbd5e1",
+                    backgroundColor: mapLayer === "streets" ? "#059669" : "#fff",
+                    color: mapLayer === "streets" ? "#fff" : "#475569",
+                    fontSize: "10px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  🗺️ Streets
+                </button>
+                <button
+                  type="button"
+                  onClick={() => switchMapLayer("satellite")}
+                  style={{
+                    padding: "3px 8px",
+                    borderRadius: "4px",
+                    border: "1px solid #cbd5e1",
+                    backgroundColor: mapLayer === "satellite" ? "#1e293b" : "#fff",
+                    color: mapLayer === "satellite" ? "#34d399" : "#475569",
+                    fontSize: "10px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  🛰️ Satellite
+                </button>
+              </div>
             </div>
-            <div ref={mapContainerRef} style={{ height: 320, width: "100%" }} />
+            <div ref={mapContainerRef} style={{ height: 340, width: "100%" }} />
           </div>
         </div>
       </div>

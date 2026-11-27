@@ -34,6 +34,9 @@ import {
   fetchRoadRoute,
   formatDistance,
   formatDuration,
+  calculateBearing,
+  calculateDistanceKm,
+  MAP_LAYERS,
 } from "../../../utils/logisticsGeo";
 import "../../../styles/common.css";
 import "../../../styles/layout.css";
@@ -57,6 +60,9 @@ export default function DriverPortal() {
   const [speedKmH, setSpeedKmH] = useState(0);
   const [accuracyM, setAccuracyM] = useState(0);
   const [routeSummary, setRouteSummary] = useState(null); // { distance: "270 m", duration: "4 mins" }
+  const [liveRemainingKm, setLiveRemainingKm] = useState(null);
+  const [liveEtaMins, setLiveEtaMins] = useState(null);
+  const [mapLayer, setMapLayer] = useState("streets"); // "streets" | "satellite"
 
   // Delivery Completion modal
   const [showCompleteModal, setShowCompleteModal] = useState(false);
@@ -68,8 +74,12 @@ export default function DriverPortal() {
   const socketRef = useRef(null);
   const watchIdRef = useRef(null);
   const periodicTimerRef = useRef(null);
+  const wakeLockRef = useRef(null);
+  const prevCoordsRef = useRef(null);
+  const currentHeadingRef = useRef(0);
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
+  const tileLayerRef = useRef(null);
   const driverMarkerRef = useRef(null);
   const destMarkerRef = useRef(null);
   const routePolylineRef = useRef(null);
@@ -78,6 +88,41 @@ export default function DriverPortal() {
   useEffect(() => {
     activeTripRef.current = activeTrip;
   }, [activeTrip]);
+
+  // Request WakeLock to keep mobile screen awake while trip is active
+  useEffect(() => {
+    if (activeTrip?.status === "STARTED") {
+      if ("wakeLock" in navigator && !wakeLockRef.current) {
+        navigator.wakeLock.request("screen").then((lock) => {
+          wakeLockRef.current = lock;
+        }).catch(() => {});
+      }
+    } else if (wakeLockRef.current) {
+      wakeLockRef.current.release().catch(() => {});
+      wakeLockRef.current = null;
+    }
+    return () => {
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release().catch(() => {});
+        wakeLockRef.current = null;
+      }
+    };
+  }, [activeTrip?.status]);
+
+  // Request location permission proactively on mobile app launch
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setCurrentCoords([pos.coords.latitude, pos.coords.longitude]);
+        },
+        (err) => {
+          console.warn("Location permission check:", err.message);
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+    }
+  }, []);
 
   // Invalidate Leaflet map size when toggling fullscreen or switching tabs
   useEffect(() => {
@@ -98,8 +143,10 @@ export default function DriverPortal() {
       return;
     }
 
+    let parsedDriver = null;
     try {
-      setDriver(JSON.parse(storedDriver));
+      parsedDriver = JSON.parse(storedDriver);
+      setDriver(parsedDriver);
     } catch {
       navigate("/driver/login", { replace: true });
       return;
@@ -107,17 +154,17 @@ export default function DriverPortal() {
 
     fetchActiveTrip();
 
-    // Setup socket connection
+    // Setup socket connection with tenantId for real-time fleet stream
     const socket = createLogisticsSocket();
     socketRef.current = socket;
 
     socket.on("connect", () => {
-      if (activeTripRef.current?._id) {
-        socket.emit("trip:join", {
-          tripId: activeTripRef.current._id,
-          driverId: JSON.parse(storedDriver)?._id,
-        });
-      }
+      const activeT = activeTripRef.current;
+      socket.emit("trip:join", {
+        tripId: activeT?._id,
+        driverId: parsedDriver?._id,
+        tenantId: parsedDriver?.tenantId || activeT?.tenantId,
+      });
     });
 
     return () => {
@@ -172,6 +219,29 @@ export default function DriverPortal() {
   // -------------------------------------------------------------
   // HIGH PRECISION GPS TRACKING ENGINE (HTML5 Geolocation)
   // -------------------------------------------------------------
+  const createUberDriverIcon = (heading = 0, speed = 0) => {
+    return L.divIcon({
+      className: "uber-driver-marker-wrapper",
+      html: `
+        <div style="position:relative;width:48px;height:48px;display:flex;align-items:center;justify-content:center;">
+          ${speed > 2 ? `<div style="position:absolute;inset:2px;border-radius:50%;background:#3b82f6;opacity:0.25;animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;"></div>` : ""}
+          <div style="position:relative;width:40px;height:40px;border-radius:50%;background:#ffffff;box-shadow:0 4px 14px rgba(0,0,0,0.3);border:3px solid #2563eb;display:flex;align-items:center;justify-content:center;transform:rotate(${heading}deg);transition:transform 0.3s ease-out;">
+            <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:8px solid #2563eb;"></div>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#2563eb" stroke="#ffffff" stroke-width="1.5">
+              <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1 .4-1 1v7c0 .6.4 1 1 1h2"/>
+              <circle cx="7" cy="17" r="2"/>
+              <path d="M9 17h6"/>
+              <circle cx="17" cy="17" r="2"/>
+            </svg>
+          </div>
+          ${speed > 0 ? `<div style="position:absolute;bottom:-6px;background:#0f172a;color:#38bdf8;font-size:9px;font-weight:800;padding:1px 5px;border-radius:6px;border:1px solid #38bdf8;white-space:nowrap;box-shadow:0 2px 4px rgba(0,0,0,0.2);">${speed} km/h</div>` : ""}
+        </div>
+      `,
+      iconSize: [48, 48],
+      iconAnchor: [24, 24],
+    });
+  };
+
   const startGpsTracking = (tripId) => {
     if (!navigator.geolocation) {
       toast.error("Geolocation is not supported by your browser");
@@ -185,34 +255,70 @@ export default function DriverPortal() {
       const speedKm = speed ? Math.round(speed * 3.6) : 0;
       const roundedAcc = accuracy ? Math.round(accuracy) : 5;
 
+      // Compute heading rotation if browser doesn't report compass heading
+      let currentH = heading;
+      if ((!currentH || currentH === 0) && prevCoordsRef.current) {
+        const calculatedH = calculateBearing(
+          prevCoordsRef.current[0],
+          prevCoordsRef.current[1],
+          latitude,
+          longitude
+        );
+        if (calculatedH) {
+          currentH = calculatedH;
+          currentHeadingRef.current = calculatedH;
+        } else {
+          currentH = currentHeadingRef.current;
+        }
+      } else if (currentH) {
+        currentHeadingRef.current = currentH;
+      } else {
+        currentH = currentHeadingRef.current;
+      }
+      prevCoordsRef.current = [latitude, longitude];
+
       setSpeedKmH(speedKm);
       setAccuracyM(roundedAcc);
       setCurrentCoords([latitude, longitude]);
+
+      // Calculate dynamic remaining distance and ETA to destination
+      const destLat = activeTripRef.current?.destination?.lat;
+      const destLng = activeTripRef.current?.destination?.lng;
+      if (destLat && destLng) {
+        const remKm = calculateDistanceKm(latitude, longitude, destLat, destLng);
+        setLiveRemainingKm(remKm);
+        const estSpeed = speedKm > 5 ? speedKm : 30; // 30 km/h avg city speed fallback
+        const etaMins = Math.max(1, Math.round((remKm / estSpeed) * 60));
+        setLiveEtaMins(etaMins);
+      }
+
+      const effectiveTenantId = driver?.tenantId || activeTripRef.current?.tenantId;
 
       const payload = {
         lat: latitude,
         lng: longitude,
         speed: speedKm,
-        heading: heading || 0,
+        heading: currentH || 0,
         accuracy: roundedAcc,
         timestamp: new Date().toISOString(),
       };
 
       if (socketRef.current?.connected) {
-        // Emit both event formats for socket compatibility
         socketRef.current.emit("driver:location", {
           tripId,
           driverId: driver?._id,
+          tenantId: effectiveTenantId,
           lat: latitude,
           lng: longitude,
           speed: speedKm,
-          heading: heading || 0,
+          heading: currentH || 0,
           accuracy: roundedAcc,
         });
         socketRef.current.emit("driver:location_update", {
           tripId,
-          location: payload,
           driverId: driver?._id,
+          tenantId: effectiveTenantId,
+          location: payload,
         });
       }
 
@@ -220,7 +326,7 @@ export default function DriverPortal() {
         console.warn("Location REST sync buffered:", err?.message);
       });
 
-      updateDriverMapMarker([latitude, longitude]);
+      updateDriverMapMarker([latitude, longitude], speedKm, currentH);
     };
 
     const handleGpsError = (err) => {
@@ -233,7 +339,7 @@ export default function DriverPortal() {
         handleGpsError,
         {
           enableHighAccuracy: true,
-          maximumAge: 3000,
+          maximumAge: 0,
           timeout: 10000,
         },
       );
@@ -242,9 +348,10 @@ export default function DriverPortal() {
     periodicTimerRef.current = setInterval(() => {
       navigator.geolocation.getCurrentPosition(emitLocation, handleGpsError, {
         enableHighAccuracy: true,
-        timeout: 5000,
+        maximumAge: 0,
+        timeout: 4000,
       });
-    }, 6000);
+    }, 1500);
   };
 
   const stopGpsTracking = () => {
@@ -263,6 +370,17 @@ export default function DriverPortal() {
   // -------------------------------------------------------------
   // LEAFLET MAP & LIVE ROUTE DISPLAY
   // -------------------------------------------------------------
+  const switchTileLayer = (layerKey) => {
+    if (!mapInstanceRef.current) return;
+    setMapLayer(layerKey);
+    if (tileLayerRef.current) {
+      mapInstanceRef.current.removeLayer(tileLayerRef.current);
+    }
+    const layerDef = MAP_LAYERS[layerKey] || MAP_LAYERS.streets;
+    const tileLayer = L.tileLayer(layerDef.url, layerDef.options).addTo(mapInstanceRef.current);
+    tileLayerRef.current = tileLayer;
+  };
+
   useEffect(() => {
     if (!mapRef.current || !activeTrip) return;
 
@@ -275,12 +393,10 @@ export default function DriverPortal() {
       const map = L.map(mapRef.current, {
         zoomControl: true,
         attributionControl: false,
-      }).setView(defaultCenter, 14);
+      }).setView(defaultCenter, 15);
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19,
-        attribution: "&copy; OpenStreetMap contributors",
-      }).addTo(map);
+      const defaultLayer = MAP_LAYERS[mapLayer] || MAP_LAYERS.streets;
+      tileLayerRef.current = L.tileLayer(defaultLayer.url, defaultLayer.options).addTo(map);
 
       mapInstanceRef.current = map;
 
@@ -314,10 +430,10 @@ export default function DriverPortal() {
         if (!destMarkerRef.current) {
           const destIcon = L.divIcon({
             className: "dest-icon",
-            html: `<div style="background:#dc2626;color:white;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,0.35);border:3px solid white;font-size:16px;">📍</div>`,
-            iconSize: [34, 34],
-            iconAnchor: [17, 34],
-            popupAnchor: [0, -34],
+            html: `<div style="background:#dc2626;color:white;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,0.35);border:3px solid white;font-size:17px;">📍</div>`,
+            iconSize: [36, 36],
+            iconAnchor: [18, 36],
+            popupAnchor: [0, -36],
           });
           destMarkerRef.current = L.marker(destCoords, { icon: destIcon })
             .addTo(map)
@@ -331,7 +447,7 @@ export default function DriverPortal() {
       const driverLat = currentCoords?.[0] || activeTrip.currentLocation?.lat;
       const driverLng = currentCoords?.[1] || activeTrip.currentLocation?.lng;
       if (driverLat && driverLng) {
-        updateDriverMapMarker([driverLat, driverLng]);
+        updateDriverMapMarker([driverLat, driverLng], speedKmH, currentHeadingRef.current);
       }
 
       // 3. Draw real road route polyline between driver and destination
@@ -372,29 +488,32 @@ export default function DriverPortal() {
   }, [activeTrip]);
 
   const lastRouteFetchRef = useRef(0);
-  const updateDriverMapMarker = (coords) => {
+  const updateDriverMapMarker = (coords, speed = 0, explicitHeading = 0) => {
     if (!mapInstanceRef.current) return;
 
-    if (!driverMarkerRef.current) {
-      const driverIcon = L.divIcon({
-        className: "driver-current-icon",
-        html: `<div style="background:var(--primary-color, #2563eb);color:white;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,0.3);border:2px solid white;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <rect x="1" y="3" width="15" height="13"></rect>
-            <polygon points="16 8 20 8 23 11 23 16 16 16 8"></polygon>
-            <circle cx="5.5" cy="18.5" r="2.5"></circle>
-            <circle cx="18.5" cy="18.5" r="2.5"></circle>
-          </svg>
-        </div>`,
-        iconSize: [34, 34],
-        iconAnchor: [17, 17],
-      });
+    let heading = explicitHeading;
+    if (!heading && prevCoordsRef.current) {
+      const calcH = calculateBearing(prevCoordsRef.current[0], prevCoordsRef.current[1], coords[0], coords[1]);
+      if (calcH) {
+        heading = calcH;
+        currentHeadingRef.current = calcH;
+      } else {
+        heading = currentHeadingRef.current;
+      }
+    } else if (heading) {
+      currentHeadingRef.current = heading;
+    } else {
+      heading = currentHeadingRef.current;
+    }
 
-      driverMarkerRef.current = L.marker(coords, { icon: driverIcon }).addTo(
+    const icon = createUberDriverIcon(heading, speed);
+    if (!driverMarkerRef.current) {
+      driverMarkerRef.current = L.marker(coords, { icon }).addTo(
         mapInstanceRef.current,
       );
     } else {
       driverMarkerRef.current.setLatLng(coords);
+      driverMarkerRef.current.setIcon(icon);
     }
 
     // Refresh road route at most every 15 seconds to track active driver progress
@@ -1494,6 +1613,57 @@ export default function DriverPortal() {
                   </div>
                 )}
 
+                {/* SATELLITE / STREETS TILE SWITCHER */}
+                <div
+                  style={{
+                    position: "absolute",
+                    top: isFullScreenMap ? "72px" : "12px",
+                    right: "12px",
+                    zIndex: 9999,
+                    display: "flex",
+                    backgroundColor: "rgba(255, 255, 255, 0.95)",
+                    backdropFilter: "blur(8px)",
+                    borderRadius: "10px",
+                    boxShadow: "0 2px 10px rgba(0, 0, 0, 0.18)",
+                    padding: "3px",
+                    border: "1px solid #cbd5e1",
+                    gap: "4px",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => switchTileLayer("streets")}
+                    style={{
+                      padding: "5px 9px",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      borderRadius: "7px",
+                      border: "none",
+                      cursor: "pointer",
+                      backgroundColor: mapLayer === "streets" ? "var(--primary-color, #2563eb)" : "transparent",
+                      color: mapLayer === "streets" ? "#ffffff" : "#475569",
+                    }}
+                  >
+                    🗺️ Streets
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => switchTileLayer("satellite")}
+                    style={{
+                      padding: "5px 9px",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      borderRadius: "7px",
+                      border: "none",
+                      cursor: "pointer",
+                      backgroundColor: mapLayer === "satellite" ? "var(--primary-color, #2563eb)" : "transparent",
+                      color: mapLayer === "satellite" ? "#ffffff" : "#475569",
+                    }}
+                  >
+                    🛰️ Satellite
+                  </button>
+                </div>
+
                 {/* LEAFLET CANVAS */}
                 <div
                   ref={mapRef}
@@ -1640,30 +1810,56 @@ export default function DriverPortal() {
                       </div>
                     </div>
 
-                    {/* Route Estimated Distance & Duration Banner */}
-                    {routeSummary && (
+                    {/* Live Movement & Dynamic Destination ETA Banner (Uber/Rapido style) */}
+                    {(liveRemainingKm !== null || routeSummary) && (
                       <div
                         style={{
-                          marginBottom: "10px",
-                          padding: "6px 12px",
-                          borderRadius: "8px",
-                          backgroundColor: "#eff6ff",
-                          border: "1px solid #bfdbfe",
+                          marginBottom: "12px",
+                          padding: "10px 14px",
+                          borderRadius: "12px",
+                          backgroundColor: "#f0fdf4",
+                          border: "1px solid #bbf7d0",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "space-between",
-                          fontSize: "12px",
-                          color: "#1d4ed8",
-                          fontWeight: 600,
+                          boxShadow: "0 2px 6px rgba(0, 0, 0, 0.04)",
                         }}
                       >
-                        <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                          <Navigation size={13} />
-                          Live Road Route
-                        </span>
-                        <span>
-                          {routeSummary.duration} &bull; {routeSummary.distance}
-                        </span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <span
+                            style={{
+                              display: "inline-block",
+                              width: "10px",
+                              height: "10px",
+                              borderRadius: "50%",
+                              backgroundColor: speedKmH > 2 ? "#16a34a" : "#ca8a04",
+                              boxShadow: "0 0 0 3px rgba(34, 197, 94, 0.2)",
+                            }}
+                          />
+                          <div>
+                            <strong style={{ color: "#15803d", display: "block", fontSize: "14px" }}>
+                              {liveRemainingKm !== null ? `${liveRemainingKm} km remaining` : routeSummary?.distance}
+                            </strong>
+                            <span style={{ color: "#64748b", fontSize: "11px", fontWeight: 500 }}>
+                              {speedKmH > 2 ? `Moving at ${speedKmH} km/h` : "Stopped / Signal"} &bull; {activeTrip.distanceCoveredKm || 0} km covered
+                            </span>
+                          </div>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <span
+                            style={{
+                              backgroundColor: "#16a34a",
+                              color: "#ffffff",
+                              fontSize: "12px",
+                              fontWeight: 700,
+                              padding: "4px 10px",
+                              borderRadius: "99px",
+                              display: "inline-block",
+                            }}
+                          >
+                            {liveEtaMins ? `${liveEtaMins} min ETA` : (routeSummary?.duration || "En Route")}
+                          </span>
+                        </div>
                       </div>
                     )}
 
