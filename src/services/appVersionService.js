@@ -1,8 +1,13 @@
 import { App } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
 
 const API_URL = "https://truebillapi.trustiqtech.com";
 
 export const checkAppVersion = async () => {
+  if (!Capacitor.isNativePlatform()) {
+    return null;
+  }
+
   try {
     const appInfo = await App.getInfo();
 
@@ -25,10 +30,4 @@ export const checkAppVersion = async () => {
 
     return null;
   }
-
-  
 };
-
-checkAppVersion().then((data) => {
-  console.log("App Version Info:", data);
-});

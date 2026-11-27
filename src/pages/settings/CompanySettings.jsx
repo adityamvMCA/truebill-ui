@@ -499,7 +499,57 @@ function CompanySettings() {
     return true;
   };
 
-  const handleLogoFileChange = (e) => {
+  const compressImage = (file, maxWidth = 500, maxHeight = 500, quality = 0.8) => {
+    return new Promise((resolve, reject) => {
+      if (file.type === "image/svg+xml") {
+        if (file.size > 500 * 1024) {
+          reject(new Error("SVG file size should be less than 500KB"));
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+        return;
+      }
+
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        img.src = e.target.result;
+      };
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth || height > maxHeight) {
+          if (width > height) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const mimeType = file.type === "image/png" ? "image/png" : "image/jpeg";
+        const compressedDataUrl = canvas.toDataURL(mimeType, quality);
+        resolve(compressedDataUrl);
+      };
+      img.onerror = () => reject(new Error("Failed to load image"));
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleLogoFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -507,19 +557,20 @@ function CompanySettings() {
       return toast.error("Please select an image file (PNG, JPG, SVG, WebP)");
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      return toast.error("Logo image size should be less than 2MB");
+    if (file.size > 5 * 1024 * 1024) {
+      return toast.error("Logo image size should be less than 5MB");
     }
 
-    const reader = new FileReader();
-    reader.onload = (uploadEvent) => {
-      const base64Data = uploadEvent.target?.result;
+    try {
+      const base64Data = await compressImage(file, 400, 400, 0.8);
       if (base64Data) {
         setFormData((prev) => ({ ...prev, logo: base64Data }));
         toast.success("Logo uploaded successfully");
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error("Logo optimization error:", err);
+      toast.error(err?.message || "Failed to process logo image");
+    }
   };
 
   const handleRemoveLogo = () => {
@@ -547,6 +598,10 @@ function CompanySettings() {
     setSaving(true);
 
     try {
+      const existingLogo = tenant?.logo || tenant?.logoUrl || "";
+      const currentLogo = formData.logo || "";
+      const isLogoChanged = currentLogo !== existingLogo;
+
       const payload = {
         businessName:
           formData.businessName.trim(),
@@ -568,7 +623,6 @@ function CompanySettings() {
         city: formData.city.trim(),
         state: formData.state.trim(),
         pincode: formData.pincode.trim(),
-        logo: formData.logo?.trim() || "",
         tagline: formData.tagline?.trim() || "",
         upi: formData.upi?.trim() || "",
         bank: {
@@ -578,6 +632,11 @@ function CompanySettings() {
           branch: formData.branch?.trim() || "",
         },
       };
+
+      // Only send logo if it was actually changed by the user to avoid huge payloads (HTTP 413)
+      if (isLogoChanged) {
+        payload.logo = currentLogo.trim();
+      }
 
       const response =
         await api.tenants.update(
@@ -598,6 +657,7 @@ function CompanySettings() {
         result.tenant || {
           ...tenant,
           ...payload,
+          logo: currentLogo,
         };
 
       setTenant(updatedTenant);
