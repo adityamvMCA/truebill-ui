@@ -91,6 +91,10 @@ function Login() {
       localStorage.removeItem("tenant");
     }
 
+    if (result.subscription) {
+      localStorage.setItem("subscription", JSON.stringify(result.subscription));
+    }
+
     sessionStorage.removeItem("selectedTenantId");
     sessionStorage.removeItem("selectedClientCode");
     sessionStorage.removeItem("selectedTenant");

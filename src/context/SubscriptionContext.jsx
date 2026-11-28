@@ -52,6 +52,15 @@ export const SubscriptionProvider = ({ children }) => {
     if (localStorage.getItem("token")) {
       refresh();
     }
+
+    const handleTenantChanged = () => {
+      refresh();
+    };
+
+    window.addEventListener("tenantChanged", handleTenantChanged);
+    return () => {
+      window.removeEventListener("tenantChanged", handleTenantChanged);
+    };
   }, [refresh]);
 
   const hasFeature = useCallback(

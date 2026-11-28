@@ -68,9 +68,10 @@ function Traders() {
   };
 
   const isTraderAccessible = (trader) => {
+    if (trader?.isActive === false) return false;
     const effectiveStatus = getEffectiveStatus(trader);
-
-    return effectiveStatus === "active" || effectiveStatus === "trial";
+    // Allow active, trial, and expired traders to be accessed in ERP (expired displays banner in read-only mode)
+    return effectiveStatus !== "inactive" && effectiveStatus !== "suspended";
   };
 
   const getStatusIcon = (status) => {
@@ -188,12 +189,13 @@ function Traders() {
     }
 
     if (!isTraderAccessible(trader)) {
-      toast.error("This trader subscription is not active");
+      toast.error("This trader is inactive or suspended");
       return;
     }
 
     sessionStorage.setItem("selectedTenantId", trader._id);
     sessionStorage.setItem("selectedClientCode", trader.clientCode || "");
+    sessionStorage.setItem("selectedTenant", JSON.stringify(trader));
 
     window.dispatchEvent(new Event("tenantChanged"));
 

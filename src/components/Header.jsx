@@ -39,10 +39,8 @@ const isTraderAccessible = (item, currentTenantId) => {
   if (!item) return false;
   if (currentTenantId && String(item._id || item.id) === String(currentTenantId)) return true;
   if (item.isActive === false) return false;
-  if (item.status === "suspended" || item.status === "expired") return false;
-  if (item.subscriptionEnd && new Date(item.subscriptionEnd) <= new Date()) {
-    return false;
-  }
+  if (item.status === "suspended") return false;
+  // Expired tenants are accessible with read-only banner
   return true;
 };
 

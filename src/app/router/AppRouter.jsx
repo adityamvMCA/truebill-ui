@@ -754,6 +754,10 @@ const AppRouter = () => (
             path={routes.reports.lfullreport}
             element={gated("ledger.view", <LedgerStatement />)}
           />
+          <Route
+            path="/accounting/ledger-statement"
+            element={gated("ledger.view", <LedgerStatement />)}
+          />
 
           <Route
             path="/settings/print-templates"
