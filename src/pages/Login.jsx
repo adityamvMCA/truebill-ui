@@ -95,6 +95,7 @@ function Login() {
       localStorage.setItem("subscription", JSON.stringify(result.subscription));
     }
 
+    localStorage.removeItem("selectedTenantId");
     sessionStorage.removeItem("selectedTenantId");
     sessionStorage.removeItem("selectedClientCode");
     sessionStorage.removeItem("selectedTenant");

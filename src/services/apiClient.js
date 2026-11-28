@@ -212,12 +212,20 @@ apiClient.interceptors.request.use(
       if (selectedTenantId) {
         config.headers["x-tenant-id"] = selectedTenantId;
       }
-    }
+    } else if (user) {
+      // For tenant users, only send X-Tenant-Id if deliberately switched to a sub-company
+      const activeUserTenantId = user.tenantId || user.tenant?.id || user.tenant?._id;
+      const selectedTenantId =
+        sessionStorage.getItem("selectedTenantId") ||
+        localStorage.getItem("selectedTenantId");
 
-    const selectedTenantId = localStorage.getItem("selectedTenantId");
-
-    if (selectedTenantId) {
-      config.headers["X-Tenant-Id"] = selectedTenantId;
+      if (
+        selectedTenantId &&
+        activeUserTenantId &&
+        String(selectedTenantId) !== String(activeUserTenantId)
+      ) {
+        config.headers["X-Tenant-Id"] = selectedTenantId;
+      }
     }
 
     // JSON for normal requests; let browser set multipart boundary for FormData

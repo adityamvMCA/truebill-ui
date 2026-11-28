@@ -348,6 +348,10 @@ function Header({ onMenuClick }) {
 
     localStorage.removeItem("tenant");
 
+    localStorage.removeItem("subscription");
+
+    localStorage.removeItem("selectedTenantId");
+
     sessionStorage.removeItem("selectedTenantId");
 
     sessionStorage.removeItem("selectedClientCode");
