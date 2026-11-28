@@ -1393,3 +1393,37 @@
   box-shadow: none;
   flex: 1;
 }
+
+/* ============================================================
+   Unknown Barcode Modal & Scanned Item Flash (Vyapar / MyBillBook)
+   ============================================================ */
+@keyframes posScannedFlash {
+  0% {
+    background-color: #dbeafe !important;
+  }
+  100% {
+    background-color: transparent !important;
+  }
+}
+
+.pos-row-scanned {
+  animation: posScannedFlash 1.2s ease-out;
+}
+
+.pos-unknown-modal {
+  width: 100%;
+  max-width: 520px;
+  border-radius: 14px;
+  background: var(--card-bg, #ffffff);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.22);
+}
+
+.pos-unknown-tab-btn:hover {
+  background: #f8fafc !important;
+}
+
+.pos-unknown-tab-btn.active {
+  color: #2563eb !important;
+  border-bottom: 2px solid #2563eb !important;
+}
+

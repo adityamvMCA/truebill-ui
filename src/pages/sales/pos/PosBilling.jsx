@@ -42,6 +42,9 @@ import productCategoryApi from "../../../services/modules/productCategoryApi";
 import routes from "../../../config/routes";
 import ScanBarcodeModal from "../../barcode/ScanBarcodeModal";
 import ScanSessionPanel from "../../barcode/ScanSessionPanel";
+import useKeyboardWedge from "../../barcode/useKeyboardWedge";
+import { lookupLocal, cacheServerHit } from "../../barcode/barcodeCatalog";
+import UnknownBarcodeModal from "./UnknownBarcodeModal";
 import "./PosBilling.css";
 
 /* --------------------------------------------------------------------------
@@ -123,6 +126,12 @@ export default function PosBilling() {
   const [cameraModalOpen, setCameraModalOpen] = useState(false);
   const [showMobileScan, setShowMobileScan] = useState(false);
   const [mobileScanKey, setMobileScanKey] = useState(0);
+  const [unknownBarcodeModal, setUnknownBarcodeModal] = useState({
+    open: false,
+    barcode: "",
+    quantity: 1,
+  });
+  const [lastScannedId, setLastScannedId] = useState(null);
   const scannerInputRef = useRef(null);
 
   // State: Cart Items
@@ -262,20 +271,40 @@ export default function PosBilling() {
   }, []);
 
   /* ------------------------------------------------------------------------
-     2. Keyboard Shortcuts Handler (F1, F4, F8, F12, etc.)
+     2. Keyboard Shortcuts Handler (F1, F2, F4, F7, F8, F12, etc.)
      ------------------------------------------------------------------------ */
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // F1: Focus Barcode Scanner
+      // F1: Focus Barcode Scanner Input
       if (e.key === "F1") {
         e.preventDefault();
         scannerInputRef.current?.focus();
         scannerInputRef.current?.select();
       }
+      // F2: Jump to quantity edit of the latest item in cart
+      else if (e.key === "F2") {
+        e.preventDefault();
+        const qtyInputs = document.querySelectorAll(".pos-qty-input");
+        if (qtyInputs.length > 0) {
+          const lastInput = qtyInputs[qtyInputs.length - 1];
+          lastInput?.focus();
+          lastInput?.select();
+        }
+      }
       // F4: Hold Bill
       else if (e.key === "F4") {
         e.preventDefault();
         handleHoldBill();
+      }
+      // F7: Toggle Payment Mode (CASH -> UPI -> CARD -> CREDIT -> CASH)
+      else if (e.key === "F7") {
+        e.preventDefault();
+        setPaymentMode((prev) => {
+          if (prev === "CASH") return "UPI";
+          if (prev === "UPI") return "CARD";
+          if (prev === "CARD") return "CREDIT";
+          return "CASH";
+        });
       }
       // F8: View Held Bills
       else if (e.key === "F8") {
@@ -287,12 +316,14 @@ export default function PosBilling() {
         e.preventDefault();
         handleSaveAndPrint();
       }
-      // Escape: Close modals
+      // Escape: Close all modals & dropdowns
       else if (e.key === "Escape") {
         setShowPrintModal(false);
         setShowHeldModal(false);
         setShowAddCustomerModal(false);
         setIsCustomerDropdownOpen(false);
+        setCameraModalOpen(false);
+        setUnknownBarcodeModal({ open: false, barcode: "", quantity: 1 });
       }
     };
 
@@ -301,13 +332,16 @@ export default function PosBilling() {
   });
 
   /* ------------------------------------------------------------------------
-     3. Add Product to Cart Logic
+     3. Add Product to Cart Logic (Supports auto-increment and pack quantities)
      ------------------------------------------------------------------------ */
   const addToCart = useCallback(
-    (product) => {
+    (product, qtyToAdd = 1) => {
       if (!product) return;
-
+      const count = Number(qtyToAdd) > 0 ? Number(qtyToAdd) : 1;
       const pId = String(product._id || product.id);
+
+      setLastScannedId(pId);
+      setTimeout(() => setLastScannedId((cur) => (cur === pId ? null : cur)), 1300);
 
       setCartItems((prevItems) => {
         const existingIndex = prevItems.findIndex((item) => item.productId === pId);
@@ -316,7 +350,7 @@ export default function PosBilling() {
           // Increment quantity
           const updated = [...prevItems];
           const curr = updated[existingIndex];
-          const newQty = curr.quantity + 1;
+          const newQty = curr.quantity + count;
           const discountedRate = curr.unitRate * (1 - curr.discountPercent / 100);
           const taxable = discountedRate * newQty;
           const tax = taxable * (curr.gstRate / 100);
@@ -334,7 +368,7 @@ export default function PosBilling() {
           const unitRate = Number(product.salePrice) || Number(product.price) || 0;
           const gstRate = Number(product.gstRate) || 0;
           const discountPercent = 0;
-          const taxable = unitRate * 1;
+          const taxable = unitRate * count;
           const tax = taxable * (gstRate / 100);
           const lineTotal = taxable + tax;
 
@@ -347,7 +381,7 @@ export default function PosBilling() {
               name: product.name,
               productCode: product.productCode || product.sku || "",
               unitRate,
-              quantity: 1,
+              quantity: count,
               discountPercent,
               gstRate,
               lineTotal,
@@ -374,11 +408,8 @@ export default function PosBilling() {
           gstRate: line.gstRate || 0,
           unit: line.unit || "Pcs",
         };
-        // Add once per scanned unit quantity
         const qty = Math.max(1, Math.round(line.quantity || 1));
-        for (let i = 0; i < qty; i++) {
-          addToCart(product);
-        }
+        addToCart(product, qty);
       });
     },
     [addToCart]
@@ -390,53 +421,158 @@ export default function PosBilling() {
   }, []);
 
   /* ------------------------------------------------------------------------
-     4. Barcode / Fast Input Scanner Handler
+     4. Multi-Source Barcode Resolution Engine (myBillBook / Vyapar style)
+     ------------------------------------------------------------------------ */
+  const resolveAndAddBarcode = useCallback(
+    async (rawCode, forcedQty = null) => {
+      if (!rawCode) return false;
+      let code = String(rawCode).trim();
+      if (!code) return false;
+
+      let qty = forcedQty;
+      // Support quantity prefix multiplier: "5*890123..." or "3*ITEMCODE"
+      const multMatch = code.match(/^(\d+(?:\.\d+)?)\s*[*xX]\s*(.+)$/);
+      if (multMatch) {
+        qty = Number(multMatch[1]) || 1;
+        code = multMatch[2].trim();
+      }
+      if (!qty || qty <= 0) qty = 1;
+
+      // Tier 1: In-Memory Exact Match against POS loaded products
+      const localProduct = products.find(
+        (p) =>
+          (p.barcode && String(p.barcode).trim().toUpperCase() === code.toUpperCase()) ||
+          (p.productCode && String(p.productCode).trim().toUpperCase() === code.toUpperCase()) ||
+          (p.sku && String(p.sku).trim().toUpperCase() === code.toUpperCase()) ||
+          (p.name && p.name.trim().toLowerCase() === code.toLowerCase())
+      );
+
+      if (localProduct) {
+        addToCart(localProduct, qty);
+        toast.success(`Scanned: ${localProduct.name} (+${qty})`);
+        return true;
+      }
+
+      // Tier 2: Check IndexedDB on-device barcode catalog cache
+      try {
+        const localHit = await lookupLocal(code);
+        if (localHit?.product) {
+          const convQty = Number(localHit.packaging?.conversionQuantity) || 1;
+          const finalQty = qty * convQty;
+          addToCart(localHit.product, finalQty);
+          toast.success(`Scanned: ${localHit.product.name} (+${finalQty})`);
+          return true;
+        }
+      } catch (err) {
+        console.warn("Local catalog lookup error:", err);
+      }
+
+      // Tier 3: Remote Barcode Catalog Lookup
+      try {
+        const res = await barcodeApi.lookup(code);
+        const hit = res?.data?.data || res?.data;
+        if (hit?.product) {
+          try {
+            await cacheServerHit(code, hit);
+          } catch {}
+          const convQty = Number(hit.mapping?.conversionQuantity) || 1;
+          const finalQty = qty * convQty;
+          addToCart(hit.product, finalQty);
+          toast.success(`Scanned: ${hit.product.name} (+${finalQty})`);
+          return true;
+        }
+      } catch (err) {
+        // Not registered in barcode catalog table
+      }
+
+      // Tier 4: Fallback search via productApi for matching barcode/productCode or exact name
+      try {
+        const pRes = await productApi.getAll({ search: code, limit: 10, status: "ACTIVE" });
+        const list = Array.isArray(pRes?.data)
+          ? pRes.data
+          : Array.isArray(pRes?.data?.data)
+          ? pRes.data.data
+          : Array.isArray(pRes?.data?.products)
+          ? pRes.data.products
+          : [];
+
+        const foundProd = list.find(
+          (p) =>
+            (p.barcode && String(p.barcode).trim().toUpperCase() === code.toUpperCase()) ||
+            (p.productCode && String(p.productCode).trim().toUpperCase() === code.toUpperCase()) ||
+            (p.name && p.name.trim().toLowerCase() === code.toLowerCase())
+        );
+
+        if (foundProd) {
+          addToCart(foundProd, qty);
+          toast.success(`Scanned: ${foundProd.name} (+${qty})`);
+          return true;
+        }
+      } catch (err) {
+        console.warn("Product search fallback error:", err);
+      }
+
+      // Tier 5: Fallback partial match on in-memory loaded products if entered manually
+      const partialMatch = products.find(
+        (p) =>
+          p.name?.toLowerCase().includes(code.toLowerCase()) ||
+          p.productCode?.toLowerCase().includes(code.toLowerCase())
+      );
+
+      if (partialMatch) {
+        addToCart(partialMatch, qty);
+        toast.success(`Added: ${partialMatch.name} (+${qty})`);
+        return true;
+      }
+
+      // If still not found -> Unknown Barcode Workflow (Vyapar / myBillBook modal)
+      playErrorBeep();
+      setUnknownBarcodeModal({
+        open: true,
+        barcode: code,
+        quantity: qty,
+      });
+      return false;
+    },
+    [products, addToCart]
+  );
+
+  /* ------------------------------------------------------------------------
+     4b. Always-On Hardware Scanner Wedge (USB / Bluetooth Barcode Guns)
+     ------------------------------------------------------------------------ */
+  useKeyboardWedge(
+    (scannedCode) => {
+      // Ignore background wedge when modal overlays are active
+      if (
+        showPrintModal ||
+        showHeldModal ||
+        showAddCustomerModal ||
+        cameraModalOpen ||
+        unknownBarcodeModal.open
+      ) {
+        return;
+      }
+
+      let codeToResolve = scannedCode;
+      // If user typed a quantity multiplier in the search box (e.g. "3*"), take it
+      if (scanQuery.trim().endsWith("*")) {
+        codeToResolve = scanQuery.trim() + scannedCode;
+      }
+      setScanQuery("");
+      resolveAndAddBarcode(codeToResolve);
+    },
+    { enabled: true }
+  );
+
+  /* ------------------------------------------------------------------------
+     4c. Manual Barcode / Search Box Enter Handler
      ------------------------------------------------------------------------ */
   const handleScannerSubmit = async (e) => {
     e.preventDefault();
     const query = scanQuery.trim();
     if (!query) return;
-
-    // 1. Check loaded products by productCode, barcode, or exact name
-    const match = products.find(
-      (p) =>
-        (p.productCode && p.productCode.toUpperCase() === query.toUpperCase()) ||
-        (p.barcode && p.barcode.toUpperCase() === query.toUpperCase()) ||
-        (p.name && p.name.toLowerCase() === query.toLowerCase())
-    );
-
-    if (match) {
-      addToCart(match);
-      setScanQuery("");
-      return;
-    }
-
-    // 2. Lookup barcode remotely if not locally found
-    try {
-      const res = await barcodeApi.lookup(query);
-      if (res?.data?.product) {
-        addToCart(res.data.product);
-        setScanQuery("");
-        return;
-      }
-    } catch {
-      // not in barcode catalog
-    }
-
-    // 3. Fallback: partial match on loaded products
-    const partialMatch = products.find(
-      (p) =>
-        p.name?.toLowerCase().includes(query.toLowerCase()) ||
-        p.productCode?.toLowerCase().includes(query.toLowerCase())
-    );
-
-    if (partialMatch) {
-      addToCart(partialMatch);
-      setScanQuery("");
-    } else {
-      playErrorBeep();
-      toast.error(`Product "${query}" not found`);
-    }
+    setScanQuery("");
+    await resolveAndAddBarcode(query);
   };
 
   /* ------------------------------------------------------------------------
@@ -1138,7 +1274,10 @@ export default function PosBilling() {
                 </thead>
                 <tbody>
                   {cartItems.map((item, idx) => (
-                    <tr key={item.productId}>
+                    <tr
+                      key={item.productId}
+                      className={lastScannedId === item.productId ? "pos-row-scanned" : ""}
+                    >
                       <td>
                         <div className="pos-cart-item-title">{item.name}</div>
                         <div className="pos-cart-item-sku">
@@ -1666,11 +1805,21 @@ export default function PosBilling() {
         open={cameraModalOpen}
         onClose={() => setCameraModalOpen(false)}
         onFound={(item) => {
+          setCameraModalOpen(false);
           if (item?.product) {
-            addToCart(item.product);
+            const convQty = Number(item.packaging?.conversionQuantity) || 1;
+            addToCart(item.product, convQty);
           } else if (item) {
-            addToCart(item);
+            addToCart(item, 1);
           }
+        }}
+        onUnknown={({ barcode }) => {
+          setCameraModalOpen(false);
+          setUnknownBarcodeModal({
+            open: true,
+            barcode: barcode || "",
+            quantity: 1,
+          });
         }}
       />
 
@@ -1705,6 +1854,31 @@ export default function PosBilling() {
             />
           </div>
         </div>
+      )}
+
+      {/* ====================================================================
+          8. Modal: Unknown Barcode Resolver (Vyapar / myBillBook style)
+          ==================================================================== */}
+      {unknownBarcodeModal.open && (
+        <UnknownBarcodeModal
+          barcode={unknownBarcodeModal.barcode}
+          quantity={unknownBarcodeModal.quantity}
+          allProducts={products}
+          onClose={() => setUnknownBarcodeModal({ open: false, barcode: "", quantity: 1 })}
+          onResolved={(product, addedQty) => {
+            addToCart(product, addedQty || unknownBarcodeModal.quantity);
+            // Append newly linked/created product to local catalog
+            setProducts((prev) => {
+              const pId = String(product._id || product.id);
+              if (!prev.some((p) => String(p._id || p.id) === pId)) {
+                return [product, ...prev];
+              }
+              return prev;
+            });
+            setUnknownBarcodeModal({ open: false, barcode: "", quantity: 1 });
+            playSuccessBeep();
+          }}
+        />
       )}
     </div>
   );
